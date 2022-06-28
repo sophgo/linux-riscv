@@ -3,7 +3,11 @@
 #ifndef __ASM_GENERIC_SPINLOCK_H
 #define __ASM_GENERIC_SPINLOCK_H
 
+#ifdef CONFIG_QUEUED_SPINLOCKS
+#include <asm-generic/qspinlock.h>
+#else
 #include <asm-generic/ticket_spinlock.h>
+#endif
 #include <asm/qrwlock.h>
 
 /* See include/linux/spinlock.h */

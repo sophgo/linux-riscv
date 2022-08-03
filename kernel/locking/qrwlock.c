@@ -90,3 +90,35 @@ unlock:
 	trace_contention_end(lock, 0);
 }
 EXPORT_SYMBOL(queued_write_lock_slowpath);
+
+static arch_spinlock_t test_lock;
+void test_arch_spin_lock(void)
+{
+	arch_spin_lock(&test_lock);
+}
+EXPORT_SYMBOL(test_arch_spin_lock);
+void test_arch_spin_trylock(void)
+{
+	arch_spin_trylock(&test_lock);
+}
+EXPORT_SYMBOL(test_arch_spin_trylock);
+void test_arch_spin_unlock(void)
+{
+	arch_spin_unlock(&test_lock);
+}
+EXPORT_SYMBOL(test_arch_spin_unlock);
+void test_arch_spin_is_locked(void)
+{
+	arch_spin_is_locked(&test_lock);
+}
+EXPORT_SYMBOL(test_arch_spin_is_locked);
+void test_arch_spin_is_contended(void)
+{
+	arch_spin_is_contended(&test_lock);
+}
+EXPORT_SYMBOL(test_arch_spin_is_contended);
+void test_arch_spin_value_unlocked(void)
+{
+	arch_spin_value_unlocked(test_lock);
+}
+EXPORT_SYMBOL(test_arch_spin_value_unlocked);

@@ -52,8 +52,9 @@ void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 void arch_dma_prep_coherent(struct page *page, size_t size)
 {
 	void *flush_addr = page_address(page);
+	phys_addr_t paddr = PFN_PHYS(page_to_pfn(page));
 
-	ALT_CMO_OP(flush, flush_addr, size, riscv_cbom_block_size);
+	ALT_CMO_OP_VPA(flush, flush_addr, paddr, size, riscv_cbom_block_size);
 }
 
 void arch_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,

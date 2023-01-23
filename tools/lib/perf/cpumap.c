@@ -351,8 +351,8 @@ struct perf_cpu_map *perf_cpu_map__merge(struct perf_cpu_map *orig,
 					 struct perf_cpu_map *other)
 {
 	struct perf_cpu *tmp_cpus;
-	int tmp_len;
-	int i, j, k;
+	unsigned int tmp_len;
+	unsigned int i, j, k;
 	struct perf_cpu_map *merged;
 
 	if (perf_cpu_map__is_subset(orig, other))
@@ -369,7 +369,7 @@ struct perf_cpu_map *perf_cpu_map__merge(struct perf_cpu_map *orig,
 
 	/* Standard merge algorithm from wikipedia */
 	i = j = k = 0;
-	while (i < orig->nr && j < other->nr) {
+	while (i < (unsigned int)orig->nr && j < (unsigned int)other->nr) {
 		if (orig->map[i].cpu <= other->map[j].cpu) {
 			if (orig->map[i].cpu == other->map[j].cpu)
 				j++;
@@ -378,10 +378,10 @@ struct perf_cpu_map *perf_cpu_map__merge(struct perf_cpu_map *orig,
 			tmp_cpus[k++] = other->map[j++];
 	}
 
-	while (i < orig->nr)
+	while (i < (unsigned int)orig->nr)
 		tmp_cpus[k++] = orig->map[i++];
 
-	while (j < other->nr)
+	while (j < (unsigned int)other->nr)
 		tmp_cpus[k++] = other->map[j++];
 	assert(k <= tmp_len);
 

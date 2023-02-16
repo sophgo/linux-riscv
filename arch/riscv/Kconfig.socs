@@ -80,4 +80,9 @@ config SOC_CANAAN_K210_DTB_SOURCE
 
 endif # SOC_CANAAN
 
+config SOC_SOPHGO
+	bool "Sophgo SoCs"
+	select SIFIVE_PLIC
+	help
+	  This enables support for Sophgo SoC platform hardware.
 endmenu # "SoC selection"

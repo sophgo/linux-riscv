@@ -120,6 +120,7 @@ obj-$(CONFIG_ARCH_STM32)		+= stm32/
 obj-$(CONFIG_SOC_STARFIVE)		+= starfive/
 obj-$(CONFIG_ARCH_SUNXI)		+= sunxi/
 obj-y					+= sunxi-ng/
+obj-$(CONFIG_SOC_SOPHGO)		+= sophgo/
 obj-$(CONFIG_ARCH_TEGRA)		+= tegra/
 obj-y					+= ti/
 obj-$(CONFIG_CLK_UNIPHIER)		+= uniphier/

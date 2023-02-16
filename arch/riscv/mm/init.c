@@ -31,6 +31,11 @@
 
 #include "../kernel/head.h"
 
+#ifdef CONFIG_HIGHMEM
+#include <asm/highmem.h>
+extern phys_addr_t __init_memblock find_max_low_addr(phys_addr_t limit);
+#endif
+
 struct kernel_mapping kernel_map __ro_after_init;
 EXPORT_SYMBOL(kernel_map);
 #ifdef CONFIG_XIP_KERNEL
@@ -71,6 +76,9 @@ static void __init zone_sizes_init(void)
 	max_zone_pfns[ZONE_DMA32] = PFN_DOWN(dma32_phys_limit);
 #endif
 	max_zone_pfns[ZONE_NORMAL] = max_low_pfn;
+#ifdef CONFIG_HIGHMEM
+	max_zone_pfns[ZONE_HIGHMEM] = max_pfn;
+#endif
 
 	free_area_init(max_zone_pfns);
 }
@@ -127,6 +135,10 @@ static inline void print_ml(char *name, unsigned long b, unsigned long t)
 static void __init print_vm_layout(void)
 {
 	pr_notice("Virtual kernel memory layout:\n");
+#ifdef CONFIG_HIGHMEM
+	print_ml("pkmap", (unsigned long)PKMAP_BASE,
+		(unsigned long)FIXADDR_START);
+#endif
 	print_ml("fixmap", (unsigned long)FIXADDR_START,
 		(unsigned long)FIXADDR_TOP);
 	print_ml("pci io", (unsigned long)PCI_IO_START,
@@ -154,6 +166,106 @@ static void __init print_vm_layout(void)
 static void print_vm_layout(void) { }
 #endif /* CONFIG_DEBUG_VM */
 
+#ifdef CONFIG_HIGHMEM
+
+#ifdef CONFIG_DEBUG_VM
+#error Please unset CONFIG_DEBUG_VM when CONFIG_HIGHMEM is set, \
+because CONFIG_DEBUG_VM will trigger VM_BUG_ON_PAGE in __free_pages()->put_page_testzero().
+#endif
+#if defined(CONFIG_SPARSEMEM_VMEMMAP) && defined(CONFIG_NUMA)
+#error Please unset CONFIG_SPARSEMEM_VMEMMAP when CONFIG_HIGHMEM and CONFIG_NUMA are set, \
+because vmemmap_verify will report warning that [xxx-xxx] potential offnode page_structs.
+#endif
+
+/* free order size pages for optimize system boot time. */
+#define OPTIMIZE_FREE_PAGES
+
+#ifdef OPTIMIZE_FREE_PAGES
+#define ORDER_SIZE(order)              (1UL << order)
+#define ORDER_MASK(order)              (~(ORDER_SIZE(order) - 1))
+#define PFN_ALIGN_ORDER(pfn, order)    \
+	(((u64)(pfn) + (ORDER_SIZE(order) - 1)) & ORDER_MASK(order))
+
+/* Free the reserved page into the buddy system, so it gets managed. */
+static void __init free_highmem_pages(u64 start, u64 order)
+{
+	struct page *page;
+	u64  i, pfn;
+
+	for (i = 0, pfn = start; i < ORDER_SIZE(order); i++, pfn++) {
+		page = pfn_to_page(pfn);
+		ClearPageReserved(page);
+		set_page_count(page, 0);
+	}
+
+	page = pfn_to_page(start);
+	__free_pages(page, order);
+	adjust_managed_page_count(page, ORDER_SIZE(order));
+}
+
+static void __init free_highpages(void)
+{
+	phys_addr_t range_start, range_end;
+	u64 max_low = max_low_pfn;
+	u64 i, order;
+
+	/* set highmem page free */
+	for_each_free_mem_range(i, NUMA_NO_NODE, MEMBLOCK_NONE,
+			&range_start, &range_end, NULL) {
+		u64 start = PFN_UP(range_start), start_align;
+		u64 end = PFN_DOWN(range_end);
+
+		/* Ignore complete lowmem entries */
+		if (end <= max_low)
+			continue;
+
+		/* Truncate partial highmem entries */
+		if (start < max_low)
+			start = max_low;
+
+		order = MAX_ORDER;
+		start_align = PFN_ALIGN_ORDER(start, order);
+
+		for (; start < start_align; start++)
+			free_highmem_page(pfn_to_page(start));
+
+		//step by order size
+		for (; start < end; start += ORDER_SIZE(order))
+			free_highmem_pages(start, order);
+
+		for (; start < end; start++)
+			free_highmem_page(pfn_to_page(start));
+	}
+}
+#else
+static void __init free_highpages(void)
+{
+	unsigned long max_low = max_low_pfn;
+	phys_addr_t range_start, range_end;
+	u64 i;
+
+	/* set highmem page free */
+	for_each_free_mem_range(i, NUMA_NO_NODE, MEMBLOCK_NONE,
+			&range_start, &range_end, NULL) {
+		unsigned long start = PFN_UP(range_start);
+		unsigned long end = PFN_DOWN(range_end);
+
+
+		/* Ignore complete lowmem entries */
+		if (end <= max_low)
+			continue;
+
+		/* Truncate partial highmem entries */
+		if (start < max_low)
+			start = max_low;
+
+		for (; start < end; start++)
+			free_highmem_page(pfn_to_page(start));
+	}
+}
+#endif
+#endif
+
 void __init mem_init(void)
 {
 #ifdef CONFIG_FLATMEM
@@ -162,6 +274,9 @@ void __init mem_init(void)
 
 	swiotlb_init(max_pfn > PFN_DOWN(dma32_phys_limit), SWIOTLB_VERBOSE);
 	memblock_free_all();
+#ifdef CONFIG_HIGHMEM
+	free_highpages();
+#endif
 
 	print_vm_layout();
 }
@@ -190,13 +305,18 @@ static void __init setup_bootmem(void)
 	phys_addr_t vmlinux_end = __pa_symbol(&_end);
 	phys_addr_t max_mapped_addr;
 	phys_addr_t phys_ram_end, vmlinux_start;
+#ifdef CONFIG_HIGHMEM
+	phys_addr_t max_low_addr;
+#endif
 
 	if (IS_ENABLED(CONFIG_XIP_KERNEL))
 		vmlinux_start = __pa_symbol(&_sdata);
 	else
 		vmlinux_start = __pa_symbol(&_start);
 
+#ifndef CONFIG_HIGHMEM
 	memblock_enforce_memory_limit(memory_limit);
+#endif
 
 	/*
 	 * Make sure we align the reservation on PMD_SIZE since we will
@@ -229,11 +349,22 @@ static void __init setup_bootmem(void)
 	}
 
 	min_low_pfn = PFN_UP(phys_ram_base);
+#ifdef CONFIG_HIGHMEM
+	max_low_addr = find_max_low_addr(memory_limit);
+	max_low_pfn = PFN_DOWN(max_low_addr);
+	max_pfn = PFN_DOWN(phys_ram_end);
+	memblock_set_current_limit(max_low_addr);
+#else
 	max_low_pfn = max_pfn = PFN_DOWN(phys_ram_end);
+#endif
 	high_memory = (void *)(__va(PFN_PHYS(max_low_pfn)));
 
 	dma32_phys_limit = min(4UL * SZ_1G, (unsigned long)PFN_PHYS(max_low_pfn));
+#ifdef CONFIG_HIGHMEM
+	set_max_mapnr(max_pfn - ARCH_PFN_OFFSET);
+#else
 	set_max_mapnr(max_low_pfn - ARCH_PFN_OFFSET);
+#endif
 
 	reserve_initrd_mem();
 	/*
@@ -276,8 +407,14 @@ EXPORT_SYMBOL(riscv_pfn_base);
 
 pgd_t swapper_pg_dir[PTRS_PER_PGD] __page_aligned_bss;
 pgd_t trampoline_pg_dir[PTRS_PER_PGD] __page_aligned_bss;
+#ifdef CONFIG_HIGHMEM
+static pte_t fixmap_pte[PTRS_PER_PTE * FIXADDR_PMD_NUM] __page_aligned_bss;
+#else
 static pte_t fixmap_pte[PTRS_PER_PTE] __page_aligned_bss;
-
+#endif
+#ifdef CONFIG_HIGHMEM
+static pte_t pkmap_pte[PTRS_PER_PTE] __page_aligned_bss;
+#endif
 pgd_t early_pg_dir[PTRS_PER_PGD] __initdata __aligned(PAGE_SIZE);
 static p4d_t __maybe_unused early_dtb_p4d[PTRS_PER_P4D] __initdata __aligned(PAGE_SIZE);
 static pud_t __maybe_unused early_dtb_pud[PTRS_PER_PUD] __initdata __aligned(PAGE_SIZE);
@@ -315,10 +452,17 @@ void __set_fixmap(enum fixed_addresses idx, phys_addr_t phys, pgprot_t prot)
 {
 	unsigned long addr = __fix_to_virt(idx);
 	pte_t *ptep;
+#ifdef CONFIG_HIGHMEM
+	unsigned long pte_idx = (addr - FIXADDR_START) >> PAGE_SHIFT;
+#endif
 
 	BUG_ON(idx <= FIX_HOLE || idx >= __end_of_fixed_addresses);
 
+#ifdef CONFIG_HIGHMEM
+	ptep = &fixmap_pte[pte_idx];
+#else
 	ptep = &fixmap_pte[pte_index(addr)];
+#endif
 
 	if (pgprot_val(prot))
 		set_pte(ptep, pfn_pte(phys >> PAGE_SHIFT, prot));
@@ -1022,8 +1166,26 @@ asmlinkage void __init setup_vm(uintptr_t dtb_pa)
 	if (pgtable_l4_enabled)
 		create_pud_mapping(fixmap_pud, FIXADDR_START,
 				   (uintptr_t)fixmap_pmd, PUD_SIZE, PAGE_TABLE);
+#ifdef CONFIG_HIGHMEM
+	{
+		int i;
+		for (i = 0; i < FIXADDR_PMD_NUM; i++)
+			create_pmd_mapping(fixmap_pmd,
+					   (FIXADDR_START + i * PMD_SIZE),
+					   (uintptr_t)&(fixmap_pte[i * PTRS_PER_PTE]),
+					   PMD_SIZE,
+					   PAGE_TABLE);
+	}
+#else
 	create_pmd_mapping(fixmap_pmd, FIXADDR_START,
 			   (uintptr_t)fixmap_pte, PMD_SIZE, PAGE_TABLE);
+#endif
+#ifdef CONFIG_HIGHMEM
+	/* Setup pkmap PMD */
+	create_pmd_mapping(fixmap_pmd, PKMAP_BASE,
+			   (uintptr_t)pkmap_pte, PMD_SIZE, PAGE_TABLE);
+#endif
+
 	/* Setup trampoline PGD and PMD */
 	create_pgd_mapping(trampoline_pg_dir, kernel_map.virt_addr,
 			   trampoline_pgd_next, PGDIR_SIZE, PAGE_TABLE);
@@ -1219,6 +1381,13 @@ static void __init reserve_crashkernel(void)
 	crashk_res.end = crash_base + crash_size - 1;
 }
 
+#ifdef CONFIG_HIGHMEM
+static void __init pkmap_init(void)
+{
+	pkmap_page_table = &pkmap_pte[pte_index(PKMAP_BASE)];
+}
+#endif
+
 void __init paging_init(void)
 {
 	setup_bootmem();
@@ -1231,6 +1400,9 @@ void __init misc_mem_init(void)
 	arch_numa_init();
 	sparse_init();
 	zone_sizes_init();
+#ifdef CONFIG_HIGHMEM
+	pkmap_init();
+#endif
 	reserve_crashkernel();
 	memblock_dump_all();
 }

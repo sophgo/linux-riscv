@@ -113,7 +113,11 @@ asm volatile(ALTERNATIVE(						\
  *   0000000    11001     00000      000      00000  0001011
  */
 #define THEAD_inval_A0	".long 0x0265000b"
+#ifdef CONFIG_SOC_SOPHGO
+#define THEAD_clean_A0	".long 0x0275000b"
+#else
 #define THEAD_clean_A0	".long 0x0245000b"
+#endif
 #define THEAD_flush_A0	".long 0x0275000b"
 #define THEAD_SYNC_S	".long 0x0190000b"
 

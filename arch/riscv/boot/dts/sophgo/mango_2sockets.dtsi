@@ -1,0 +1,589 @@
+/dts-v1/;
+#include <dt-bindings/clock/sophgo.h>
+#include <dt-bindings/clock/sophgo-mango-clock.h>
+#include <dt-bindings/reset/sophgo-mango-resets.h>
+
+#include "mango_socket0_cpus.dtsi"
+#include "mango_socket1_cpus.dtsi"
+#include "mango_clock.dtsi"
+#include "mango_pinctrl.dtsi"
+
+/ {
+	model = "Sophgo Mango";
+	compatible = "sophgo,mango";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	dma-noncoherent;
+
+	distance-map {
+		compatible = "numa-distance-map-v1";
+		distance-matrix = <0 0 10>,	//chip0
+				  <0 1 15>,
+				  <0 2 25>,
+				  <0 3 30>,
+				  <0 4 110>,
+				  <0 5 115>,
+				  <0 6 125>,
+				  <0 7 130>,
+				  <1 0 15>,
+				  <1 1 10>,
+				  <1 2 30>,
+				  <1 3 25>,
+				  <1 4 115>,
+				  <1 5 110>,
+				  <1 6 130>,
+				  <1 7 125>,
+				  <2 0 25>,
+				  <2 1 30>,
+				  <2 2 10>,
+				  <2 3 15>,
+				  <2 4 125>,
+				  <2 5 130>,
+				  <2 6 110>,
+				  <2 7 115>,
+				  <3 0 30>,
+				  <3 1 25>,
+				  <3 2 15>,
+				  <3 3 10>,
+				  <3 4 130>,
+				  <3 5 125>,
+				  <3 6 115>,
+				  <3 7 110>,
+				  <4 0 110>,	//chip1
+				  <4 1 115>,
+				  <4 2 125>,
+				  <4 3 130>,
+				  <4 4 10>,
+				  <4 5 15>,
+				  <4 6 25>,
+				  <4 7 30>,
+				  <5 0 115>,
+				  <5 1 110>,
+				  <5 2 130>,
+				  <5 3 125>,
+				  <5 4 15>,
+				  <5 5 10>,
+				  <5 6 30>,
+				  <5 7 25>,
+				  <6 0 125>,
+				  <6 1 130>,
+				  <6 2 110>,
+				  <6 3 115>,
+				  <6 4 25>,
+				  <6 5 30>,
+				  <6 6 10>,
+				  <6 7 15>,
+				  <7 0 130>,
+				  <7 1 125>,
+				  <7 2 115>,
+				  <7 3 110>,
+				  <7 4 30>,
+				  <7 5 25>,
+				  <7 6 15>,
+				  <7 7 10>;
+	};
+
+	/* the mem node will be updated by ZSBL. */
+	/* chip 0 */
+	memory@0 {
+		device_type = "memory";
+		reg = <0x00000000 0x0000000 0x00000000 0x00000000>;
+		numa-node-id = <0>;
+	};
+	memory@1 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000001 0x00000000 0x00000000>;
+		numa-node-id = <1>;
+	};
+	memory@2 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000002 0x00000000 0x00000000>;
+		numa-node-id = <2>;
+	};
+	memory@3 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000003 0x00000000 0x00000000>;
+		numa-node-id = <3>;
+	};
+
+	/* chip 1 */
+	memory@4 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000004 0x00000000 0x00000000>;
+		numa-node-id = <4>;
+	};
+	memory@5 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000005 0x00000000 0x00000000>;
+		numa-node-id = <5>;
+	};
+	memory@6 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000006 0x00000000 0x00000000>;
+		numa-node-id = <6>;
+	};
+	memory@7 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000007 0x00000000 0x00000000>;
+		numa-node-id = <7>;
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+
+		intc: interrupt-controller@7090000000 {
+			#interrupt-cells = <1>;
+			compatible = "riscv,plic0";
+			interrupt-controller;
+			interrupts-extended = <
+				&cpu0_intc  0xffffffff &cpu0_intc  9
+				&cpu1_intc  0xffffffff &cpu1_intc  9
+				&cpu2_intc  0xffffffff &cpu2_intc  9
+				&cpu3_intc  0xffffffff &cpu3_intc  9
+				&cpu4_intc  0xffffffff &cpu4_intc  9
+				&cpu5_intc  0xffffffff &cpu5_intc  9
+				&cpu6_intc  0xffffffff &cpu6_intc  9
+				&cpu7_intc  0xffffffff &cpu7_intc  9
+				&cpu8_intc  0xffffffff &cpu8_intc  9
+				&cpu9_intc  0xffffffff &cpu9_intc  9
+				&cpu10_intc  0xffffffff &cpu10_intc  9
+				&cpu11_intc  0xffffffff &cpu11_intc  9
+				&cpu12_intc  0xffffffff &cpu12_intc  9
+				&cpu13_intc  0xffffffff &cpu13_intc  9
+				&cpu14_intc  0xffffffff &cpu14_intc  9
+				&cpu15_intc  0xffffffff &cpu15_intc  9
+				&cpu16_intc  0xffffffff &cpu16_intc  9
+				&cpu17_intc  0xffffffff &cpu17_intc  9
+				&cpu18_intc  0xffffffff &cpu18_intc  9
+				&cpu19_intc  0xffffffff &cpu19_intc  9
+				&cpu20_intc  0xffffffff &cpu20_intc  9
+				&cpu21_intc  0xffffffff &cpu21_intc  9
+				&cpu22_intc  0xffffffff &cpu22_intc  9
+				&cpu23_intc  0xffffffff &cpu23_intc  9
+				&cpu24_intc  0xffffffff &cpu24_intc  9
+				&cpu25_intc  0xffffffff &cpu25_intc  9
+				&cpu26_intc  0xffffffff &cpu26_intc  9
+				&cpu27_intc  0xffffffff &cpu27_intc  9
+				&cpu28_intc  0xffffffff &cpu28_intc  9
+				&cpu29_intc  0xffffffff &cpu29_intc  9
+				&cpu30_intc  0xffffffff &cpu30_intc  9
+				&cpu31_intc  0xffffffff &cpu31_intc  9
+				&cpu32_intc  0xffffffff &cpu32_intc  9
+				&cpu33_intc  0xffffffff &cpu33_intc  9
+				&cpu34_intc  0xffffffff &cpu34_intc  9
+				&cpu35_intc  0xffffffff &cpu35_intc  9
+				&cpu36_intc  0xffffffff &cpu36_intc  9
+				&cpu37_intc  0xffffffff &cpu37_intc  9
+				&cpu38_intc  0xffffffff &cpu38_intc  9
+				&cpu39_intc  0xffffffff &cpu39_intc  9
+				&cpu40_intc  0xffffffff &cpu40_intc  9
+				&cpu41_intc  0xffffffff &cpu41_intc  9
+				&cpu42_intc  0xffffffff &cpu42_intc  9
+				&cpu43_intc  0xffffffff &cpu43_intc  9
+				&cpu44_intc  0xffffffff &cpu44_intc  9
+				&cpu45_intc  0xffffffff &cpu45_intc  9
+				&cpu46_intc  0xffffffff &cpu46_intc  9
+				&cpu47_intc  0xffffffff &cpu47_intc  9
+				&cpu48_intc  0xffffffff &cpu48_intc  9
+				&cpu49_intc  0xffffffff &cpu49_intc  9
+				&cpu50_intc  0xffffffff &cpu50_intc  9
+				&cpu51_intc  0xffffffff &cpu51_intc  9
+				&cpu52_intc  0xffffffff &cpu52_intc  9
+				&cpu53_intc  0xffffffff &cpu53_intc  9
+				&cpu54_intc  0xffffffff &cpu54_intc  9
+				&cpu55_intc  0xffffffff &cpu55_intc  9
+				&cpu56_intc  0xffffffff &cpu56_intc  9
+				&cpu57_intc  0xffffffff &cpu57_intc  9
+				&cpu58_intc  0xffffffff &cpu58_intc  9
+				&cpu59_intc  0xffffffff &cpu59_intc  9
+				&cpu60_intc  0xffffffff &cpu60_intc  9
+				&cpu61_intc  0xffffffff &cpu61_intc  9
+				&cpu62_intc  0xffffffff &cpu62_intc  9
+				&cpu63_intc  0xffffffff &cpu63_intc  9
+
+				//chip 1
+				&cpu64_intc  0xffffffff &cpu64_intc  9
+				&cpu65_intc  0xffffffff &cpu65_intc  9
+				&cpu66_intc  0xffffffff &cpu66_intc  9
+				&cpu67_intc  0xffffffff &cpu67_intc  9
+				&cpu68_intc  0xffffffff &cpu68_intc  9
+				&cpu69_intc  0xffffffff &cpu69_intc  9
+				&cpu70_intc  0xffffffff &cpu70_intc  9
+				&cpu71_intc  0xffffffff &cpu71_intc  9
+				&cpu72_intc  0xffffffff &cpu72_intc  9
+				&cpu73_intc  0xffffffff &cpu73_intc  9
+				&cpu74_intc  0xffffffff &cpu74_intc  9
+				&cpu75_intc  0xffffffff &cpu75_intc  9
+				&cpu76_intc  0xffffffff &cpu76_intc  9
+				&cpu77_intc  0xffffffff &cpu77_intc  9
+				&cpu78_intc  0xffffffff &cpu78_intc  9
+				&cpu79_intc  0xffffffff &cpu79_intc  9
+				&cpu80_intc  0xffffffff &cpu80_intc  9
+				&cpu81_intc  0xffffffff &cpu81_intc  9
+				&cpu82_intc  0xffffffff &cpu82_intc  9
+				&cpu83_intc  0xffffffff &cpu83_intc  9
+				&cpu84_intc  0xffffffff &cpu84_intc  9
+				&cpu85_intc  0xffffffff &cpu85_intc  9
+				&cpu86_intc  0xffffffff &cpu86_intc  9
+				&cpu87_intc  0xffffffff &cpu87_intc  9
+				&cpu88_intc  0xffffffff &cpu88_intc  9
+				&cpu89_intc  0xffffffff &cpu89_intc  9
+				&cpu90_intc  0xffffffff &cpu90_intc  9
+				&cpu91_intc  0xffffffff &cpu91_intc  9
+				&cpu92_intc  0xffffffff &cpu92_intc  9
+				&cpu93_intc  0xffffffff &cpu93_intc  9
+				&cpu94_intc  0xffffffff &cpu94_intc  9
+				&cpu95_intc  0xffffffff &cpu95_intc  9
+				&cpu96_intc  0xffffffff &cpu96_intc  9
+				&cpu97_intc  0xffffffff &cpu97_intc  9
+				&cpu98_intc  0xffffffff &cpu98_intc  9
+				&cpu99_intc  0xffffffff &cpu99_intc  9
+				&cpu100_intc  0xffffffff &cpu100_intc  9
+				&cpu101_intc  0xffffffff &cpu101_intc  9
+				&cpu102_intc  0xffffffff &cpu102_intc  9
+				&cpu103_intc  0xffffffff &cpu103_intc  9
+				&cpu104_intc  0xffffffff &cpu104_intc  9
+				&cpu105_intc  0xffffffff &cpu105_intc  9
+				&cpu106_intc  0xffffffff &cpu106_intc  9
+				&cpu107_intc  0xffffffff &cpu107_intc  9
+				&cpu108_intc  0xffffffff &cpu108_intc  9
+				&cpu109_intc  0xffffffff &cpu109_intc  9
+				&cpu110_intc  0xffffffff &cpu110_intc  9
+				&cpu111_intc  0xffffffff &cpu111_intc  9
+				&cpu112_intc  0xffffffff &cpu112_intc  9
+				&cpu113_intc  0xffffffff &cpu113_intc  9
+				&cpu114_intc  0xffffffff &cpu114_intc  9
+				&cpu115_intc  0xffffffff &cpu115_intc  9
+				&cpu116_intc  0xffffffff &cpu116_intc  9
+				&cpu117_intc  0xffffffff &cpu117_intc  9
+				&cpu118_intc  0xffffffff &cpu118_intc  9
+				&cpu119_intc  0xffffffff &cpu119_intc  9
+				&cpu120_intc  0xffffffff &cpu120_intc  9
+				&cpu121_intc  0xffffffff &cpu121_intc  9
+				&cpu122_intc  0xffffffff &cpu122_intc  9
+				&cpu123_intc  0xffffffff &cpu123_intc  9
+				&cpu124_intc  0xffffffff &cpu124_intc  9
+				&cpu125_intc  0xffffffff &cpu125_intc  9
+				&cpu126_intc  0xffffffff &cpu126_intc  9
+				&cpu127_intc  0xffffffff &cpu127_intc  9
+				>;
+			reg = <0x00000070 0x90000000 0x00000000 0x04000000>;
+			reg-names = "control";
+			riscv,max-priority = <7>;
+			riscv,ndev = <172>;
+		};
+
+		top_misc: top_misc_ctrl@7030010000 {
+			compatible = "sophgo,top-misc", "syscon";
+			reg = <0x70 0x30010000 0x0 0x8000>;
+			clocks = <&div_clk GATE_CLK_AXI_DBG_I2C>,
+				 <&div_clk GATE_CLK_AXI_SRAM>,
+				 <&div_clk GATE_CLK_AHB_ROM>;
+			clock-names = "dbg_i2c_clk", "axi_sram_clk", "ahb_rom_clk";
+		};
+
+		rst: reset-controller {
+			#reset-cells = <1>;
+			compatible = "bitmain,reset";
+			subctrl-syscon = <&top_misc>;
+			top_rst_offset = <0x3000>;
+			nr_resets = <RST_MAX_NUM>;
+		};
+
+		i2c0: i2c@7030005000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			compatible = "snps,designware-i2c";
+			reg = <0x70 0x30005000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <101>;
+			clock-frequency = <100000>;
+		};
+
+		i2c1: i2c@7030006000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			compatible = "snps,designware-i2c";
+			reg = <0x70 0x30006000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <102>;
+			clock-frequency = <100000>;
+		};
+
+		i2c2: i2c@7030007000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			compatible = "snps,designware-i2c";
+			reg = <0x70 0x30007000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <103>;
+			clock-frequency = <100000>;
+		};
+
+		i2c3: i2c@7030008000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			compatible = "snps,designware-i2c";
+			reg = <0x70 0x30008000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <104>;
+			clock-frequency = <100000>;
+		};
+
+		gpio0: gpio@7030009000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x30009000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port0a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <96>;
+			};
+		};
+
+		pwm: pwm@703000C000 {
+			compatible = "bitmain,bm-pwm";
+			reg = <0x70 0x3000C000 0x0 0x20>;
+			clocks = <&div_clk GATE_CLK_APB_PWM>;
+			clock-names = "clk_gate_apb_pwm";
+			#pwm-cells = <2>;
+			pwm-num = <2>;
+			no-polarity;
+		};
+
+		tach0: tach@703000C020 {
+			compatible = "bitmain,bm-tach";
+			reg = <0x70 0x3000C020 0x0 0x8>;
+		};
+
+		tach1: tach@703000C028 {
+			compatible = "bitmain,bm-tach";
+			reg = <0x70 0x3000C028 0x0 0x8>;
+		};
+
+		uart0: serial@7040000000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x00000070 0x40000000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <112>;
+			clock-frequency = <500000000>;
+			clocks = <&div_clk GATE_CLK_UART_500M>,
+				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-names = "baudclk", "apb_pclk";
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		emmc: bm-emmc@704002A000 {
+			compatible = "bitmain,bm-emmc";
+			reg = <0x70 0x4002A000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <134>;
+			bus-width = <4>;
+			non-removable;
+			no-sdio;
+			no-sd;
+			resets = <&rst RST_EMMC>;
+			reset-names = "emmc";
+			clocks =
+				<&div_clk GATE_CLK_EMMC_100M>,
+				<&div_clk GATE_CLK_AXI_EMMC>,
+				<&div_clk GATE_CLK_100K_EMMC>;
+			clock-names =
+				"clk_gate_emmc",
+				"clk_gate_axi_emmc",
+				"clk_gate_100k_emmc";
+		};
+
+		sd: bm-sd@704002B000 {
+			compatible = "bitmain,bm-sd";
+			reg = <0x70 0x4002B000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <136>;
+			bus-width = <4>;
+			no-sdio;
+			no-mmc;
+			resets = <&rst RST_SD>;
+			reset-names = "sdio";
+			clocks =
+				<&div_clk GATE_CLK_SD_100M>,
+				<&div_clk GATE_CLK_AXI_SD>,
+				<&div_clk GATE_CLK_100K_SD>;
+			clock-names =
+				"clk_gate_sd",
+				"clk_gate_axi_sd",
+				"clk_gate_100k_sd";
+		};
+
+		stmmac_axi_setup: stmmac-axi-config {
+			snps,wr_osr_lmt = <1>;
+			snps,rd_osr_lmt = <2>;
+			snps,blen = <4 8 16 0 0 0 0>;
+		};
+
+		mtl_rx_setup: rx-queues-config {
+			snps,rx-queues-to-use = <8>;
+			queue0 {};
+			queue1 {};
+			queue2 {};
+			queue3 {};
+			queue4 {};
+			queue5 {};
+			queue6 {};
+			queue7 {};
+		};
+
+		mtl_tx_setup: tx-queues-config {
+			snps,tx-queues-to-use = <8>;
+			queue0 {};
+			queue1 {};
+			queue2 {};
+			queue3 {};
+			queue4 {};
+			queue5 {};
+			queue6 {};
+			queue7 {};
+		};
+
+		ethernet0: ethernet@7040026000 {
+			compatible = "bitmain,ethernet";
+			reg = <0x70 0x40026000 0x0 0x4000>;
+			interrupt-parent = <&intc>;
+			interrupts = <132>;
+			interrupt-names = "macirq";
+			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
+			clocks = <&div_clk DIV_CLK_FPLL_TX_ETH0>,
+				   <&div_clk GATE_CLK_TX_ETH0>,
+				   <&div_clk GATE_CLK_AXI_ETH0>,
+				   <&div_clk GATE_CLK_PTP_REF_I_ETH0>,
+				   <&div_clk GATE_CLK_REF_ETH0>;
+
+			/* no hash filter and perfect filter support */
+			snps,multicast-filter-bins = <0>;
+			snps,perfect-filter-entries = <1>;
+
+			snps,txpbl = <32>;
+			snps,rxpbl = <32>;
+			snps,aal;
+
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+
+			phy-mode = "rgmii-id";
+			phy-reset-gpios = <&port0a 27 0>;
+			phy-handle = <&phy0>;
+			mdio {
+				#address-cells = <0x1>;
+				#size-cells = <0x0>;
+				compatible = "snps,dwmac-mdio";
+				phy0: phy@0 {
+					compatible = "ethernet-phy-ieee802.3-c22";
+					device_type = "ethernet-phy";
+					reg = <0x0>;
+				};
+			};
+		};
+	};
+
+	pcie@7060000000 {
+		compatible = "sophgo,cdns-pcie-host";
+		device_type = "pci";
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x0 0x7f>;
+		linux,pci-domain = <0>;
+		cdns,max-outbound-regions = <16>;
+		cdns,no-bar-match-nbits = <48>;
+		vendor-id = /bits/ 16 <0x1E30>;
+		device-id = /bits/ 16 <0x2042>;
+		interrupt-parent = <&intc>;
+		interrupts = <122>;
+		interrupt-names = "msi";
+		reg = <0x70 0x60000000  0x0 0x02000000>,
+		      <0x40 0x00000000  0x0 0x00001000>;
+		reg-names = "reg", "cfg";
+
+		// IO, check IO_SPACE_LIMIT
+		// 32bit prefetchable memory
+		// 32bit non-prefetchable memory
+		// 64bit prefetchable memory
+		// 64bit non-prefetchable memory
+		ranges = <0x01000000 0x0 0x00000000  0x40 0x10000000  0x0 0x00800000>,
+			 <0x42000000 0x0 0x20000000  0x40 0x20000000  0x0 0x50000000>,
+			 <0x02000000 0x0 0x70000000  0x40 0x70000000  0x0 0x20000000>,
+			 <0x43000000 0x1 0x00000000  0x41 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x3 0x00000000  0x43 0x00000000  0x1 0x00000000>;
+
+		status = "okay";
+	};
+
+	pcie@7062000000 {
+		compatible = "sophgo,cdns-pcie-host";
+		device_type = "pci";
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x80 0xff>;
+		linux,pci-domain = <1>;
+		cdns,max-outbound-regions = <16>;
+		cdns,no-bar-match-nbits = <48>;
+		vendor-id = /bits/ 16 <0x1E30>;
+		device-id = /bits/ 16 <0x2042>;
+		interrupt-parent = <&intc>;
+		interrupts = <123>;
+		interrupt-names = "msi";
+		reg = <0x70 0x62000000  0x0 0x02000000>,
+		      <0x48 0x00000000  0x0 0x00001000>;
+		reg-names = "reg", "cfg";
+
+		// IO, check IO_SPACE_LIMIT
+		// 32bit prefetchable memory
+		// 32bit non-prefetchable memory
+		// 64bit prefetchable memory
+		// 64bit non-prefetchable memory
+		ranges = <0x01000000 0x0 0x00800000  0x48 0x10800000  0x0 0x00800000>,
+			 <0x42000000 0x0 0x90000000  0x48 0x90000000  0x0 0x50000000>,
+			 <0x02000000 0x0 0xe0000000  0x48 0xe0000000  0x0 0x20000000>,
+			 <0x43000000 0x9 0x00000000  0x49 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0xb 0x00000000  0x4b 0x00000000  0x1 0x00000000>;
+
+		status = "okay";
+	};
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon ignore_loglevel rdinit=/init root=/dev/ram0 rw initrd=0x30000000,32M retain_initrd maxcpus=1 nvme.use_threaded_interrupts=1";
+		stdout-path = "serial0";
+	};
+};

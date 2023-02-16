@@ -276,7 +276,11 @@ static int __init numa_alloc_distance(void)
 	int i, j;
 
 	size = nr_node_ids * nr_node_ids * sizeof(numa_distance[0]);
+#ifdef CONFIG_HIGHMEM
+	numa_distance = memblock_alloc_low(size, PAGE_SIZE);
+#else
 	numa_distance = memblock_alloc(size, PAGE_SIZE);
+#endif
 	if (WARN_ON(!numa_distance))
 		return -ENOMEM;
 

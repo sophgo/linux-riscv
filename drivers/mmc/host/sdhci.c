@@ -49,8 +49,6 @@ static unsigned int debug_quirks2;
 
 static void sdhci_enable_preset_value(struct sdhci_host *host, bool enable);
 
-static bool sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd);
-
 void sdhci_dumpregs(struct sdhci_host *host)
 {
 	SDHCI_DUMP("============ SDHCI REGISTER DUMP ===========\n");
@@ -1641,7 +1639,7 @@ static void sdhci_finish_data(struct sdhci_host *host)
 	__sdhci_finish_data(host, false);
 }
 
-static bool sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
+bool sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 {
 	int flags;
 	u32 mask;
@@ -1732,6 +1730,7 @@ static bool sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 
 	return true;
 }
+EXPORT_SYMBOL_GPL(sdhci_send_command);
 
 static bool sdhci_present_error(struct sdhci_host *host,
 				struct mmc_command *cmd, bool present)

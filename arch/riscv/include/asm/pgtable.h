@@ -87,12 +87,25 @@
 
 #define FIXADDR_TOP      PCI_IO_START
 #ifdef CONFIG_64BIT
+#ifdef CONFIG_HIGHMEM
+#define FIXADDR_PMD_NUM  20
+#define FIXADDR_SIZE     (PMD_SIZE * FIXADDR_PMD_NUM)
+#else
 #define FIXADDR_SIZE     PMD_SIZE
+#endif
 #else
 #define FIXADDR_SIZE     PGDIR_SIZE
 #endif
 #define FIXADDR_START    (FIXADDR_TOP - FIXADDR_SIZE)
 
+#endif
+
+#ifdef CONFIG_HIGHMEM
+#define PKMAP_BASE       ((FIXADDR_START - PMD_SIZE) & (PMD_MASK))
+#define LAST_PKMAP       (PMD_SIZE >> PAGE_SHIFT)
+#define LAST_PKMAP_MASK  (LAST_PKMAP - 1)
+#define PKMAP_NR(virt)   (((virt) - PKMAP_BASE) >> PAGE_SHIFT)
+#define PKMAP_ADDR(nr)   (PKMAP_BASE + ((nr) << PAGE_SHIFT))
 #endif
 
 #ifdef CONFIG_XIP_KERNEL
@@ -469,6 +482,9 @@ static inline void __set_pte_at(struct mm_struct *mm,
 		flush_icache_pte(pteval);
 
 	set_pte(ptep, pteval);
+#ifdef CONFIG_HIGHMEM
+	local_flush_tlb_page(addr);
+#endif
 }
 
 static inline void set_pte_at(struct mm_struct *mm,

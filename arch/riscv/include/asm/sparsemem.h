@@ -5,7 +5,7 @@
 
 #ifdef CONFIG_SPARSEMEM
 #ifdef CONFIG_64BIT
-#define MAX_PHYSMEM_BITS	56
+#define MAX_PHYSMEM_BITS	44
 #else
 #define MAX_PHYSMEM_BITS	32
 #endif /* CONFIG_64BIT */

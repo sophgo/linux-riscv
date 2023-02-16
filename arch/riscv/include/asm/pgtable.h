@@ -150,9 +150,17 @@ extern struct pt_alloc_ops pt_ops __initdata;
 #define USER_PTRS_PER_PGD   (TASK_SIZE / PGDIR_SIZE)
 
 /* Page protection bits */
+#ifdef CONFIG_ERRATA_THEAD_PBMT
+#define _PAGE_BASE	(_PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_USER | \
+			_PAGE_PMA_THEAD)
+
+#define PAGE_NONE		__pgprot(_PAGE_PROT_NONE | _PAGE_READ | \
+					_PAGE_PMA_THEAD)
+#else
 #define _PAGE_BASE	(_PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_USER)
 
 #define PAGE_NONE		__pgprot(_PAGE_PROT_NONE | _PAGE_READ)
+#endif
 #define PAGE_READ		__pgprot(_PAGE_BASE | _PAGE_READ)
 #define PAGE_WRITE		__pgprot(_PAGE_BASE | _PAGE_READ | _PAGE_WRITE)
 #define PAGE_EXEC		__pgprot(_PAGE_BASE | _PAGE_EXEC)
@@ -166,12 +174,22 @@ extern struct pt_alloc_ops pt_ops __initdata;
 #define PAGE_SHARED		PAGE_WRITE
 #define PAGE_SHARED_EXEC	PAGE_WRITE_EXEC
 
+#ifdef CONFIG_ERRATA_THEAD_PBMT
+#define _PAGE_KERNEL		(_PAGE_READ \
+				| _PAGE_WRITE \
+				| _PAGE_PRESENT \
+				| _PAGE_ACCESSED \
+				| _PAGE_DIRTY \
+				| _PAGE_GLOBAL \
+				| _PAGE_PMA_THEAD)
+#else
 #define _PAGE_KERNEL		(_PAGE_READ \
 				| _PAGE_WRITE \
 				| _PAGE_PRESENT \
 				| _PAGE_ACCESSED \
 				| _PAGE_DIRTY \
 				| _PAGE_GLOBAL)
+#endif
 
 #define PAGE_KERNEL		__pgprot(_PAGE_KERNEL)
 #define PAGE_KERNEL_READ	__pgprot(_PAGE_KERNEL & ~_PAGE_WRITE)

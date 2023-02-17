@@ -374,18 +374,47 @@
 		};
 	};
 
+	intc1: top_intc {
+		compatible = "sophgo,top-intc";
+		reg = <0x70 0x300102E0 0x0 0x4>,
+		      <0x70 0x30010300 0x0 0x4>,
+		      <0x70 0x30010304 0x0 0x4>;
+		reg-names = "sta", "set", "clr";
+		reg-bitwidth = <32>;
+		interrupt-controller;
+		#interrupt-cells = <0x1>; // only applies to child node
+		for-msi;
+
+		interrupt-parent = <&intc>;
+		interrupts = <64>, <65>, <66>, <67>, <68>, <69>, <70>, <71>,
+			     <72>, <73>, <74>, <75>, <76>, <77>, <78>, <79>,
+			     <80>, <81>, <82>, <83>, <84>, <85>, <86>, <87>,
+			     <88>, <89>, <90>, <91>, <92>, <93>, <94>, <95>;
+		interrupt-names = "msi0",  "msi1",  "msi2",  "msi3",
+				  "msi4",  "msi5",  "msi6",  "msi7",
+				  "msi8",  "msi9",  "msi10", "msi11",
+				  "msi12", "msi13", "msi14", "msi15",
+				  "msi16", "msi17", "msi18", "msi19",
+				  "msi20", "msi21", "msi22", "msi23",
+				  "msi24", "msi25", "msi26", "msi27",
+				  "msi28", "msi29", "msi30", "msi31";
+
+	};
+
 	pcie@7060000000 {
 		compatible = "sophgo,cdns-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		bus-range = <0x0 0x7f>;
+		bus-range = <0x0 0x3f>;
 		linux,pci-domain = <0>;
 		cdns,max-outbound-regions = <16>;
 		cdns,no-bar-match-nbits = <48>;
 		vendor-id = /bits/ 16 <0x1E30>;
 		device-id = /bits/ 16 <0x2042>;
+		pcie-id = /bits/ 16 <0x0>;
+		link-id = /bits/ 16 <0x0>;
 		interrupt-parent = <&intc>;
 		interrupts = <122>;
 		interrupt-names = "msi";
@@ -398,11 +427,43 @@
 		// 32bit non-prefetchable memory
 		// 64bit prefetchable memory
 		// 64bit non-prefetchable memory
-		ranges = <0x01000000 0x0 0x00000000  0x40 0x10000000  0x0 0x00800000>,
-			 <0x42000000 0x0 0x20000000  0x40 0x20000000  0x0 0x50000000>,
-			 <0x02000000 0x0 0x70000000  0x40 0x70000000  0x0 0x20000000>,
-			 <0x43000000 0x1 0x00000000  0x41 0x00000000  0x2 0x00000000>,
-			 <0x03000000 0x3 0x00000000  0x43 0x00000000  0x1 0x00000000>;
+		ranges = <0x01000000 0x0  0x00000000  0x40 0x10000000  0x0 0x00800000>,
+			 <0x42000000 0x0  0x20000000  0x40 0x20000000  0x0 0x30000000>,
+			 <0x02000000 0x0  0x50000000  0x40 0x50000000  0x0 0x10000000>,
+			 <0x43000000 0x41 0x00000000  0x41 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x43 0x00000000  0x43 0x00000000  0x1 0x00000000>;
+
+		status = "okay";
+	};
+
+	pcie@7060800000 {
+		compatible = "sophgo,cdns-pcie-host";
+		device_type = "pci";
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x40 0x7f>;
+		linux,pci-domain = <1>;
+		cdns,max-outbound-regions = <16>;
+		cdns,no-bar-match-nbits = <48>;
+		vendor-id = /bits/ 16 <0x1E30>;
+		device-id = /bits/ 16 <0x2042>;
+		pcie-id = /bits/ 16 <0x0>;
+		link-id = /bits/ 16 <0x1>;
+		interrupt-parent = <&intc1>;
+		reg = <0x44 0x00000000  0x0 0x00001000>;
+		reg-names = "cfg";
+
+		// IO, check IO_SPACE_LIMIT
+		// 32bit prefetchable memory
+		// 32bit non-prefetchable memory
+		// 64bit prefetchable memory
+		// 64bit non-prefetchable memory
+		ranges = <0x01000000 0x0  0x00400000  0x44 0x10400000  0x0 0x00400000>,
+			 <0x42000000 0x0  0x60000000  0x44 0x60000000  0x0 0x20000000>,
+			 <0x02000000 0x0  0x80000000  0x44 0x80000000  0x0 0x10000000>,
+			 <0x43000000 0x45 0x00000000  0x45 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x47 0x00000000  0x47 0x00000000  0x1 0x00000000>;
 
 		status = "okay";
 	};
@@ -414,11 +475,13 @@
 		#size-cells = <2>;
 
 		bus-range = <0x80 0xff>;
-		linux,pci-domain = <1>;
+		linux,pci-domain = <2>;
 		cdns,max-outbound-regions = <16>;
 		cdns,no-bar-match-nbits = <48>;
 		vendor-id = /bits/ 16 <0x1E30>;
 		device-id = /bits/ 16 <0x2042>;
+		pcie-id = /bits/ 16 <0x1>;
+		link-id = /bits/ 16 <0x0>;
 		interrupt-parent = <&intc>;
 		interrupts = <123>;
 		interrupt-names = "msi";
@@ -431,11 +494,11 @@
 		// 32bit non-prefetchable memory
 		// 64bit prefetchable memory
 		// 64bit non-prefetchable memory
-		ranges = <0x01000000 0x0 0x00800000  0x48 0x10800000  0x0 0x00800000>,
-			 <0x42000000 0x0 0x90000000  0x48 0x90000000  0x0 0x50000000>,
-			 <0x02000000 0x0 0xe0000000  0x48 0xe0000000  0x0 0x20000000>,
-			 <0x43000000 0x9 0x00000000  0x49 0x00000000  0x2 0x00000000>,
-			 <0x03000000 0xb 0x00000000  0x4b 0x00000000  0x1 0x00000000>;
+		ranges = <0x01000000 0x0  0x00800000  0x48 0x10800000  0x0 0x00800000>,
+			 <0x42000000 0x0  0x90000000  0x48 0x90000000  0x0 0x50000000>,
+			 <0x02000000 0x0  0xe0000000  0x48 0xe0000000  0x0 0x20000000>,
+			 <0x43000000 0x49 0x00000000  0x49 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x4b 0x00000000  0x4b 0x00000000  0x1 0x00000000>;
 
 		status = "okay";
 	};

@@ -14,6 +14,7 @@
 #include <linux/pm_runtime.h>
 
 #include "pcie-cadence.h"
+#include "pcie-cadence-sophgo.h"
 
 #define MAX_MSI_IRQS			512
 #define MAX_MSI_IRQS_PER_CTRL		1
@@ -37,6 +38,12 @@
 #define CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT		2
 
 #define CDNS_PLAT_CPU_TO_BUS_ADDR       0x4FFFFFFFFF
+
+struct cdns_pcie_database {
+	void __iomem *pcie_reg_base;
+};
+
+static struct cdns_pcie_database cdns_pcie_db;
 
 static inline void cdns_pcie_rp_writel(struct cdns_pcie *pcie,
 				       u32 reg, u32 value)
@@ -75,6 +82,8 @@ struct cdns_mango_pcie_rc {
 	u32			no_bar_nbits;
 	u16			vendor_id;
 	u16			device_id;
+	u16			pcie_id;
+	u16			link_id;
 	struct irq_domain	*msi_domain;
 	int			msi_irq;
 	struct irq_domain	*irq_domain;
@@ -153,7 +162,7 @@ int cdns_pcie_config_read(struct pci_bus *bus, unsigned int devfn,
 	unsigned int value, offset;
 	void __iomem *aligned_addr;
 
-	if ((bus->number != 0) && (bus->number != 0x80))
+	if ((bus->number != 0) && (bus->number != 0x40) && (bus->number != 0x80))
 		return pci_generic_config_read(bus, devfn, where, size, val);
 
 	addr = (unsigned long)bus->ops->map_bus(bus, devfn, where);
@@ -188,7 +197,7 @@ int cdns_pcie_config_write(struct pci_bus *bus, unsigned int devfn,
 	unsigned int value, offset;
 	void __iomem *aligned_addr;
 
-	if ((bus->number != 0) && (bus->number != 0x80))
+	if ((bus->number != 0) && (bus->number != 0x40) && (bus->number != 0x80))
 		return pci_generic_config_write(bus, devfn, where, size, val);
 
 	addr = (unsigned long)bus->ops->map_bus(bus, devfn, where);
@@ -379,14 +388,15 @@ static int cdns_pcie_host_init(struct device *dev, struct cdns_mango_pcie_rc *rc
 	if (err)
 		return err;
 
-	rc->num_vectors = MSI_DEF_NUM_VECTORS;
-	rc->num_applied_vecs = 0;
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		err = cdns_pcie_msi_init(rc);
-		if (err)
-			return err;
+	if (rc->link_id == 0) {
+		rc->num_vectors = MSI_DEF_NUM_VECTORS;
+		rc->num_applied_vecs = 0;
+		if (IS_ENABLED(CONFIG_PCI_MSI)) {
+			err = cdns_pcie_msi_init(rc);
+			if (err)
+				return err;
+		}
 	}
-
 	return 0;
 }
 
@@ -420,6 +430,22 @@ static struct msi_domain_info cdns_pcie_msi_domain_info = {
 		   MSI_FLAG_PCI_MSIX | MSI_FLAG_MULTI_PCI_MSI),
 	.chip	= &cdns_pcie_msi_irq_chip,
 };
+
+static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc)
+{
+	struct irq_domain *irq_parent = cdns_pcie_get_parent_irq_domain();
+	struct fwnode_handle *fwnode = of_node_to_fwnode(rc->dev->of_node);
+
+	rc->msi_domain = pci_msi_create_irq_domain(fwnode,
+						   &cdns_pcie_msi_domain_info,
+						   irq_parent);
+	if (!rc->msi_domain) {
+		dev_err(rc->dev, "create msi irq domain failed\n");
+		return -ENODEV;
+	}
+
+	return 0;
+}
 
 /* MSI int handler */
 irqreturn_t cdns_handle_msi_irq(struct cdns_mango_pcie_rc *rc)
@@ -694,11 +720,22 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	rc->device_id = 0xffff;
 	of_property_read_u16(np, "device-id", &rc->device_id);
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "reg");
-	pcie->reg_base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(pcie->reg_base)) {
-		dev_err(dev, "missing \"reg\"\n");
-		return PTR_ERR(pcie->reg_base);
+	rc->pcie_id = 0xffff;
+	of_property_read_u16(np, "pcie-id", &rc->pcie_id);
+
+	rc->link_id = 0xffff;
+	of_property_read_u16(np, "link-id", &rc->link_id);
+
+	if (rc->link_id == 0) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "reg");
+		pcie->reg_base = devm_ioremap_resource(dev, res);
+		if (IS_ERR(pcie->reg_base)) {
+			dev_err(dev, "missing \"reg\"\n");
+			return PTR_ERR(pcie->reg_base);
+		}
+		cdns_pcie_db.pcie_reg_base = pcie->reg_base;
+	} else if (rc->link_id == 1) {
+		pcie->reg_base = cdns_pcie_db.pcie_reg_base + 0x800000;
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "cfg");
@@ -727,15 +764,17 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_init;
 
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+	if ((rc->link_id == 0) && (IS_ENABLED(CONFIG_PCI_MSI))) {
 		rc->msi_irq = platform_get_irq_byname(pdev, "msi");
 		if (rc->msi_irq <= 0) {
 			dev_err(dev, "failed to get MSI irq\n");
 			goto err_init_irq;
 		}
+
 		ret = devm_request_irq(dev, rc->msi_irq, cdns_pcie_irq_handler,
-							   IRQF_SHARED | IRQF_NO_THREAD,
-							   "cdns-pcie-irq", rc);
+				       IRQF_SHARED | IRQF_NO_THREAD,
+				       "cdns-pcie-irq", rc);
+
 		if (ret) {
 			dev_err(dev, "failed to request MSI irq\n");
 			goto err_init_irq;
@@ -746,11 +785,18 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	bridge->ops = &cdns_pcie_host_ops;
 	bridge->map_irq = of_irq_parse_and_map_pci;
 	bridge->swizzle_irq = pci_common_swizzle;
-	bridge->sysdata = rc;
+	if (rc->link_id == 0)
+		bridge->sysdata = rc;
 
-	ret = cdns_pcie_msi_setup(rc);
-	if (ret < 0)
-		goto err_host_probe;
+	if (rc->link_id == 0) {
+		ret = cdns_pcie_msi_setup(rc);
+		if (ret < 0)
+			goto err_host_probe;
+	} else if (rc->link_id == 1) {
+		ret = cdns_pcie_msi_setup_for_top_intc(rc);
+		if (ret < 0)
+			goto err_host_probe;
+	}
 
 	ret = pci_host_probe(bridge);
 	if (ret < 0)
@@ -760,7 +806,7 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 
  err_host_probe:
  err_init_irq:
-	if (pci_msi_enabled())
+	if ((rc->link_id == 0) && pci_msi_enabled())
 		cdns_pcie_free_msi(rc);
 
  err_init:

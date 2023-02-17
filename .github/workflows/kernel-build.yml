@@ -1,0 +1,75 @@
+name: sophgo-kernel
+
+on:
+  push:
+ 
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  build-kernel:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: thead-gcc
+            toolchain_tripe: riscv64-unknown-linux-gnu-
+          - name: gcc-12
+            toolchain_tripe: riscv64-linux-gnu-
+
+    runs-on: ubuntu-22.04
+    env:
+      xuetie_toolchain: https://occ-oss-prod.oss-cn-hangzhou.aliyuncs.com/resource//1663142514282
+      toolchain_file_name: Xuantie-900-gcc-linux-5.10.4-glibc-x86_64-V2.6.1-20220906.tar.gz
+      wget_alias: 'wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0'
+      ARCH: riscv
+      KBUILD_BUILD_USER: riscv
+      KBUILD_BUILD_HOST: riscv-builder
+      KDEB_COMPRESS: xz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: kernel
+
+      - name: Install software
+        run: |
+              sudo apt update && \
+              sudo apt install -y gdisk dosfstools g++-12-riscv64-linux-gnu build-essential \
+                                  libncurses-dev gawk flex bison openssl libssl-dev tree \
+                                  dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf \
+                                  device-tree-compiler xz-utils
+              sudo update-alternatives --install \
+                  /usr/bin/riscv64-linux-gnu-gcc riscv64-gcc /usr/bin/riscv64-linux-gnu-gcc-12 10
+              sudo update-alternatives --install \
+                  /usr/bin/riscv64-linux-gnu-g++ riscv64-g++ /usr/bin/riscv64-linux-gnu-g++-12 10
+
+      - name: Compile Kernel && Install
+        run: |
+              mkdir -p artifact
+              ${wget_alias} ${xuetie_toolchain}/${toolchain_file_name}
+              tar -xvf ${toolchain_file_name} -C /opt
+              pushd kernel
+                export PATH="/opt/Xuantie-900-gcc-linux-5.10.4-glibc-x86_64-V2.6.1/bin:$PATH"
+                make CROSS_COMPILE=${{ matrix.toolchain_tripe }} ARCH=${ARCH} sophgo_mango_ubuntu_defconfig
+                if [[ ${{ matrix.name }} = "thead-gcc" ]]; then
+                  echo "vector kernel"
+                  echo "CONFIG_VECTOR=y" >> .config
+                  echo "CONFIG_THEAD_ISA=y" >> .config
+                fi
+                make CROSS_COMPILE=${{ matrix.toolchain_tripe }} ARCH=${ARCH} -j$(nproc) dtbs
+                make CROSS_COMPILE=${{ matrix.toolchain_tripe }} ARCH=${ARCH} -j$(nproc) bindeb-pkg
+                sudo cp -v arch/riscv/boot/dts/sophgo/*.dtb ../artifact
+                sudo cp -v ../*.deb ../artifact
+              popd
+
+      - name: compress
+        run: tar -zcvf sophgo-kernel-${{ matrix.name }}.tar.gz artifact
+
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: sophgo-kernel-${{ matrix.name }}.tar.gz
+          path: sophgo-kernel-${{ matrix.name }}.tar.gz
+          retention-days: 10

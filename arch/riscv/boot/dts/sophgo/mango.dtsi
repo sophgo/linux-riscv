@@ -238,12 +238,12 @@
 		};
 
 		tach0: tach@703000C020 {
-			compatible = "bitmain,bm-tach";
+			compatible = "sophgo,sophgo-tach";
 			reg = <0x70 0x3000C020 0x0 0x8>;
 		};
 
 		tach1: tach@703000C028 {
-			compatible = "bitmain,bm-tach";
+			compatible = "sophgo,sophgo-tach";
 			reg = <0x70 0x3000C028 0x0 0x8>;
 		};
 

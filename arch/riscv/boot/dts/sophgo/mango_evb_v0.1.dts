@@ -96,11 +96,25 @@
 		};
 
 		board {
-			polling-delay-passive = <5000>; /*milliseconds*/
-			polling-delay = <5000>; /* milliseconds */
+			polling-delay-passive = <1000>; /* milliseconds */
+			polling-delay = <1000>; /* milliseconds */
 			thermal-sensors = <&mcu 1>;
-		};
 
+			trips {
+				board_pwmfan_trip1: board_pwmfan_trip@1 {
+					temperature = <75000>; /* millicelsius */
+					hysteresis = <8000>; /* millicelsius */
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				map4 {
+					trip = <&board_pwmfan_trip1>;
+					cooling-device = <&pwmfan 3 4>;
+				};
+			};
+		};
 	};
 
 };

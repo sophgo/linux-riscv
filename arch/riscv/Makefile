@@ -47,25 +47,30 @@ endif
 endif
 endif
 
-# ISA string setting
-riscv-march-$(CONFIG_ARCH_RV32I)	:= rv32ima
-riscv-march-$(CONFIG_ARCH_RV64I)	:= rv64ima
-riscv-march-$(CONFIG_FPU)		:= $(riscv-march-y)fd
-riscv-march-$(CONFIG_RISCV_ISA_C)	:= $(riscv-march-y)c
+riscv-march-cflags-$(CONFIG_ARCH_RV32I) := rv32ima
+riscv-march-cflags-$(CONFIG_ARCH_RV64I) := rv64ima
+riscv-march-cflags-$(CONFIG_RISCV_ISA_C)        := $(riscv-march-cflags-y)c
 
+riscv-march-aflags-$(CONFIG_ARCH_RV32I) := rv32ima
+riscv-march-aflags-$(CONFIG_ARCH_RV64I) := rv64ima
+riscv-march-aflags-$(CONFIG_FPU)                := $(riscv-march-aflags-y)fd
+riscv-march-aflags-$(CONFIG_RISCV_ISA_C)        := $(riscv-march-aflags-y)c
+riscv-march-aflags-$(CONFIG_VECTOR)             := $(riscv-march-aflags-y)v0p7
+
+# ISA string setting
 # Newer binutils versions default to ISA spec version 20191213 which moves some
 # instructions from the I extension to the Zicsr and Zifencei extensions.
-toolchain-need-zicsr-zifencei := $(call cc-option-yn, -march=$(riscv-march-y)_zicsr_zifencei)
-riscv-march-$(toolchain-need-zicsr-zifencei) := $(riscv-march-y)_zicsr_zifencei
+toolchain-need-zicsr-zifencei := $(call cc-option-yn, -march=$(riscv-march-aflags-y)_zicsr_zifencei)
+riscv-march-aflags-$(toolchain-need-zicsr-zifencei) := $(riscv-march-aflags-y)_zicsr_zifencei
 
 # Check if the toolchain supports Zicbom extension
-riscv-march-$(CONFIG_TOOLCHAIN_HAS_ZICBOM) := $(riscv-march-y)_zicbom
+riscv-march-aflags-$(CONFIG_TOOLCHAIN_HAS_ZICBOM) := $(riscv-march-aflags-y)_zicbom
 
 # Check if the toolchain supports Zihintpause extension
-riscv-march-$(CONFIG_TOOLCHAIN_HAS_ZIHINTPAUSE) := $(riscv-march-y)_zihintpause
+riscv-march-aflags-$(CONFIG_TOOLCHAIN_HAS_ZIHINTPAUSE) := $(riscv-march-aflags-y)_zihintpause
 
-KBUILD_CFLAGS += -march=$(subst fd,,$(riscv-march-y))
-KBUILD_AFLAGS += -march=$(riscv-march-y)
+KBUILD_CFLAGS += -march=$(riscv-march-cflags-y) -Wa,-march=$(riscv-march-aflags-y)
+KBUILD_AFLAGS += -march=$(riscv-march-aflags-y)
 
 KBUILD_CFLAGS += -mno-save-restore
 KBUILD_CFLAGS += -DCONFIG_PAGE_OFFSET=$(CONFIG_PAGE_OFFSET)

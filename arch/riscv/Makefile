@@ -63,12 +63,15 @@ riscv-march-aflags-$(CONFIG_THEAD_ISA)          := $(riscv-march-aflags-y)_xthea
 # instructions from the I extension to the Zicsr and Zifencei extensions.
 toolchain-need-zicsr-zifencei := $(call cc-option-yn, -march=$(riscv-march-aflags-y)_zicsr_zifencei)
 riscv-march-aflags-$(toolchain-need-zicsr-zifencei) := $(riscv-march-aflags-y)_zicsr_zifencei
+riscv-march-cflags-$(toolchain-need-zicsr-zifencei) := $(riscv-march-cflags-y)_zicsr_zifencei
 
 # Check if the toolchain supports Zicbom extension
 riscv-march-aflags-$(CONFIG_TOOLCHAIN_HAS_ZICBOM) := $(riscv-march-aflags-y)_zicbom
+riscv-march-cflags-$(CONFIG_TOOLCHAIN_HAS_ZICBOM) := $(riscv-march-cflags-y)_zicbom
 
 # Check if the toolchain supports Zihintpause extension
 riscv-march-aflags-$(CONFIG_TOOLCHAIN_HAS_ZIHINTPAUSE) := $(riscv-march-aflags-y)_zihintpause
+riscv-march-cflags-$(CONFIG_TOOLCHAIN_HAS_ZIHINTPAUSE) := $(riscv-march-cflags-y)_zihintpause
 
 KBUILD_CFLAGS += -march=$(riscv-march-cflags-y) -Wa,-march=$(riscv-march-aflags-y)
 KBUILD_AFLAGS += -march=$(riscv-march-aflags-y)

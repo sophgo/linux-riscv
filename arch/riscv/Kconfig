@@ -508,6 +508,10 @@ config VECTOR
 
 	  If you don't know what to do here, say Y.
 
+config THEAD_ISA
+	bool "T-HEAD extension ISA in AFLAGS with -march=_xtheadc"
+	default n
+
 endmenu # "Platform type"
 
 menu "Kernel features"

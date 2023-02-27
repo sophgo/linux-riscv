@@ -473,6 +473,19 @@ irqreturn_t cdns_handle_msi_irq(struct cdns_mango_pcie_rc *rc)
 		}
 		writel(0, ((void *)(rc->msi_page) + i * BYTE_NUM_PER_MSI_VEC));
 	}
+	if (ret == IRQ_NONE) {
+		ret = IRQ_HANDLED;
+		for (i = 0; i <= num_vectors; i++) {
+			for (pos = 0; pos < MAX_MSI_IRQS_PER_CTRL; pos++) {
+				irq = irq_find_mapping(rc->irq_domain,
+						       (i * MAX_MSI_IRQS_PER_CTRL) +
+						       pos);
+				if (!irq)
+					continue;
+				generic_handle_irq(irq);
+			}
+		}
+	}
 
 	return ret;
 }

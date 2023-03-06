@@ -61,6 +61,7 @@
 		#size-cells = <2>;
 		compatible = "simple-bus";
 		ranges;
+		dma-ranges = <0x0 0x0 0x0 0x0 0x1f 0x0>;
 
 		intc: interrupt-controller@7090000000 {
 			#interrupt-cells = <1>;

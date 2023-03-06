@@ -29,6 +29,13 @@
 	pinctrl-0 = <&fan1_acquire>;
 };
 
+&ethernet0 {
+	max-speed = <100>;
+	eth-sophgo-config {
+		autoneg = "enable";
+	};
+};
+
 / {
 	pwmfan: pwm-fan {
 		compatible = "pwm-fan";

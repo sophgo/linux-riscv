@@ -30,7 +30,7 @@
 };
 
 &ethernet0 {
-	max-speed = <100>;
+	max-speed = <1000>;
 	eth-sophgo-config {
 		autoneg = "enable";
 	};

@@ -359,7 +359,7 @@
 			snps,mtl-rx-config = <&mtl_rx_setup>;
 			snps,mtl-tx-config = <&mtl_tx_setup>;
 
-			phy-mode = "rgmii-id";
+			phy-mode = "rgmii-txid";
 			phy-reset-gpios = <&port0a 27 0>;
 			phy-handle = <&phy0>;
 			mdio {

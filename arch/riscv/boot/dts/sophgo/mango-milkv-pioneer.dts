@@ -1,9 +1,9 @@
 #include "mango.dtsi"
-#include "mango_pcie_3rc.dtsi"
+#include "mango-pcie-4rc.dtsi"
 
 / {
 	info {
-		file-name = "mango_evb_v0.1.dts";
+		file-name = "mango-milkv-pioneer.dts";
 	};
 };
 

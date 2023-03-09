@@ -11,7 +11,7 @@
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
 
-#define MAX_IRQ_NUMBER 64
+#define MAX_IRQ_NUMBER 32
 
 /*
  * here we assume all plic hwirq and tic hwirq should
@@ -133,7 +133,7 @@ static int top_intc_domain_alloc(struct irq_domain *domain,
 		data->tic_to_plic[hwirq] = data->plic_hwirqs[hwirq];
 	}
 
-	pr_info("%s hwirq %ld, irq %d, plic irq %d, total %d\n", __func__,
+	pr_debug("%s hwirq %ld, irq %d, plic irq %d, total %d\n", __func__,
 		hwirq, virq, data->plic_irqs[hwirq], nr_irqs);
 	return 0;
 }
@@ -145,7 +145,7 @@ static void top_intc_domain_free(struct irq_domain *domain,
 	struct top_intc_data *data = irq_data_get_irq_chip_data(d);
 	unsigned long flags;
 
-	pr_info("%s hwirq %ld, irq %d, total %d\n", __func__, d->hwirq, virq, nr_irqs);
+	pr_debug("%s hwirq %ld, irq %d, total %d\n", __func__, d->hwirq, virq, nr_irqs);
 
 	spin_lock_irqsave(&data->lock, flags);
 	bitmap_release_region(data->irq_bitmap, d->hwirq,
@@ -203,7 +203,7 @@ static void top_intc_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 	msg->address_hi = upper_32_bits(data->reg_set_phys);
 	msg->data = 1 << d->hwirq;
 
-	pr_info("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
+	pr_debug("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
 		(int)d->hwirq, msg->address_hi, msg->address_lo, msg->data);
 }
 
@@ -323,18 +323,17 @@ static int top_intc_probe(struct platform_device *pdev)
 
 		snprintf(name, ARRAY_SIZE(name), "msi%d", i);
 		irq = platform_get_irq_byname(pdev, name);
-
 		if (irq < 0)
 			break;
 
 		data->plic_irqs[i] = irq;
 		data->plic_irq_datas[i] = irq_get_irq_data(irq);
 		data->plic_hwirqs[i] = data->plic_irq_datas[i]->hwirq;
-		dev_info(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
+		dev_dbg(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
 				data->plic_hwirqs[i], data->plic_irqs[i]);
 	}
 	data->irq_num = i;
-	dev_info(&pdev->dev, "got %d plic irqs\n", data->irq_num);
+	dev_dbg(&pdev->dev, "got %d plic irqs\n", data->irq_num);
 
 	// create IRQ domain
 	data->domain = irq_domain_create_linear(fwnode, data->irq_num,
@@ -350,8 +349,8 @@ static int top_intc_probe(struct platform_device *pdev)
 	 * workaround to deal with IRQ conflict with TPU driver,
 	 * skip the firt IRQ and mark it as used.
 	 */
-	bitmap_allocate_region(data->irq_bitmap, 0, order_base_2(1));
-	for (i = 1; i < data->irq_num; i++)
+	//bitmap_allocate_region(data->irq_bitmap, 0, order_base_2(1));
+	for (i = 0; i < data->irq_num; i++)
 		irq_set_chained_handler_and_data(data->plic_irqs[i],
 							top_intc_irq_handler, data);
 

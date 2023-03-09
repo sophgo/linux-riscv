@@ -1,9 +1,9 @@
 #include "mango.dtsi"
-#include "mango_pcie_4rc.dtsi"
+#include "mango-pcie-3rc.dtsi"
 
 / {
 	info {
-		file-name = "mango_evb_v0.1.dts";
+		file-name = "mango-sophgo-x8evb.dts";
 	};
 };
 

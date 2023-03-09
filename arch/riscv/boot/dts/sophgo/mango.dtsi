@@ -3,9 +3,9 @@
 #include <dt-bindings/clock/sophgo-mango-clock.h>
 #include <dt-bindings/reset/sophgo-mango-resets.h>
 
-#include "mango_socket0_cpus.dtsi"
-#include "mango_clock.dtsi"
-#include "mango_pinctrl.dtsi"
+#include "mango-cpus-socket0.dtsi"
+#include "mango-clock.dtsi"
+#include "mango-pinctrl.dtsi"
 
 / {
 	model = "Sophgo Mango";

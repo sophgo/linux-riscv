@@ -162,7 +162,8 @@ int cdns_pcie_config_read(struct pci_bus *bus, unsigned int devfn,
 	unsigned int value, offset;
 	void __iomem *aligned_addr;
 
-	if ((bus->number != 0) && (bus->number != 0x40) && (bus->number != 0x80))
+	if ((bus->number != 0) && (bus->number != 0x40) &&
+	    (bus->number != 0x80) && (bus->number != 0xc0))
 		return pci_generic_config_read(bus, devfn, where, size, val);
 
 	addr = (unsigned long)bus->ops->map_bus(bus, devfn, where);
@@ -197,7 +198,8 @@ int cdns_pcie_config_write(struct pci_bus *bus, unsigned int devfn,
 	unsigned int value, offset;
 	void __iomem *aligned_addr;
 
-	if ((bus->number != 0) && (bus->number != 0x40) && (bus->number != 0x80))
+	if ((bus->number != 0) && (bus->number != 0x40) &&
+	    (bus->number != 0x80) && (bus->number != 0xc0))
 		return pci_generic_config_write(bus, devfn, where, size, val);
 
 	addr = (unsigned long)bus->ops->map_bus(bus, devfn, where);

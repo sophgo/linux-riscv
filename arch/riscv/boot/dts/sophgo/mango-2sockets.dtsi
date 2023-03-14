@@ -584,7 +584,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,115200 earlycon ignore_loglevel rdinit=/init root=/dev/ram0 rw initrd=0x30000000,32M retain_initrd maxcpus=1 nvme.use_threaded_interrupts=1 nvme.io_timeout=3000";
+		bootargs = "console=ttyS0,115200 earlycon ignore_loglevel rdinit=/init root=/dev/ram0 rw initrd=0x30000000,32M retain_initrd maxcpus=1 nvme.use_threaded_interrupts=1 nvme_core.io_timeout=3000";
 		stdout-path = "serial0";
 	};
 };

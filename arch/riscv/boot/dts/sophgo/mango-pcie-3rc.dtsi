@@ -1,3 +1,7 @@
+#include <dt-bindings/interrupt-controller/irq.h>
+
+#define SOC_PERIPHERAL_IRQ(nr)	(nr)
+
 / {
 	pcie@7060000000 {
 		compatible = "sophgo,cdns-pcie-host";
@@ -14,7 +18,7 @@
 		pcie-id = /bits/ 16 <0x0>;
 		link-id = /bits/ 16 <0x0>;
 		interrupt-parent = <&intc>;
-		interrupts = <122>;
+		interrupts = <SOC_PERIPHERAL_IRQ(122) IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "msi";
 		reg = <0x70 0x60000000  0x0 0x02000000>,
 		      <0x40 0x00000000  0x0 0x00001000>;
@@ -83,7 +87,7 @@
 		pcie-id = /bits/ 16 <0x1>;
 		link-id = /bits/ 16 <0x0>;
 		interrupt-parent = <&intc>;
-		interrupts = <123>;
+		interrupts = <SOC_PERIPHERAL_IRQ(123) IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "msi";
 		reg = <0x70 0x62000000  0x0 0x02000000>,
 		      <0x48 0x00000000  0x0 0x00001000>;

@@ -382,7 +382,7 @@
 		intc: interrupt-controller@7090000000 {
 			#address-cells = <0>;
 			#interrupt-cells = <2>;
-			compatible = "thead,c900-plic","riscv,plic0";
+			compatible = "thead,c900-plic";
 			interrupt-controller;
 			interrupts-extended = <
 				&cpu0_intc  0xffffffff &cpu0_intc  9

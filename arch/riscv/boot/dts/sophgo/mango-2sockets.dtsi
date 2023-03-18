@@ -95,9 +95,9 @@
 	};
 
 	soc {
-		/delete-node/ interrupt-controller@7094000000;
-		msi: interrupt-controller@7094000000 {
-			compatible = "riscv,aclint-mswi";
+		/delete-node/ clint-mswi@7094000000;
+		clint_mswi: clint-mswi@7094000000 {
+			compatible = "thead,c900-clint-mswi";
 			reg = <0x00000070 0x94000000 0x00000000 0x00004000>;
 			interrupts-extended = <
 				&cpu0_intc 3
@@ -231,151 +231,182 @@
 				&cpu126_intc 3
 				&cpu127_intc 3
 				>;
-			interrupt-controller;
-			#interrupt-cells = <0>;
 		};
 
-		/delete-node/ interrupt-controller@70ac000000;
-		mtimer: interrupt-controller@70ac000000 {
-			compatible = "riscv,mango-mtimer";
-			reg = <0x00000070 0xac000000 0x00000000 0x00200000>;
-			mtimer,no-64bit-mmio;
+		clint_mtimer16: clint-mtimer@70ac100000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac100000 0x00000000 0x00007ff8>;
 			interrupts-extended = <
-				&cpu0_intc 7
-				&cpu1_intc 7
-				&cpu2_intc 7
-				&cpu3_intc 7
-				&cpu4_intc 7
-				&cpu5_intc 7
-				&cpu6_intc 7
-				&cpu7_intc 7
-				&cpu8_intc 7
-				&cpu9_intc 7
-				&cpu10_intc 7
-				&cpu11_intc 7
-				&cpu12_intc 7
-				&cpu13_intc 7
-				&cpu14_intc 7
-				&cpu15_intc 7
-				&cpu16_intc 7
-				&cpu17_intc 7
-				&cpu18_intc 7
-				&cpu19_intc 7
-				&cpu20_intc 7
-				&cpu21_intc 7
-				&cpu22_intc 7
-				&cpu23_intc 7
-				&cpu24_intc 7
-				&cpu25_intc 7
-				&cpu26_intc 7
-				&cpu27_intc 7
-				&cpu28_intc 7
-				&cpu29_intc 7
-				&cpu30_intc 7
-				&cpu31_intc 7
-				&cpu32_intc 7
-				&cpu33_intc 7
-				&cpu34_intc 7
-				&cpu35_intc 7
-				&cpu36_intc 7
-				&cpu37_intc 7
-				&cpu38_intc 7
-				&cpu39_intc 7
-				&cpu40_intc 7
-				&cpu41_intc 7
-				&cpu42_intc 7
-				&cpu43_intc 7
-				&cpu44_intc 7
-				&cpu45_intc 7
-				&cpu46_intc 7
-				&cpu47_intc 7
-				&cpu48_intc 7
-				&cpu49_intc 7
-				&cpu50_intc 7
-				&cpu51_intc 7
-				&cpu52_intc 7
-				&cpu53_intc 7
-				&cpu54_intc 7
-				&cpu55_intc 7
-				&cpu56_intc 7
-				&cpu57_intc 7
-				&cpu58_intc 7
-				&cpu59_intc 7
-				&cpu60_intc 7
-				&cpu61_intc 7
-				&cpu62_intc 7
-				&cpu63_intc 7
-
-				// chip 1
 				&cpu64_intc 7
 				&cpu65_intc 7
 				&cpu66_intc 7
 				&cpu67_intc 7
+				>;
+		};
+
+		clint_mtimer17: clint-mtimer@70ac110000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac110000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu68_intc 7
 				&cpu69_intc 7
 				&cpu70_intc 7
 				&cpu71_intc 7
+				>;
+		};
+
+		clint_mtimer18: clint-mtimer@70ac120000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac120000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu72_intc 7
 				&cpu73_intc 7
 				&cpu74_intc 7
 				&cpu75_intc 7
+				>;
+		};
+
+		clint_mtimer19: clint-mtimer@70ac130000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac130000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu76_intc 7
 				&cpu77_intc 7
 				&cpu78_intc 7
 				&cpu79_intc 7
+				>;
+		};
+
+		clint_mtimer20: clint-mtimer@70ac140000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac140000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu80_intc 7
 				&cpu81_intc 7
 				&cpu82_intc 7
 				&cpu83_intc 7
+				>;
+		};
+
+		clint_mtimer21: clint-mtimer@70ac150000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac150000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu84_intc 7
 				&cpu85_intc 7
 				&cpu86_intc 7
 				&cpu87_intc 7
+				>;
+		};
+
+		clint_mtimer22: clint-mtimer@70ac160000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac160000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu88_intc 7
 				&cpu89_intc 7
 				&cpu90_intc 7
 				&cpu91_intc 7
+				>;
+		};
+
+		clint_mtimer23: clint-mtimer@70ac170000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac170000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu92_intc 7
 				&cpu93_intc 7
 				&cpu94_intc 7
 				&cpu95_intc 7
+				>;
+		};
+
+		clint_mtimer24: clint-mtimer@70ac180000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac180000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu96_intc 7
 				&cpu97_intc 7
 				&cpu98_intc 7
 				&cpu99_intc 7
+				>;
+		};
+
+		clint_mtimer25: clint-mtimer@70ac190000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac190000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu100_intc 7
 				&cpu101_intc 7
 				&cpu102_intc 7
 				&cpu103_intc 7
+				>;
+		};
+
+		clint_mtimer26: clint-mtimer@70ac1a0000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac1a0000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu104_intc 7
 				&cpu105_intc 7
 				&cpu106_intc 7
 				&cpu107_intc 7
+				>;
+		};
+
+		clint_mtimer27: clint-mtimer@70ac1b0000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac1b0000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu108_intc 7
 				&cpu109_intc 7
 				&cpu110_intc 7
 				&cpu111_intc 7
+				>;
+		};
+
+		clint_mtimer28: clint-mtimer@70ac1c0000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac1c0000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu112_intc 7
 				&cpu113_intc 7
 				&cpu114_intc 7
 				&cpu115_intc 7
+				>;
+		};
+
+		clint_mtimer29: clint-mtimer@70ac1d0000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac1d0000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu116_intc 7
 				&cpu117_intc 7
 				&cpu118_intc 7
 				&cpu119_intc 7
+				>;
+		};
+
+		clint_mtimer30: clint-mtimer@70ac1e0000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac1e0000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu120_intc 7
 				&cpu121_intc 7
 				&cpu122_intc 7
 				&cpu123_intc 7
+				>;
+		};
+
+		clint_mtimer31: clint-mtimer@70ac1f0000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000070 0xac1f0000 0x00000000 0x00007ff8>;
+			interrupts-extended = <
 				&cpu124_intc 7
 				&cpu125_intc 7
 				&cpu126_intc 7
 				&cpu127_intc 7
 				>;
-			interrupt-controller;
-			#interrupt-cells = <0>;
-			cores-per-cluster = <4>;
-			cluster-mtimer-offset = <0x00010000>;
 		};
 
 		/delete-node/ interrupt-controller@7090000000;

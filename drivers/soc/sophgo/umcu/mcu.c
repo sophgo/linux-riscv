@@ -364,7 +364,6 @@ ssize_t info_show(struct device *dev, struct device_attribute *attr,
 	struct mcu_info *info = &ctx->info;
 	const struct mcu_features *features = ctx->features;
 	int err;
-	struct nvmem_cell *cell;
 
 	if (info->updated == 0) {
 		/* get information from mcu through i2c */
@@ -376,12 +375,6 @@ ssize_t info_show(struct device *dev, struct device_attribute *attr,
 		if (err)
 			return err;
 		info->updated = 1;
-	}
-
-	cell = devm_nvmem_cell_get(dev, "sn");
-	if (IS_ERR(cell)) {
-		dev_err(dev, "failed to get cell\n");
-		return PTR_ERR(cell);
 	}
 
 	/* convert to json text */

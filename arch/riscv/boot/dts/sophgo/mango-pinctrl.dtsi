@@ -382,6 +382,20 @@
 			};
 		};
 
+		pwr_key: pwr-key {
+			mux {
+				pins = <147>;
+				function = "gpio0_a";
+			};
+		};
+
+		restart_key: restart-key {
+			mux {
+				pins = <148>;
+				function = "gpio0_a";
+			};
+		};
+
 		dbgi2c_acquire: dbgi2c_acquire {
 			mux {
 				groups = "dbgi2c_grp";

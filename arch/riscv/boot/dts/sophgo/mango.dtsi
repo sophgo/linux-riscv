@@ -1,6 +1,8 @@
 /dts-v1/;
 #include <dt-bindings/clock/sophgo.h>
 #include <dt-bindings/clock/sophgo-mango-clock.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
 #include <dt-bindings/reset/sophgo-mango-resets.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 
@@ -59,7 +61,7 @@
 		numa-node-id = <3>;
 	};
 
-	soc {
+	soc: soc {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		compatible = "simple-bus";

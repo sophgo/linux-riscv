@@ -217,7 +217,9 @@ static const unsigned int spi1_pins[] = {102, 103, 104, 105, 106};
 static const unsigned int jtag0_pins[] = {107, 108, 109, 110, 111, 112};
 static const unsigned int jtag1_pins[] = {113, 114, 115, 116, 117, 118};
 static const unsigned int jtag2_pins[] = {119, 120, 121, 122, 123, 124};
-// GPIO0 is pin 125
+static const unsigned int gpio0_pins[] = {125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137,\
+					 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,\
+					 151, 152, 153};
 static const unsigned int dbgi2c_pins[] = {154, 155, 156};
 
 static const char * const lpc_group[] = {"lpc_grp"};
@@ -247,6 +249,7 @@ static const char * const spi1_group[] = {"spi1_grp"};
 static const char * const jtag0_group[] = {"jtag0_grp"};
 static const char * const jtag1_group[] = {"jtag1_grp"};
 static const char * const jtag2_group[] = {"jtag2_grp"};
+static const char * const gpio0_group[] = {"gpio0_grp"};
 static const char * const dbgi2c_group[] = {"dbgi2c_grp"};
 
 static struct mango_group mango_groups[] = {
@@ -277,6 +280,7 @@ static struct mango_group mango_groups[] = {
 	PIN_GROUP(jtag0),
 	PIN_GROUP(jtag1),
 	PIN_GROUP(jtag2),
+	PIN_GROUP(gpio0),
 	PIN_GROUP(dbgi2c),
 };
 
@@ -335,6 +339,8 @@ static const struct mango_pmx_func mango_funcs[] = {
 	FUNCTION(jtag1_r, jtag1, FUNC_MODE0),
 	FUNCTION(jtag2_a, jtag2, FUNC_MODE1),
 	FUNCTION(jtag2_r, jtag2, FUNC_MODE0),
+	FUNCTION(gpio0_a, gpio0, FUNC_MODE1),
+	FUNCTION(gpio0_r, gpio0, FUNC_MODE0),
 	FUNCTION(dbgi2c_a, dbgi2c, FUNC_MODE0),
 	FUNCTION(dbgi2c_r, dbgi2c, FUNC_MODE1),
 };
@@ -366,6 +372,7 @@ static struct device_attribute spi1_attr =	__ATTR(spi1, 0664, pinmux_show, pinmu
 static struct device_attribute jtag0_attr =	__ATTR(jtag0, 0664, pinmux_show, pinmux_store);
 static struct device_attribute jtag1_attr =	__ATTR(jtag1, 0664, pinmux_show, pinmux_store);
 static struct device_attribute jtag2_attr =	__ATTR(jtag2, 0664, pinmux_show, pinmux_store);
+static struct device_attribute gpio0_attr =	__ATTR(gpio0, 0664, pinmux_show, pinmux_store);
 static struct device_attribute dbgi2c_attr =	__ATTR(dbgi2c, 0664, pinmux_show, pinmux_store);
 
 
@@ -397,6 +404,7 @@ static struct attribute *pinmux_attrs[] = {
 	&jtag0_attr.attr,
 	&jtag1_attr.attr,
 	&jtag2_attr.attr,
+	&gpio0_attr.attr,
 	&dbgi2c_attr.attr,
 	NULL,
 };

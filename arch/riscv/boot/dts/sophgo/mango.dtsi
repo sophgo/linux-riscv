@@ -61,6 +61,77 @@
 		numa-node-id = <3>;
 	};
 
+	pmu {
+		compatible = "riscv,pmu";
+		riscv,event-to-mhpmevent = /* SBI_PMU_HW_BRANCH_MISSES -> mhpmevent10 */
+					   <0x00006 0x00000000 0x00000008>,
+					   /* SBI_PMU_HW_BRANCH_INSTRUCTIONS -> mhpmevent11 */
+					   <0x00005 0x00000000 0x00000009>,
+					   /* L1I_READ_ACCESS -> mhpmevent3 */
+					   <0x10008 0x00000000 0x00000001>,
+					   /* L1I_READ_MISS -> mhpmevent4 */
+					   <0x10009 0x00000000 0x00000002>,
+					   /* ITLB_READ_MISS -> mhpmevent5 */
+					   <0x10021 0x00000000 0x00000003>,
+					   /* DTLB_READ_MISS -> mhpmevent6 */
+					   <0x10019 0x00000000 0x00000004>,
+					   /* L1D_READ_ACCESS -> mhpmevent14 */
+					   <0x10000 0x00000000 0x0000000c>,
+					   /* L1D_READ_MISS -> mhpmevent15 */
+					   <0x10001 0x00000000 0x0000000d>,
+					   /* L1D_WRITE_ACCESS -> mhpmevent16 */
+					   <0x10002 0x00000000 0x0000000e>,
+					   /* L1D_WRITE_MISS -> mhpmevent17 */
+					   <0x10003 0x00000000 0x0000000f>,
+					   /* LL_READ_ACCESS -> mhpmevent18 */
+					   <0x10010 0x00000000 0x00000010>,
+					   /* LL_READ_MISS -> mhpmevent19 */
+					   <0x10011 0x00000000 0x00000011>,
+					   /* LL_WRITE_ACCESS -> mhpmevent20 */
+					   <0x10012 0x00000000 0x00000012>,
+					   /* LL_WRITE_MISS -> mhpmevent21 */
+					   <0x10013 0x00000000 0x00000013>;
+		riscv,event-to-mhpmcounters = <0x00006 0x00006 0x00000400>,
+					      <0x00005 0x00005 0x00000800>,
+					      <0x10000 0x10000 0x00004000>,
+					      <0x10001 0x10001 0x00008000>,
+					      <0x10002 0x10002 0x00010000>,
+					      <0x10003 0x10003 0x00020000>,
+					      <0x10008 0x10008 0x00000008>,
+					      <0x10009 0x10009 0x00000010>,
+					      <0x10010 0x10010 0x00040000>,
+					      <0x10011 0x10011 0x00080000>,
+					      <0x10012 0x10012 0x00100000>,
+					      <0x10013 0x10013 0x00200000>,
+					      <0x10019 0x10019 0x00000040>,
+					      <0x10021 0x10021 0x00000020>;
+		riscv,raw-event-to-mhpmcounters =
+			    /* the platform encodes each raw PMU event as a unique ID,
+			     * the value of variant must be 0xffffffff_ffffffff */
+			    // /* JTLB Miss -> mhpmevent7: jTLB only in T-HEAD */
+			    // <0x00000000 0x00000005 0xffffffff 0xffffffff 0x00000080>,
+				/* Conditional Branch Mispredict -> mhpmevent8 */
+				<0x00000000 0x00000006 0xffffffff 0xffffffff 0x00000100>,
+				/* LSU Spec Fail -> mhpmevent12 */
+				<0x00000000 0x0000000a 0xffffffff 0xffffffff 0x00001000>,
+				/* Store Instruction -> mhpmevent13 */
+				<0x00000000 0x0000000b 0xffffffff 0xffffffff 0x00002000>,
+				/* RF Launch Fail -> mhpmevent22 */
+				<0x00000000 0x00000014 0xffffffff 0xffffffff 0x00400000>,
+				/* RF Reg Launch Fail -> mhpmevent23 */
+				<0x00000000 0x00000015 0xffffffff 0xffffffff 0x00800000>,
+				/* RF Instruction -> mhpmevent24 */
+				<0x00000000 0x00000016 0xffffffff 0xffffffff 0x01000000>,
+				/* LSU Cross 4K Stall -> mhpmevent25 */
+				<0x00000000 0x00000017 0xffffffff 0xffffffff 0x02000000>,
+				/* LSU Other Stall -> mhpmevent26 */
+				<0x00000000 0x00000018 0xffffffff 0xffffffff 0x04000000>,
+				/* LSU SQ Discard -> mhpmevent27 */
+				<0x00000000 0x00000019 0xffffffff 0xffffffff 0x08000000>,
+				/* LSU SQ Data Discard -> mhpmevent28 */
+				<0x00000000 0x0000001a 0xffffffff 0xffffffff 0x10000000>;
+	};
+
 	soc: soc {
 		#address-cells = <2>;
 		#size-cells = <2>;

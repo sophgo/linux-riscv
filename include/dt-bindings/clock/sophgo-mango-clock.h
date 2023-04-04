@@ -158,6 +158,8 @@
 #define MUX_CLK_RP_CPU_NORMAL 2
 #define MUX_CLK_AXI_DDR 3
 
-#define DIV_CLK_TABLE			0
-#define MUX_CLK_TABLE			1
+#define S0_DIV_CLK_TABLE		0
+#define S1_DIV_CLK_TABLE		1
+#define S0_MUX_CLK_TABLE		2
+#define S1_MUX_CLK_TABLE		3
 #endif

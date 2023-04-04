@@ -7,7 +7,7 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 
 #include "mango-cpus-socket0.dtsi"
-#include "mango-clock.dtsi"
+#include "mango-clock-socket0.dtsi"
 #include "mango-pinctrl.dtsi"
 
 #define SOC_PERIPHERAL_IRQ(nr)	(nr)
@@ -460,16 +460,12 @@
 			reg = <0x00000070 0x90000000 0x00000000 0x04000000>;
 			reg-names = "control";
 			riscv,max-priority = <7>;
-			riscv,ndev = <172>;
+			riscv,ndev = <224>;
 		};
 
 		top_misc: top_misc_ctrl@7030010000 {
-			compatible = "sophgo,top-misc", "syscon";
+			compatible = "syscon";
 			reg = <0x70 0x30010000 0x0 0x8000>;
-			clocks = <&div_clk GATE_CLK_AXI_DBG_I2C>,
-				 <&div_clk GATE_CLK_AXI_SRAM>,
-				 <&div_clk GATE_CLK_AHB_ROM>;
-			clock-names = "dbg_i2c_clk", "axi_sram_clk", "ahb_rom_clk";
 		};
 
 		rst: reset-controller {
@@ -483,49 +479,57 @@
 		i2c0: i2c@7030005000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
 			clocks = <&div_clk GATE_CLK_APB_I2C>;
 			clock-names = "clk_gate_apb_i2c";
-			compatible = "snps,designware-i2c";
 			reg = <0x70 0x30005000 0x0 0x1000>;
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(101) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <100000>;
+			resets = <&rst RST_I2C0>;
+			reset-names = "i2c0";
 		};
 
 		i2c1: i2c@7030006000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
 			clocks = <&div_clk GATE_CLK_APB_I2C>;
 			clock-names = "clk_gate_apb_i2c";
-			compatible = "snps,designware-i2c";
 			reg = <0x70 0x30006000 0x0 0x1000>;
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(102) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <100000>;
+			resets = <&rst RST_I2C1>;
+			reset-names = "i2c1";
 		};
 
 		i2c2: i2c@7030007000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
 			clocks = <&div_clk GATE_CLK_APB_I2C>;
 			clock-names = "clk_gate_apb_i2c";
-			compatible = "snps,designware-i2c";
 			reg = <0x70 0x30007000 0x0 0x1000>;
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(103) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <100000>;
+			resets = <&rst RST_I2C2>;
+			reset-names = "i2c2";
 		};
 
 		i2c3: i2c@7030008000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
 			clocks = <&div_clk GATE_CLK_APB_I2C>;
 			clock-names = "clk_gate_apb_i2c";
-			compatible = "snps,designware-i2c";
 			reg = <0x70 0x30008000 0x0 0x1000>;
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(104) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <100000>;
+			resets = <&rst RST_I2C3>;
+			reset-names = "i2c3";
 		};
 
 		gpio0: gpio@7030009000 {
@@ -549,6 +553,54 @@
 				#interrupt-cells = <2>;
 				interrupt-parent = <&intc>;
 				interrupts = <SOC_PERIPHERAL_IRQ(96) IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		gpio1: gpio@703000a000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x3000a000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port1a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <SOC_PERIPHERAL_IRQ(97) IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		gpio2: gpio@703000b000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x3000b000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port2a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <SOC_PERIPHERAL_IRQ(98) IRQ_TYPE_LEVEL_HIGH>;
 			};
 		};
 
@@ -577,6 +629,45 @@
 			reg = <0x00000070 0x40000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(112) IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <500000000>;
+			clocks = <&div_clk GATE_CLK_UART_500M>,
+				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-names = "baudclk", "apb_pclk";
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		uart1: serial@7040001000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x00000070 0x40001000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(113) IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <500000000>;
+			clocks = <&div_clk GATE_CLK_UART_500M>,
+				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-names = "baudclk", "apb_pclk";
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		uart2: serial@7040002000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x00000070 0x40002000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(114) IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <500000000>;
+			clocks = <&div_clk GATE_CLK_UART_500M>,
+				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-names = "baudclk", "apb_pclk";
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		uart3: serial@7040003000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x00000070 0x40003000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(115) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <500000000>;
 			clocks = <&div_clk GATE_CLK_UART_500M>,
 				   <&div_clk GATE_CLK_SYSDMA_AXI>;

@@ -1,5 +1,6 @@
 #include "mango.dtsi"
 #include "mango-cpus-socket1.dtsi"
+#include "mango-clock-socket1.dtsi"
 
 / {
 	/delete-node/ distance-map;
@@ -621,7 +622,133 @@
 			reg = <0x00000070 0x90000000 0x00000000 0x04000000>;
 			reg-names = "control";
 			riscv,max-priority = <7>;
-			riscv,ndev = <172>;
+			riscv,ndev = <448>;
 		};
+
+		top1_misc: top_misc_ctrl@f030010000 {
+			compatible = "syscon";
+			reg = <0xf0 0x30010000 0x0 0x8000>;
+		};
+
+		rst1: reset1-controller {
+			#reset-cells = <1>;
+			compatible = "bitmain,reset";
+			subctrl-syscon = <&top1_misc>;
+			top_rst_offset = <0x3000>;
+			nr_resets = <RST_MAX_NUM>;
+		};
+
+		gpio3: gpio@f030009000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0xf0 0x30009000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&s1_div_clk GATE_CLK_APB_GPIO>,
+				 <&s1_div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&s1_div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port3a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <SOC_PERIPHERAL_IRQ(320) IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		ethernet1: ethernet@f040026000 {
+			compatible = "bitmain,ethernet";
+			reg = <0xf0 0x40026000 0x0 0x4000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(356) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
+			clocks = <&s1_div_clk DIV_CLK_FPLL_TX_ETH0>,
+				   <&s1_div_clk GATE_CLK_TX_ETH0>,
+				   <&s1_div_clk GATE_CLK_AXI_ETH0>,
+				   <&s1_div_clk GATE_CLK_PTP_REF_I_ETH0>,
+				   <&s1_div_clk GATE_CLK_REF_ETH0>;
+
+			/* no hash filter and perfect filter support */
+			snps,multicast-filter-bins = <0>;
+			snps,perfect-filter-entries = <1>;
+
+			snps,txpbl = <32>;
+			snps,rxpbl = <32>;
+			snps,aal;
+
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+
+			phy-mode = "rgmii-txid";
+			phy-reset-gpios = <&port3a 27 0>;
+			phy-handle = <&phy1>;
+			mdio {
+				#address-cells = <0x1>;
+				#size-cells = <0x0>;
+				compatible = "snps,dwmac-mdio";
+				phy1: phy@0 {
+					compatible = "ethernet-phy-ieee802.3-c22";
+					device_type = "ethernet-phy";
+					reg = <0x0>;
+				};
+			};
+		};
+
+		emmc1: bm-emmc@f04002A000 {
+			compatible = "bitmain,bm-emmc";
+			reg = <0xf0 0x4002A000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(358) IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <4>;
+			non-removable;
+			no-sdio;
+			no-sd;
+			resets = <&rst1 RST_EMMC>;
+			reset-names = "emmc";
+			clocks =
+				<&s1_div_clk GATE_CLK_EMMC_100M>,
+				<&s1_div_clk GATE_CLK_AXI_EMMC>,
+				<&s1_div_clk GATE_CLK_100K_EMMC>;
+			clock-names =
+				"clk_gate_emmc",
+				"clk_gate_axi_emmc",
+				"clk_gate_100k_emmc";
+		};
+
+		sd1: bm-sd@f04002B000 {
+			compatible = "bitmain,bm-sd";
+			reg = <0xf0 0x4002B000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(360) IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <4>;
+			no-sdio;
+			no-mmc;
+			resets = <&rst1 RST_SD>;
+			reset-names = "sdio";
+			clocks =
+				<&s1_div_clk GATE_CLK_SD_100M>,
+				<&s1_div_clk GATE_CLK_AXI_SD>,
+				<&s1_div_clk GATE_CLK_100K_SD>;
+			clock-names =
+				"clk_gate_sd",
+				"clk_gate_axi_sd",
+				"clk_gate_100k_sd";
+		};
+	};
+
+	aliases {
+	        serial0 = &uart0;
+	        ethernet0 = &ethernet0;
+	        ethernet1 = &ethernet1;
 	};
 };

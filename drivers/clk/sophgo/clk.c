@@ -775,7 +775,7 @@ err:
 
 /* pll clock init */
 int mango_register_pll_clks(struct device_node *node,
-			 struct mango_clk_data *clk_data, unsigned int id)
+			 struct mango_clk_data *clk_data, const char *clk_name)
 {
 	struct clk *clk = NULL;
 	struct mango_pll_clock *pll_clks;
@@ -784,7 +784,7 @@ int mango_register_pll_clks(struct device_node *node,
 
 	pll_clks = (struct mango_pll_clock *)clk_data->table->pll_clks;
 	for (i = 0; i < clk_data->table->pll_clks_num; i++) {
-		if (id == pll_clks[i].id) {
+		if (!strcmp(clk_name,  pll_clks[i].name)) {
 			/* have to assigne pll_clks.syscon_top first
 			 * since clk_register_composite will need it
 			 * to calculate current rate.

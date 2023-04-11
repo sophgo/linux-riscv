@@ -32,18 +32,18 @@
 
 
 /**
- * struct bm_pwm_channel - private data of PWM channel
+ * struct sophgo_pwm_channel - private data of PWM channel
  * @period_ns:	current period in nanoseconds programmed to the hardware
  * @duty_ns:	current duty time in nanoseconds programmed to the hardware
  * @tin_ns:	time of one timer tick in nanoseconds with current timer rate
  */
-struct bm_pwm_channel {
+struct sophgo_pwm_channel {
 	u32 period;
 	u32 hlperiod;
 };
 
 /**
- * struct bm_pwm_chip - private data of PWM chip
+ * struct sophgo_pwm_chip - private data of PWM chip
  * @chip:		generic PWM chip
  * @variant:		local copy of hardware variant data
  * @inverter_mask:	inverter status for all channels - one bit per channel
@@ -52,7 +52,7 @@ struct bm_pwm_channel {
  * @tclk0:		external clock 0 (can be ERR_PTR if not present)
  * @tclk1:		external clock 1 (can be ERR_PTR if not present)
  */
-struct bm_pwm_chip {
+struct sophgo_pwm_chip {
 	struct pwm_chip chip;
 	void __iomem *base;
 	struct clk *base_clk;
@@ -62,14 +62,14 @@ struct bm_pwm_chip {
 
 
 static inline
-struct bm_pwm_chip *to_bm_pwm_chip(struct pwm_chip *chip)
+struct sophgo_pwm_chip *to_sophgo_pwm_chip(struct pwm_chip *chip)
 {
-	return container_of(chip, struct bm_pwm_chip, chip);
+	return container_of(chip, struct sophgo_pwm_chip, chip);
 }
 
-static int pwm_bm_request(struct pwm_chip *chip, struct pwm_device *pwm_dev)
+static int pwm_sophgo_request(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 {
-	struct bm_pwm_channel *channel;
+	struct sophgo_pwm_channel *channel;
 
 	channel = kzalloc(sizeof(*channel), GFP_KERNEL);
 	if (!channel)
@@ -78,19 +78,19 @@ static int pwm_bm_request(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 	return pwm_set_chip_data(pwm_dev, channel);
 }
 
-static void pwm_bm_free(struct pwm_chip *chip, struct pwm_device *pwm_dev)
+static void pwm_sophgo_free(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 {
-	struct bm_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
+	struct sophgo_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
 
 	pwm_set_chip_data(pwm_dev, NULL);
 	kfree(channel);
 }
 
-static int pwm_bm_config(struct pwm_chip *chip, struct pwm_device *pwm_dev,
+static int pwm_sophgo_config(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 			     int duty_ns, int period_ns)
 {
-	struct bm_pwm_chip *our_chip = to_bm_pwm_chip(chip);
-	struct bm_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
+	struct sophgo_pwm_chip *our_chip = to_sophgo_pwm_chip(chip);
+	struct sophgo_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
 	u64 cycles;
 
 	cycles = clk_get_rate(our_chip->base_clk);
@@ -101,16 +101,14 @@ static int pwm_bm_config(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 	cycles = cycles * duty_ns;
 	do_div(cycles, period_ns);
 	channel->hlperiod = channel->period - cycles;
-	dev_info(chip->dev, "period_ns=%d,duty_ns=%d,period=%d,hlperiod=%d\n",
-			period_ns, duty_ns, channel->period, channel->hlperiod);
 
 	return 0;
 }
 
-static int pwm_bm_enable(struct pwm_chip *chip, struct pwm_device *pwm_dev)
+static int pwm_sophgo_enable(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 {
-	struct bm_pwm_chip *our_chip = to_bm_pwm_chip(chip);
-	struct bm_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
+	struct sophgo_pwm_chip *our_chip = to_sophgo_pwm_chip(chip);
+	struct sophgo_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
 
 	writel(channel->period, our_chip->base + REG_GROUP * pwm_dev->hwpwm + REG_PERIOD);
 	writel(channel->hlperiod, our_chip->base + REG_GROUP * pwm_dev->hwpwm + REG_HLPERIOD);
@@ -118,16 +116,16 @@ static int pwm_bm_enable(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 	return 0;
 }
 
-static void pwm_bm_disable(struct pwm_chip *chip,
+static void pwm_sophgo_disable(struct pwm_chip *chip,
 			       struct pwm_device *pwm_dev)
 {
-	struct bm_pwm_chip *our_chip = to_bm_pwm_chip(chip);
+	struct sophgo_pwm_chip *our_chip = to_sophgo_pwm_chip(chip);
 
 	writel(0, our_chip->base + REG_GROUP * pwm_dev->hwpwm + REG_PERIOD);
 	writel(0, our_chip->base + REG_GROUP * pwm_dev->hwpwm + REG_HLPERIOD);
 }
 
-static int pwm_bm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+static int pwm_sophgo_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 			      const struct pwm_state *state)
 {
 	int ret;
@@ -135,26 +133,26 @@ static int pwm_bm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	bool enabled = pwm->state.enabled;
 
 	if (state->polarity != pwm->state.polarity && pwm->state.enabled) {
-		pwm_bm_disable(chip, pwm);
+		pwm_sophgo_disable(chip, pwm);
 		enabled = false;
 	}
 
 	if (!state->enabled) {
 		if (enabled)
-			pwm_bm_disable(chip, pwm);
+			pwm_sophgo_disable(chip, pwm);
 		return 0;
 	}
 
-	ret = pwm_bm_config(chip, pwm, state->duty_cycle, state->period);
+	ret = pwm_sophgo_config(chip, pwm, state->duty_cycle, state->period);
 	if (ret) {
 		dev_err(chip->dev, "pwm apply err\n");
 		return ret;
 	}
 	dev_dbg(chip->dev, "%s tate->enabled =%d\n", __func__, state->enabled);
 	if (state->enabled)
-		ret = pwm_bm_enable(chip, pwm);
+		ret = pwm_sophgo_enable(chip, pwm);
 	else
-		pwm_bm_disable(chip, pwm);
+		pwm_sophgo_disable(chip, pwm);
 
 	if (ret) {
 		dev_err(chip->dev, "pwm apply failed\n");
@@ -163,23 +161,23 @@ static int pwm_bm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	return ret;
 }
 
-static const struct pwm_ops pwm_bm_ops = {
-	.request	= pwm_bm_request,
-	.free		= pwm_bm_free,
-	.apply		= pwm_bm_apply,
+static const struct pwm_ops pwm_sophgo_ops = {
+	.request	= pwm_sophgo_request,
+	.free		= pwm_sophgo_free,
+	.apply		= pwm_sophgo_apply,
 	.owner		= THIS_MODULE,
 };
 
-static const struct of_device_id bm_pwm_match[] = {
-	{ .compatible = "bitmain,bm-pwm" },
+static const struct of_device_id sophgo_pwm_match[] = {
+	{ .compatible = "sophgo,sophgo-pwm" },
 	{ },
 };
-MODULE_DEVICE_TABLE(of, bm_pwm_match);
+MODULE_DEVICE_TABLE(of, sophgo_pwm_match);
 
-static int pwm_bm_probe(struct platform_device *pdev)
+static int pwm_sophgo_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct bm_pwm_chip *chip;
+	struct sophgo_pwm_chip *chip;
 	struct resource *res;
 	int ret;
 
@@ -190,7 +188,7 @@ static int pwm_bm_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	chip->chip.dev = &pdev->dev;
-	chip->chip.ops = &pwm_bm_ops;
+	chip->chip.ops = &pwm_sophgo_ops;
 	chip->chip.base = -1;
 	chip->polarity_mask = 0;
 
@@ -211,13 +209,13 @@ static int pwm_bm_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	//pwm-num default is 4, compatible with bm1682
+	//pwm-num default is 4, compatible with sg2042
 	if (of_property_read_bool(pdev->dev.of_node, "pwm-num"))
 		device_property_read_u32(&pdev->dev, "pwm-num", &chip->chip.npwm);
 	else
 		chip->chip.npwm = 4;
 
-	//no_polarity default is false(have polarity) , compatible with bm1682
+	//no_polarity default is false(have polarity) , compatible with sg2042
 	if (of_property_read_bool(pdev->dev.of_node, "no-polarity"))
 		chip->no_polarity = true;
 	else
@@ -236,9 +234,9 @@ static int pwm_bm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int pwm_bm_remove(struct platform_device *pdev)
+static int pwm_sophgo_remove(struct platform_device *pdev)
 {
-	struct bm_pwm_chip *chip = platform_get_drvdata(pdev);
+	struct sophgo_pwm_chip *chip = platform_get_drvdata(pdev);
 
 	pwmchip_remove(&chip->chip);
 
@@ -248,31 +246,31 @@ static int pwm_bm_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int pwm_bm_suspend(struct device *dev)
+static int pwm_sophgo_suspend(struct device *dev)
 {
 	return 0;
 }
 
-static int pwm_bm_resume(struct device *dev)
+static int pwm_sophgo_resume(struct device *dev)
 {
 	return 0;
 }
 #endif
 
-static SIMPLE_DEV_PM_OPS(pwm_bm_pm_ops, pwm_bm_suspend,
-			 pwm_bm_resume);
+static SIMPLE_DEV_PM_OPS(pwm_sophgo_pm_ops, pwm_sophgo_suspend,
+			 pwm_sophgo_resume);
 
-static struct platform_driver pwm_bm_driver = {
+static struct platform_driver pwm_sophgo_driver = {
 	.driver		= {
-		.name	= "bitmain-pwm",
-		.pm	= &pwm_bm_pm_ops,
-		.of_match_table = of_match_ptr(bm_pwm_match),
+		.name	= "sophgo-pwm",
+		.pm	= &pwm_sophgo_pm_ops,
+		.of_match_table = of_match_ptr(sophgo_pwm_match),
 	},
-	.probe		= pwm_bm_probe,
-	.remove		= pwm_bm_remove,
+	.probe		= pwm_sophgo_probe,
+	.remove		= pwm_sophgo_remove,
 };
-module_platform_driver(pwm_bm_driver);
+module_platform_driver(pwm_sophgo_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("chunzhi.lin");
-MODULE_DESCRIPTION("Bitmain PWM driver");
+MODULE_DESCRIPTION("Sophgo PWM driver");

@@ -605,7 +605,7 @@
 		};
 
 		pwm: pwm@703000C000 {
-			compatible = "bitmain,bm-pwm";
+			compatible = "sophgo,sophgo-pwm";
 			reg = <0x70 0x3000C000 0x0 0x20>;
 			clocks = <&div_clk GATE_CLK_APB_PWM>;
 			clock-names = "clk_gate_apb_pwm";

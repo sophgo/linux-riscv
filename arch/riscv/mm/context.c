@@ -12,11 +12,21 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/static_key.h>
+#include <linux/init.h>
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
 #include <asm/mmu_context.h>
 
 #ifdef CONFIG_MMU
+static bool __read_mostly noasid;
+static int __init early_noasid(char *str)
+{
+       noasid = true;
+       pr_notice("ASID disabled!\n");
+
+       return 0;
+}
+early_param("noasid", early_noasid);
 
 DEFINE_STATIC_KEY_FALSE(use_asid_allocator);
 
@@ -274,7 +284,18 @@ static int __init asids_init(void)
 
 	return 0;
 }
-early_initcall(asids_init);
+
+static int  __init init_asids(void)
+{
+       int ret = 0;
+
+       if (!noasid)
+               ret = asids_init();
+
+       return ret;
+}
+early_initcall(init_asids);
+
 #else
 static inline void set_mm(struct mm_struct *prev,
 			  struct mm_struct *next, unsigned int cpu)

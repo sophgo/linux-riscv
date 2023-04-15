@@ -37,7 +37,7 @@
 #define CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT		2
 #define CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT		2
 
-#define CDNS_PLAT_CPU_TO_BUS_ADDR       0x4FFFFFFFFF
+#define CDNS_PLAT_CPU_TO_BUS_ADDR       0xCFFFFFFFFF
 
 struct cdns_pcie_database {
 	void __iomem *pcie_reg_base;
@@ -84,6 +84,7 @@ struct cdns_mango_pcie_rc {
 	u16			device_id;
 	u16			pcie_id;
 	u16			link_id;
+	u32			top_intc_used;
 	struct irq_domain	*msi_domain;
 	int			msi_irq;
 	struct irq_domain	*irq_domain;
@@ -390,7 +391,7 @@ static int cdns_pcie_host_init(struct device *dev, struct cdns_mango_pcie_rc *rc
 	if (err)
 		return err;
 
-	if (rc->link_id == 0) {
+	if (rc->top_intc_used == 0) {
 		rc->num_vectors = MSI_DEF_NUM_VECTORS;
 		rc->num_applied_vecs = 0;
 		if (IS_ENABLED(CONFIG_PCI_MSI)) {
@@ -740,6 +741,9 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	rc->link_id = 0xffff;
 	of_property_read_u16(np, "link-id", &rc->link_id);
 
+	rc->top_intc_used = 0;
+	of_property_read_u32(np, "top-intc-used", &rc->top_intc_used);
+
 	if (rc->link_id == 0) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "reg");
 		pcie->reg_base = devm_ioremap_resource(dev, res);
@@ -778,7 +782,7 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_init;
 
-	if ((rc->link_id == 0) && (IS_ENABLED(CONFIG_PCI_MSI))) {
+	if ((rc->top_intc_used == 0) && (IS_ENABLED(CONFIG_PCI_MSI))) {
 		rc->msi_irq = platform_get_irq_byname(pdev, "msi");
 		if (rc->msi_irq <= 0) {
 			dev_err(dev, "failed to get MSI irq\n");
@@ -799,14 +803,14 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	bridge->ops = &cdns_pcie_host_ops;
 	bridge->map_irq = of_irq_parse_and_map_pci;
 	bridge->swizzle_irq = pci_common_swizzle;
-	if (rc->link_id == 0)
+	if (rc->top_intc_used == 0)
 		bridge->sysdata = rc;
 
-	if (rc->link_id == 0) {
+	if (rc->top_intc_used == 0) {
 		ret = cdns_pcie_msi_setup(rc);
 		if (ret < 0)
 			goto err_host_probe;
-	} else if (rc->link_id == 1) {
+	} else if (rc->top_intc_used == 1) {
 		ret = cdns_pcie_msi_setup_for_top_intc(rc);
 		if (ret < 0)
 			goto err_host_probe;
@@ -820,7 +824,7 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 
  err_host_probe:
  err_init_irq:
-	if ((rc->link_id == 0) && pci_msi_enabled())
+	if ((rc->top_intc_used == 0) && pci_msi_enabled())
 		cdns_pcie_free_msi(rc);
 
  err_init:

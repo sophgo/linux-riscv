@@ -1,4 +1,5 @@
 #include "mango-2sockets.dtsi"
+#include "mango-pcie-2rc.dtsi"
 
 / {
 	info {

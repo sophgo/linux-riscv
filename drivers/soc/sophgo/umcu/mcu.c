@@ -24,6 +24,8 @@
 #define MCU_CRITICAL_ACTION_POWEROFF	0x2
 #define MCU_CRITICAL_ACTION_REBOOT	0X1
 
+#define MANGO_BOARD_TYPE_MASK	1 << 7
+
 #ifndef assert
 #define assert(exp)	WARN_ON(!(exp))
 #endif
@@ -93,8 +95,42 @@ const struct mcu_features mcu_list[] = {
 			"Power supply failure",
 			"12V power supply failure",
 			"SoC required reboot",
-			"Watchdog",
-			"Testing mode",
+		},
+	},
+
+	{
+		0x83, "SG2042 X4", "SG2042", "GD32",
+		0x00, 0x01, 0x02, 0x04, 0x05, 0x06, 0x08, 0x0a, 0x0b, -1,
+		-1, -1, -1, -1, MCU_REG_CRITICAL_ACTIONS,
+		MCU_REG_CRITICAL_TEMP, MCU_REG_REPOWERON_TEMP,
+		MCU_REG_KEEP_DDR_POWERON,
+		{
+			"SoC overheat",
+			"Power supply overheat",
+			"Board overheat",
+			"Board overheat and shutdown",
+			"SoC overheat and shutdown",
+			"Power supply failure",
+			"12V power supply failure",
+			"SoC required reboot",
+		},
+	},
+
+		{
+		0x90, "MILKV PIONEER", "SG2042", "GD32",
+		0x00, 0x01, 0x02, 0x04, 0x05, 0x06, 0x08, 0x0a, 0x0b, -1,
+		-1, -1, -1, -1, MCU_REG_CRITICAL_ACTIONS,
+		MCU_REG_CRITICAL_TEMP, MCU_REG_REPOWERON_TEMP,
+		MCU_REG_KEEP_DDR_POWERON,
+		{
+			"SoC overheat",
+			"Power supply overheat",
+			"Board overheat",
+			"Board overheat and shutdown",
+			"SoC overheat and shutdown",
+			"Power supply failure",
+			"12V power supply failure",
+			"SoC required reboot",
 		},
 	},
 };
@@ -1035,7 +1071,7 @@ static int sub_probe(struct i2c_client *i2c,
 
 	assert(features->alert_status + 2 == features->alert_mask);
 
-	if (features->id == 0x80) {
+	if ((features->id & MANGO_BOARD_TYPE_MASK) == 0x80 ) {
 		err = register_hwmon_temp_sensor(i2c, ctx);
 		if (err)
 			dev_warn(i2c2dev(i2c), "mcu board id %u register hwmon failed\n", features->id);

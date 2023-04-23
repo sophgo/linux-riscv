@@ -368,6 +368,9 @@ static int cdns_pcie_msi_init(struct cdns_mango_pcie_rc *rc)
 	dev_info(dev, "msi_data is 0x%llx\n", rc->msi_data);
 	msi_target = (u64)rc->msi_data;
 
+	if (rc->link_id == 1)
+		apb_base -= 0x800000;
+
 	/* Program the msi_data */
 	cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0860), lower_32_bits(msi_target));
 	cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0864), upper_32_bits(msi_target));
@@ -500,6 +503,9 @@ static irqreturn_t cdns_pcie_irq_handler(int irq, void *arg)
 	u32 apb_base = CDNS_PCIE_CFG_MANGO_APB;
 	u32 status = 0;
 
+	if (rc->link_id == 1)
+		apb_base -= 0x800000;
+
 	status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0810));
 	if ((status >> CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT) & 0x1) {
 		WARN_ON(!IS_ENABLED(CONFIG_PCI_MSI));
@@ -531,6 +537,9 @@ static void cdns_chained_msi_isr(struct irq_desc *desc)
 
 	rc = irq_desc_get_handler_data(desc);
 	pcie = &rc->pcie;
+	if (rc->link_id == 1)
+		apb_base -= 0x800000;
+
 	status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0810));
 	if ((status >> CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT) & 0x1) {
 		WARN_ON(!IS_ENABLED(CONFIG_PCI_MSI));

@@ -1,5 +1,5 @@
 #include "mango.dtsi"
-//#include "mango-pcie-3rc.dtsi"
+#include "mango-pcie-3rc-v2.dtsi"
 
 / {
 	info {

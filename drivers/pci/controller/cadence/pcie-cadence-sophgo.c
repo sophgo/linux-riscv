@@ -533,13 +533,13 @@ static void cdns_chained_msi_isr(struct irq_desc *desc)
 	u32 apb_base = CDNS_PCIE_CFG_MANGO_APB;
 	u32 status = 0;
 
-	if (rc->link_id == 1)
-		apb_base -= 0x800000;
-
 	chained_irq_enter(chip, desc);
 
 	rc = irq_desc_get_handler_data(desc);
 	pcie = &rc->pcie;
+	if (rc->link_id == 1)
+		apb_base -= 0x800000;
+
 	status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0810));
 	if ((status >> CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT) & 0x1) {
 		WARN_ON(!IS_ENABLED(CONFIG_PCI_MSI));

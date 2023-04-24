@@ -533,6 +533,9 @@ static void cdns_chained_msi_isr(struct irq_desc *desc)
 	u32 apb_base = CDNS_PCIE_CFG_MANGO_APB;
 	u32 status = 0;
 
+	if (rc->link_id == 1)
+		apb_base -= 0x800000;
+
 	chained_irq_enter(chip, desc);
 
 	rc = irq_desc_get_handler_data(desc);

@@ -29,13 +29,18 @@
 #define CDNS_PCIE_IRS_REG0418       0x0418
 #define CDNS_PCIE_IRS_REG041C       0x041C
 #define CDNS_PCIE_IRS_REG0804       0x0804
+#define CDNS_PCIE_IRS_REG080C       0x080C
 #define CDNS_PCIE_IRS_REG0810       0x0810
 #define CDNS_PCIE_IRS_REG085C       0x085C
 #define CDNS_PCIE_IRS_REG0860       0x0860
 #define CDNS_PCIE_IRS_REG0864       0x0864
+#define CDNS_PCIE_IRS_REG0868       0x0868
+#define CDNS_PCIE_IRS_REG086C       0x086C
 
 #define CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT		2
+#define CDNS_PCIE_IRS_REG0804_CLR_LINK1_MSI_IN_BIT		3
 #define CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT		2
+#define CDNS_PCIE_IRS_REG0810_ST_LINK1_MSI_IN_BIT		3
 
 #define CDNS_PLAT_CPU_TO_BUS_ADDR       0xCFFFFFFFFF
 
@@ -368,16 +373,28 @@ static int cdns_pcie_msi_init(struct cdns_mango_pcie_rc *rc)
 	dev_info(dev, "msi_data is 0x%llx\n", rc->msi_data);
 	msi_target = (u64)rc->msi_data;
 
-	if (rc->link_id == 1)
+	if (rc->link_id == 1) {
 		apb_base -= 0x800000;
+		/* Program the msi_data */
+		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0868),
+				 lower_32_bits(msi_target));
+		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG086C),
+				 upper_32_bits(msi_target));
 
-	/* Program the msi_data */
-	cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0860), lower_32_bits(msi_target));
-	cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0864), upper_32_bits(msi_target));
+		value = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG080C));
+		value = (value & 0xffff0000) | MAX_MSI_IRQS;
+		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG080C), value);
+	} else {
+		/* Program the msi_data */
+		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0860),
+				 lower_32_bits(msi_target));
+		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0864),
+				 upper_32_bits(msi_target));
 
-	value = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG085C));
-	value = (value & 0x0000ffff) | (MAX_MSI_IRQS << 16);
-	cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG085C), value);
+		value = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG085C));
+		value = (value & 0x0000ffff) | (MAX_MSI_IRQS << 16);
+		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG085C), value);
+	}
 
 	return 0;
 }
@@ -502,20 +519,28 @@ static irqreturn_t cdns_pcie_irq_handler(int irq, void *arg)
 	struct cdns_pcie *pcie = &rc->pcie;
 	u32 apb_base = CDNS_PCIE_CFG_MANGO_APB;
 	u32 status = 0;
+	u32 st_msi_in_bit = 0;
+	u32 clr_msi_in_bit = 0;
 
-	if (rc->link_id == 1)
+	if (rc->link_id == 1) {
 		apb_base -= 0x800000;
+		st_msi_in_bit = CDNS_PCIE_IRS_REG0810_ST_LINK1_MSI_IN_BIT;
+		clr_msi_in_bit = CDNS_PCIE_IRS_REG0804_CLR_LINK1_MSI_IN_BIT;
+	} else {
+		st_msi_in_bit = CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT;
+		clr_msi_in_bit = CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT;
+	}
 
 	status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0810));
-	if ((status >> CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT) & 0x1) {
+	if ((status >> st_msi_in_bit) & 0x1) {
 		WARN_ON(!IS_ENABLED(CONFIG_PCI_MSI));
 
 		//clear msi interrupt bit reg0810[2]
 		status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0804));
-		status |= ((u32)0x1 << CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT);
+		status |= ((u32)0x1 << clr_msi_in_bit);
 		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0804), status);
 
-		status &= ~((u32)0x1 << CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT);
+		status &= ~((u32)0x1 << clr_msi_in_bit);
 		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0804), status);
 
 		cdns_handle_msi_irq(rc);
@@ -532,24 +557,32 @@ static void cdns_chained_msi_isr(struct irq_desc *desc)
 	struct cdns_pcie *pcie;
 	u32 apb_base = CDNS_PCIE_CFG_MANGO_APB;
 	u32 status = 0;
+	u32 st_msi_in_bit = 0;
+	u32 clr_msi_in_bit = 0;
 
 	chained_irq_enter(chip, desc);
 
 	rc = irq_desc_get_handler_data(desc);
 	pcie = &rc->pcie;
-	if (rc->link_id == 1)
+	if (rc->link_id == 1) {
 		apb_base -= 0x800000;
+		st_msi_in_bit = CDNS_PCIE_IRS_REG0810_ST_LINK1_MSI_IN_BIT;
+		clr_msi_in_bit = CDNS_PCIE_IRS_REG0804_CLR_LINK1_MSI_IN_BIT;
+	} else {
+		st_msi_in_bit = CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT;
+		clr_msi_in_bit = CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT;
+	}
 
 	status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0810));
-	if ((status >> CDNS_PCIE_IRS_REG0810_ST_LINK0_MSI_IN_BIT) & 0x1) {
+	if ((status >> st_msi_in_bit) & 0x1) {
 		WARN_ON(!IS_ENABLED(CONFIG_PCI_MSI));
 
 		//clear msi interrupt bit reg0810[2]
 		status = cdns_pcie_readl(pcie, (apb_base + CDNS_PCIE_IRS_REG0804));
-		status |= ((u32)0x1 << CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT);
+		status |= ((u32)0x1 << clr_msi_in_bit);
 		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0804), status);
 
-		status &= ~((u32)0x1 << CDNS_PCIE_IRS_REG0804_CLR_LINK0_MSI_IN_BIT);
+		status &= ~((u32)0x1 << clr_msi_in_bit);
 		cdns_pcie_writel(pcie, (apb_base + CDNS_PCIE_IRS_REG0804), status);
 
 		cdns_handle_msi_irq(rc);

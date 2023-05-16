@@ -676,6 +676,38 @@
 			reg-io-width = <4>;
 		};
 
+		spifmc0: flash-controller@7000180000 {
+			compatible = "sophgo,spifmc";
+			reg = <0x70 0x00180000 0x0 0x1000000>;
+			reg-names = "memory";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(108) IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000000>;
+			clocks = <&div_clk GATE_CLK_AHB_SF>;
+			flash@0 {
+				reg = <0>;
+				compatible = "gigadevice,gd25lb512me", "jedec,spi-nor";
+			};
+		};
+
+		spifmc1: flash-controller@7002180000 {
+			compatible = "sophgo,spifmc";
+			reg = <0x70 0x02180000 0x0 0x1000000>;
+			reg-names = "memory";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(109) IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000000>;
+			clocks = <&div_clk GATE_CLK_AHB_SF>;
+			flash@0 {
+				reg = <0>;
+				compatible = "gigadevice,gd25lb512me", "jedec,spi-nor";
+			};
+		};
+
 		emmc: bm-emmc@704002A000 {
 			compatible = "bitmain,bm-emmc";
 			reg = <0x70 0x4002A000 0x0 0x1000>;

@@ -11,7 +11,6 @@
 #include <linux/platform_device.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/spi-nor.h>
-#include <linux/math.h>
 
 /* Hardware register definitions */
 #define SPIFMC_CTRL	0x00
@@ -122,7 +121,7 @@ static int sophgo_spifmc_read_reg(struct spi_nor *nor, u8 opcode, u8 *buf,
 {
 	struct sophgo_spifmc *spifmc = nor->priv;
 	u32 reg;
-	int ret;
+	int ret, i;
 
 	reg = sophgo_spifmc_init_reg(spifmc);
 	reg |= SPIFMC_TRAN_CSR_BUS_WIDTH_1_BIT;
@@ -132,7 +131,7 @@ static int sophgo_spifmc_read_reg(struct spi_nor *nor, u8 opcode, u8 *buf,
 	writel(0, spifmc->io_base + SPIFMC_FIFO_PT);
 	writeb(opcode, spifmc->io_base + SPIFMC_FIFO_PORT);
 
-	for (int i = 0; i < len; i++)
+	for (i = 0; i < len; i++)
 		writeb(0, spifmc->io_base + SPIFMC_FIFO_PORT);
 
 	writel(0, spifmc->io_base + SPIFMC_INT_STS);
@@ -163,8 +162,10 @@ static int sophgo_spifmc_write_reg(struct spi_nor *nor, u8 opcode,
 	reg |= SPIFMC_TRAN_CSR_FIFO_TRG_LVL_1_BYTE;
 	reg |= SPIFMC_TRAN_CSR_WITH_CMD;
 
-	/* If write values to the Status Register,
-	 * configure TRAN_CSR register as the same as sophgo_spifmc_read_reg. */
+	/*
+	 * If write values to the Status Register,
+	 * configure TRAN_CSR register as the same as sophgo_spifmc_read_reg.
+	 */
 	if (opcode == SPINOR_OP_WRSR) {
 		reg |= SPIFMC_TRAN_CSR_TRAN_MODE_RX | SPIFMC_TRAN_CSR_TRAN_MODE_TX;
 		writel(len, spifmc->io_base + SPIFMC_TRAN_NUM);

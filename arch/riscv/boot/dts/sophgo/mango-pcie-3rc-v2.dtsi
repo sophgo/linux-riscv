@@ -18,6 +18,7 @@
 		pcie-id = /bits/ 16 <0x0>;
 		link-id = /bits/ 16 <0x0>;
 		top-intc-used = <1>;
+		top-intc-id = <0>;
 		interrupt-parent = <&intc1>;
 		reg = <0x70 0x60000000  0x0 0x02000000>,
 		      <0x40 0x00000000  0x0 0x00001000>;

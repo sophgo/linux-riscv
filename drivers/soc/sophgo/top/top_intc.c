@@ -12,7 +12,7 @@
 #include <linux/irqchip/chained_irq.h>
 
 #define MAX_IRQ_NUMBER 32
-
+#define TOP_INTC_NUM 2
 /*
  * here we assume all plic hwirq and tic hwirq should
  * be contiguous.
@@ -50,12 +50,15 @@ struct top_intc_data {
 };
 
 // workaround for using in other modules
-struct top_intc_data *tic_data;
+struct top_intc_data *tic_data[TOP_INTC_NUM];
 
-struct irq_domain *cdns_pcie_get_parent_irq_domain(void)
+struct irq_domain *cdns_pcie_get_parent_irq_domain(int intc_id)
 {
-	if (tic_data)
-		return tic_data->domain;
+	if (intc_id >= TOP_INTC_NUM)
+		return NULL;
+
+	if (tic_data[intc_id])
+		return tic_data[intc_id]->domain;
 	else
 		return NULL;
 }
@@ -276,6 +279,11 @@ static int top_intc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pdev->dev.of_node);
 	int ret = 0, i;
+	int intc_id = 0;
+
+	device_property_read_u32(&pdev->dev, "top-intc-id", &intc_id);
+	if (intc_id >= TOP_INTC_NUM)
+		return -EINVAL;
 
 	// alloc private data
 	data = kzalloc(sizeof(struct top_intc_data), GFP_KERNEL);
@@ -356,9 +364,10 @@ static int top_intc_probe(struct platform_device *pdev)
 
 	if (data->for_msi) {
 		irq_domain_update_bus_token(data->domain, DOMAIN_BUS_NEXUS);
-		if (tic_data)
-			dev_err(&pdev->dev, "tic_data is not empty, %s\n", dev_name(&tic_data->pdev->dev));
-		tic_data = data;
+		if (tic_data[intc_id])
+			dev_err(&pdev->dev, "tic_data is not empty, %s\n",
+				dev_name(&tic_data[intc_id]->pdev->dev));
+		tic_data[intc_id] = data;
 	}  else {
 		/*
 		 * populate child nodes. when test device node is a child, it will not be
@@ -377,7 +386,6 @@ out:
 		iounmap(data->reg_clr);
 	kfree(data);
 	return ret;
-	return 0;
 }
 
 static const struct of_device_id top_intc_of_match[] = {

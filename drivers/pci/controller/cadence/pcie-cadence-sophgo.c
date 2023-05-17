@@ -453,9 +453,9 @@ static struct msi_domain_info cdns_pcie_msi_domain_info = {
 	.chip	= &cdns_pcie_msi_irq_chip,
 };
 
-static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc)
+static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc, int intc_id)
 {
-	struct irq_domain *irq_parent = cdns_pcie_get_parent_irq_domain();
+	struct irq_domain *irq_parent = cdns_pcie_get_parent_irq_domain(intc_id);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(rc->dev->of_node);
 
 	rc->msi_domain = pci_msi_create_irq_domain(fwnode,
@@ -753,6 +753,7 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret;
 	int phy_count;
+	int top_intc_id = -1;
 
 	bridge = devm_pci_alloc_host_bridge(dev, sizeof(*rc));
 	if (!bridge)
@@ -785,6 +786,8 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 
 	rc->top_intc_used = 0;
 	of_property_read_u32(np, "top-intc-used", &rc->top_intc_used);
+	if (rc->top_intc_used == 1)
+		of_property_read_u32(np, "top-intc-id", &top_intc_id);
 
 	if (rc->link_id == 0) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "reg");
@@ -853,7 +856,7 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 		if (ret < 0)
 			goto err_host_probe;
 	} else if (rc->top_intc_used == 1) {
-		ret = cdns_pcie_msi_setup_for_top_intc(rc);
+		ret = cdns_pcie_msi_setup_for_top_intc(rc, top_intc_id);
 		if (ret < 0)
 			goto err_host_probe;
 	}

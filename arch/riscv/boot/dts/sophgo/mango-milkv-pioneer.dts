@@ -26,6 +26,7 @@
 };
 
 &soc {
+	/delete-node/ ethernet@7040026000;
 	gpio-poweroff {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -67,13 +68,6 @@
 	pinctrl-0 = <&fan1_acquire>;
 };
 
-&ethernet0 {
-	max-speed = <1000>;
-	eth-sophgo-config {
-		autoneg = "enable";
-	};
-};
-
 / {
 	pwmfan: pwm-fan {
 		compatible = "pwm-fan";
@@ -92,25 +86,25 @@
 
 			trips {
 				soc_pwmfan_trip1: soc_pwmfan_trip@1 {
-					temperature = <40000>; /* millicelsius */
+					temperature = <30000>; /* millicelsius */
 					hysteresis = <8000>; /* millicelsius */
 					type = "active";
 				};
 
 				soc_pwmfan_trip2: soc_pwmfan_trip@2 {
-					temperature = <58000>; /* millicelsius */
+					temperature = <40000>; /* millicelsius */
 					hysteresis = <12000>; /* millicelsius */
 					type = "active";
 				};
 
 				soc_pwmfan_trip3: soc_pwmfan_trip@3 {
-					temperature = <70000>; /* millicelsius */
+					temperature = <50000>; /* millicelsius */
 					hysteresis = <10000>; /* millicelsius */
 					type = "active";
 				};
 
 				soc_pwmfan_trip4: soc_pwmfan_trip@4 {
-					temperature = <85000>; /* millicelsius */
+					temperature = <60000>; /* millicelsius */
 					hysteresis = <5000>; /* millicelsius */
 					type = "active";
 				};

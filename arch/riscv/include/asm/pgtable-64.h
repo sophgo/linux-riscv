@@ -132,8 +132,13 @@ enum napot_cont_order {
  * 10000 - IO   Strongly-ordered, Non-cacheable, Non-bufferable, Non-shareable, Non-trustable
  */
 #define _PAGE_PMA_THEAD		((1UL << 62) | (1UL << 61) | (1UL << 60))
+#ifndef CONFIG_SOC_SOPHGO
 #define _PAGE_NOCACHE_THEAD	0UL
 #define _PAGE_IO_THEAD		(1UL << 63)
+#else
+#define _PAGE_NOCACHE_THEAD	((1UL << 61) | (1UL << 60))
+#define _PAGE_IO_THEAD		((1UL << 63) | (1UL << 60))
+#endif
 #define _PAGE_MTMASK_THEAD	(_PAGE_PMA_THEAD | _PAGE_IO_THEAD | (1UL << 59))
 
 static inline u64 riscv_page_mtmask(void)

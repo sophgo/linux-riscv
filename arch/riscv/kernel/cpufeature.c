@@ -29,6 +29,10 @@ static DECLARE_BITMAP(riscv_isa, RISCV_ISA_EXT_MAX) __read_mostly;
 /* Performance information */
 DEFINE_PER_CPU(long, misaligned_access_speed);
 
+#ifdef CONFIG_VECTOR
+__ro_after_init DEFINE_STATIC_KEY_FALSE(cpu_hwcap_vector);
+#endif
+
 /**
  * riscv_isa_extension_base() - Get base extension word
  *
@@ -107,6 +111,7 @@ void __init riscv_fill_hwcap(void)
 	isa2hwcap['f' - 'a'] = COMPAT_HWCAP_ISA_F;
 	isa2hwcap['d' - 'a'] = COMPAT_HWCAP_ISA_D;
 	isa2hwcap['c' - 'a'] = COMPAT_HWCAP_ISA_C;
+	isa2hwcap['v' - 'a'] = COMPAT_HWCAP_ISA_V;
 
 	elf_hwcap = 0;
 
@@ -278,6 +283,11 @@ void __init riscv_fill_hwcap(void)
 		if (elf_hwcap & BIT_MASK(i))
 			print_str[j++] = (char)('a' + i);
 	pr_info("riscv: ELF capabilities %s\n", print_str);
+
+#ifdef CONFIG_VECTOR
+	if (elf_hwcap & COMPAT_HWCAP_ISA_V)
+		static_branch_enable(&cpu_hwcap_vector);
+#endif
 }
 
 #ifdef CONFIG_RISCV_ALTERNATIVE

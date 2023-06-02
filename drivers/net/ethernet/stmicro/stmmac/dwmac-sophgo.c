@@ -53,11 +53,11 @@ static int bm_eth_reset_phy(struct platform_device *pdev)
 
 	/* RESET_PU */
 	gpio_direction_output(phy_reset_gpio, 0);
-	mdelay(50);
+	mdelay(100);
 
 	gpio_direction_output(phy_reset_gpio, 1);
 	/* RC charging time */
-	mdelay(6);
+	mdelay(100);
 
 	return 0;
 }

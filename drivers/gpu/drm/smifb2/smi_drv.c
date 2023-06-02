@@ -40,7 +40,6 @@
 #include "hw750.h"
 #include "hw768.h"
 
-#include "smi_sysfs.h"
 
 int smi_modeset = -1;
 int smi_indent = 0;
@@ -156,7 +155,6 @@ static int smi_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 	}
 
-	smi_sysfs_init(&THIS_MODULE->mkobj.kobj);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 	ret = pci_enable_device(pdev);
@@ -207,7 +205,6 @@ static void smi_pci_remove(struct pci_dev *pdev)
 {
 	struct drm_device *dev = pci_get_drvdata(pdev);
 
-	smi_sysfs_deinit(&THIS_MODULE->mkobj.kobj);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 	drm_dev_unregister(dev);

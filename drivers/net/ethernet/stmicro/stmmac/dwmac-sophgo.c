@@ -218,6 +218,10 @@ static int bm_dwmac_probe(struct platform_device *pdev)
 	ndev = dev_get_drvdata(&pdev->dev);
 	priv = netdev_priv(ndev);
 	phydev = mdiobus_get_phy(priv->mii, 0);
+	if (phydev == NULL) {
+		dev_err(&pdev->dev, "Can not get phy in addr 0\n");
+		goto err_remove_config_dt;
+	}
 
 	/* set green LED0 active for transmit, yellow LED1 for link*/
 	ret = phy_write_paged(phydev, 0, 0x1f, 0xd04);

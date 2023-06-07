@@ -39,6 +39,15 @@
 };
 
 / {
+	 board-info {
+		/* compatible MUST be sophgo,board-info */
+		compatible = "sophgo,board-info";
+		/* valid values are: full-function, xmr */
+		chip-package = "full-function";
+		/* valid values are: x4, x8 */
+		ddr-pcb-type = "x8";
+	};
+
 	pwmfan: pwm-fan {
 		compatible = "pwm-fan";
 		pwms = <&pwm 0 40000>, <&pwm 1 40000>; // period_ns

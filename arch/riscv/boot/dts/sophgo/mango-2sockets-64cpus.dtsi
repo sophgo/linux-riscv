@@ -1,0 +1,334 @@
+#include "mango.dtsi"
+#include "mango-clock-socket1.dtsi"
+
+/ {
+	/delete-node/ distance-map;
+	distance-map {
+		compatible = "numa-distance-map-v1";
+		distance-matrix = <0 0 10>,	//chip0
+				  <0 1 15>,
+				  <0 2 25>,
+				  <0 3 30>,
+				  <0 4 110>,
+				  <0 5 115>,
+				  <0 6 125>,
+				  <0 7 130>,
+				  <1 0 15>,
+				  <1 1 10>,
+				  <1 2 30>,
+				  <1 3 25>,
+				  <1 4 115>,
+				  <1 5 110>,
+				  <1 6 130>,
+				  <1 7 125>,
+				  <2 0 25>,
+				  <2 1 30>,
+				  <2 2 10>,
+				  <2 3 15>,
+				  <2 4 125>,
+				  <2 5 130>,
+				  <2 6 110>,
+				  <2 7 115>,
+				  <3 0 30>,
+				  <3 1 25>,
+				  <3 2 15>,
+				  <3 3 10>,
+				  <3 4 130>,
+				  <3 5 125>,
+				  <3 6 115>,
+				  <3 7 110>,
+				  <4 0 110>,	//chip1
+				  <4 1 115>,
+				  <4 2 125>,
+				  <4 3 130>,
+				  <4 4 10>,
+				  <4 5 15>,
+				  <4 6 25>,
+				  <4 7 30>,
+				  <5 0 115>,
+				  <5 1 110>,
+				  <5 2 130>,
+				  <5 3 125>,
+				  <5 4 15>,
+				  <5 5 10>,
+				  <5 6 30>,
+				  <5 7 25>,
+				  <6 0 125>,
+				  <6 1 130>,
+				  <6 2 110>,
+				  <6 3 115>,
+				  <6 4 25>,
+				  <6 5 30>,
+				  <6 6 10>,
+				  <6 7 15>,
+				  <7 0 130>,
+				  <7 1 125>,
+				  <7 2 115>,
+				  <7 3 110>,
+				  <7 4 30>,
+				  <7 5 25>,
+				  <7 6 15>,
+				  <7 7 10>;
+	};
+
+	/* the mem node will be updated by ZSBL. */
+	/* chip 1 */
+	memory@4 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000004 0x00000000 0x00000000>;
+		numa-node-id = <4>;
+	};
+	memory@5 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000005 0x00000000 0x00000000>;
+		numa-node-id = <5>;
+	};
+	memory@6 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000006 0x00000000 0x00000000>;
+		numa-node-id = <6>;
+	};
+	memory@7 {
+		device_type = "memory";
+		reg = <0x00000000 0x00000007 0x00000000 0x00000000>;
+		numa-node-id = <7>;
+	};
+
+	soc {
+		/delete-node/ interrupt-controller@7090000000;
+		intc: interrupt-controller@7090000000 {
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			compatible = "thead,c900-plic";
+			interrupt-controller;
+			interrupts-extended = <
+				&cpu0_intc  0xffffffff &cpu0_intc  9
+				&cpu1_intc  0xffffffff &cpu1_intc  9
+				&cpu2_intc  0xffffffff &cpu2_intc  9
+				&cpu3_intc  0xffffffff &cpu3_intc  9
+				&cpu4_intc  0xffffffff &cpu4_intc  9
+				&cpu5_intc  0xffffffff &cpu5_intc  9
+				&cpu6_intc  0xffffffff &cpu6_intc  9
+				&cpu7_intc  0xffffffff &cpu7_intc  9
+				&cpu8_intc  0xffffffff &cpu8_intc  9
+				&cpu9_intc  0xffffffff &cpu9_intc  9
+				&cpu10_intc  0xffffffff &cpu10_intc  9
+				&cpu11_intc  0xffffffff &cpu11_intc  9
+				&cpu12_intc  0xffffffff &cpu12_intc  9
+				&cpu13_intc  0xffffffff &cpu13_intc  9
+				&cpu14_intc  0xffffffff &cpu14_intc  9
+				&cpu15_intc  0xffffffff &cpu15_intc  9
+				&cpu16_intc  0xffffffff &cpu16_intc  9
+				&cpu17_intc  0xffffffff &cpu17_intc  9
+				&cpu18_intc  0xffffffff &cpu18_intc  9
+				&cpu19_intc  0xffffffff &cpu19_intc  9
+				&cpu20_intc  0xffffffff &cpu20_intc  9
+				&cpu21_intc  0xffffffff &cpu21_intc  9
+				&cpu22_intc  0xffffffff &cpu22_intc  9
+				&cpu23_intc  0xffffffff &cpu23_intc  9
+				&cpu24_intc  0xffffffff &cpu24_intc  9
+				&cpu25_intc  0xffffffff &cpu25_intc  9
+				&cpu26_intc  0xffffffff &cpu26_intc  9
+				&cpu27_intc  0xffffffff &cpu27_intc  9
+				&cpu28_intc  0xffffffff &cpu28_intc  9
+				&cpu29_intc  0xffffffff &cpu29_intc  9
+				&cpu30_intc  0xffffffff &cpu30_intc  9
+				&cpu31_intc  0xffffffff &cpu31_intc  9
+				&cpu32_intc  0xffffffff &cpu32_intc  9
+				&cpu33_intc  0xffffffff &cpu33_intc  9
+				&cpu34_intc  0xffffffff &cpu34_intc  9
+				&cpu35_intc  0xffffffff &cpu35_intc  9
+				&cpu36_intc  0xffffffff &cpu36_intc  9
+				&cpu37_intc  0xffffffff &cpu37_intc  9
+				&cpu38_intc  0xffffffff &cpu38_intc  9
+				&cpu39_intc  0xffffffff &cpu39_intc  9
+				&cpu40_intc  0xffffffff &cpu40_intc  9
+				&cpu41_intc  0xffffffff &cpu41_intc  9
+				&cpu42_intc  0xffffffff &cpu42_intc  9
+				&cpu43_intc  0xffffffff &cpu43_intc  9
+				&cpu44_intc  0xffffffff &cpu44_intc  9
+				&cpu45_intc  0xffffffff &cpu45_intc  9
+				&cpu46_intc  0xffffffff &cpu46_intc  9
+				&cpu47_intc  0xffffffff &cpu47_intc  9
+				&cpu48_intc  0xffffffff &cpu48_intc  9
+				&cpu49_intc  0xffffffff &cpu49_intc  9
+				&cpu50_intc  0xffffffff &cpu50_intc  9
+				&cpu51_intc  0xffffffff &cpu51_intc  9
+				&cpu52_intc  0xffffffff &cpu52_intc  9
+				&cpu53_intc  0xffffffff &cpu53_intc  9
+				&cpu54_intc  0xffffffff &cpu54_intc  9
+				&cpu55_intc  0xffffffff &cpu55_intc  9
+				&cpu56_intc  0xffffffff &cpu56_intc  9
+				&cpu57_intc  0xffffffff &cpu57_intc  9
+				&cpu58_intc  0xffffffff &cpu58_intc  9
+				&cpu59_intc  0xffffffff &cpu59_intc  9
+				&cpu60_intc  0xffffffff &cpu60_intc  9
+				&cpu61_intc  0xffffffff &cpu61_intc  9
+				&cpu62_intc  0xffffffff &cpu62_intc  9
+				&cpu63_intc  0xffffffff &cpu63_intc  9
+				>;
+			reg = <0x00000070 0x90000000 0x00000000 0x04000000>;
+			reg-names = "control";
+			riscv,max-priority = <7>;
+			riscv,ndev = <448>;
+		};
+
+		top1_misc: top_misc_ctrl@f030010000 {
+			compatible = "syscon";
+			reg = <0xf0 0x30010000 0x0 0x8000>;
+		};
+
+		rst1: reset1-controller {
+			#reset-cells = <1>;
+			compatible = "bitmain,reset";
+			subctrl-syscon = <&top1_misc>;
+			top_rst_offset = <0x3000>;
+			nr_resets = <RST_MAX_NUM>;
+		};
+
+		gpio3: gpio@f030009000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0xf0 0x30009000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&s1_div_clk GATE_CLK_APB_GPIO>,
+				 <&s1_div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&s1_div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port3a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <SOC_PERIPHERAL_IRQ(320) IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		ethernet1: ethernet@f040026000 {
+			compatible = "bitmain,ethernet";
+			reg = <0xf0 0x40026000 0x0 0x4000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(356) IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
+			clocks = <&s1_div_clk DIV_CLK_FPLL_TX_ETH0>,
+				   <&s1_div_clk GATE_CLK_TX_ETH0>,
+				   <&s1_div_clk GATE_CLK_AXI_ETH0>,
+				   <&s1_div_clk GATE_CLK_PTP_REF_I_ETH0>,
+				   <&s1_div_clk GATE_CLK_REF_ETH0>;
+
+			/* no hash filter and perfect filter support */
+			snps,multicast-filter-bins = <0>;
+			snps,perfect-filter-entries = <1>;
+
+			snps,txpbl = <32>;
+			snps,rxpbl = <32>;
+			snps,aal;
+
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+
+			phy-mode = "rgmii-txid";
+			phy-reset-gpios = <&port3a 27 0>;
+			phy-handle = <&phy1>;
+			mdio {
+				#address-cells = <0x1>;
+				#size-cells = <0x0>;
+				compatible = "snps,dwmac-mdio";
+				phy1: phy@0 {
+					compatible = "ethernet-phy-ieee802.3-c22";
+					device_type = "ethernet-phy";
+					reg = <0x0>;
+				};
+			};
+		};
+
+		emmc1: bm-emmc@f04002A000 {
+			compatible = "bitmain,bm-emmc";
+			reg = <0xf0 0x4002A000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(358) IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <4>;
+			non-removable;
+			no-sdio;
+			no-sd;
+			resets = <&rst1 RST_EMMC>;
+			reset-names = "emmc";
+			clocks =
+				<&s1_div_clk GATE_CLK_EMMC_100M>,
+				<&s1_div_clk GATE_CLK_AXI_EMMC>,
+				<&s1_div_clk GATE_CLK_100K_EMMC>;
+			clock-names =
+				"clk_gate_emmc",
+				"clk_gate_axi_emmc",
+				"clk_gate_100k_emmc";
+		};
+
+		sd1: bm-sd@f04002B000 {
+			compatible = "bitmain,bm-sd";
+			reg = <0xf0 0x4002B000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(360) IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <4>;
+			no-sdio;
+			no-mmc;
+			resets = <&rst1 RST_SD>;
+			reset-names = "sdio";
+			clocks =
+				<&s1_div_clk GATE_CLK_SD_100M>,
+				<&s1_div_clk GATE_CLK_AXI_SD>,
+				<&s1_div_clk GATE_CLK_100K_SD>;
+			clock-names =
+				"clk_gate_sd",
+				"clk_gate_axi_sd",
+				"clk_gate_100k_sd";
+		};
+	};
+
+	spifmc2: flash-controller@f000180000 {
+		compatible = "sophgo,spifmc";
+		reg = <0xf0 0x00180000 0x0 0x1000000>;
+		reg-names = "memory";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		interrupt-parent = <&intc>;
+		interrupts = <SOC_PERIPHERAL_IRQ(332) IRQ_TYPE_LEVEL_HIGH>;
+		clock-frequency = <100000000>;
+		clocks = <&s1_div_clk GATE_CLK_AHB_SF>;
+		flash@0 {
+			reg = <0>;
+			compatible = "jedec,spi-nor";
+		};
+	};
+
+	spifmc3: flash-controller@f002180000 {
+		compatible = "sophgo,spifmc";
+		reg = <0xf0 0x02180000 0x0 0x1000000>;
+		reg-names = "memory";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		interrupt-parent = <&intc>;
+		interrupts = <SOC_PERIPHERAL_IRQ(333) IRQ_TYPE_LEVEL_HIGH>;
+		clock-frequency = <100000000>;
+		clocks = <&s1_div_clk GATE_CLK_AHB_SF>;
+		flash@0 {
+			reg = <0>;
+			compatible = "jedec,spi-nor";
+		};
+	};
+
+	aliases {
+	        serial0 = &uart0;
+	        ethernet0 = &ethernet0;
+	        ethernet1 = &ethernet1;
+	};
+};

@@ -1,4 +1,4 @@
-#include "mango-2sockets.dtsi"
+#include "mango-2sockets-64cpus.dtsi"
 #include "mango-top-intc2.dtsi"
 #include "mango-pcie-2rc.dtsi"
 

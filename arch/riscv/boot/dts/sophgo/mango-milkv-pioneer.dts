@@ -75,7 +75,7 @@
 		pwm-names = "pwm0","pwm1";
 		pwm_inuse = "pwm0";
 		#cooling-cells = <2>;
-		cooling-levels = <153 128 77 26 1>;  //total 255
+		cooling-levels = <1 1 1 1 1>;  //total 255
 	};
 
 	thermal_zones: thermal-zones {

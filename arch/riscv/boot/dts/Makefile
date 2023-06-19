@@ -5,5 +5,6 @@ subdir-y += starfive
 subdir-y += canaan
 subdir-y += microchip
 subdir-y += renesas
+subdir-y += sophgo
 
 obj-$(CONFIG_BUILTIN_DTB) := $(addsuffix /, $(subdir-y))

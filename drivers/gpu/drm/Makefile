@@ -193,4 +193,5 @@ obj-y			+= xlnx/
 obj-y			+= gud/
 obj-$(CONFIG_DRM_HYPERV) += hyperv/
 obj-y			+= solomon/
+obj-y			+= smifb2/
 obj-$(CONFIG_DRM_SPRD) += sprd/

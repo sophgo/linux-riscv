@@ -751,6 +751,38 @@
 			};
 		};
 
+                spi0: spi@7040004000 {
+			compatible = "snps,dw-apb-ssi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70 0x40004000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(110) IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&div_clk GATE_CLK_APB_SPI>,
+			          <&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-frequency = <250000000>;
+			resets = <&rst RST_SPI0>;
+			reset-names = "spi0";
+			num-cs = <2>;
+			status = "okay";
+                };
+
+                spi1: spi@7040005000 {
+			compatible = "snps,dw-apb-ssi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70 0x40005000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(111) IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&div_clk GATE_CLK_APB_SPI>,
+			           <&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-frequency = <250000000>;
+			resets = <&rst RST_SPI1>;
+			reset-names = "spi1";
+			num-cs = <2>;
+			status = "okay";
+                };
+
 		stmmac_axi_setup: stmmac-axi-config {
 			snps,wr_osr_lmt = <1>;
 			snps,rd_osr_lmt = <2>;

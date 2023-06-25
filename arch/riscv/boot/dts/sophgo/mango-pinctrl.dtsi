@@ -382,6 +382,20 @@
 			};
 		};
 
+		gpio2_acquire: gpio2_acquire {
+			mux {
+				pins = <127>;
+				function = "gpio0_a";
+			};
+		};
+
+		gpio3_release: gpio3_release {
+			mux {
+				pins = <128>;
+				function = "gpio0_r";
+			};
+		};
+
 		pwr_key: pwr-key {
 			mux {
 				pins = <147>;

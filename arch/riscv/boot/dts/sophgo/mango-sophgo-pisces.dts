@@ -30,29 +30,19 @@
 			debounce-interval = <100>;
 		};
 	};
-
-	watchdog: sophgo-wdt@7030004000 {
-		compatible = "mango,wdt-reset";
-		reg = <0x70 0x30004000 0x0 0x1000>;
-		subctrl-syscon = <&top_misc>;
-	};
 };
 
-&gpio0 {
-	sophgo_gpio0: sophgo-gpio {
-		compatible = "sophgo,gpio0";
-		gpio-controller;
-		#gpio-cells = <2>;
-		reg = <0x70 0x30009000>;
-		interrupt-controller;
-		#interrupt-cells = <2>;
-		interrupt-parent = <&intc>;
-		interrupts = <SOC_PERIPHERAL_IRQ(96) IRQ_TYPE_LEVEL_HIGH>;
+&port0a {
+	compatible = "snps,dw-apb-gpio-port", "sophgo,gpio0";
 
-		reset_gpio: reset-gpio {
-			compatible = "mango,cpld-reset";
-			gpios = <&sophgo_gpio0 3 GPIO_ACTIVE_HIGH>;
-		};
+	cpld_poweroff: cpld-poweroff {
+		compatible = "mango,cpld-poweroff";
+		gpios = <&port0a 3 GPIO_ACTIVE_HIGH>;
+	};
+
+	cpld_reboot: cpld-reboot {
+		compatible = "mango,cpld-reboot";
+		gpios = <&port0a 5 GPIO_ACTIVE_HIGH>;
 	};
 };
 

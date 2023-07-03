@@ -2155,29 +2155,15 @@ static bool timekeeping_advance(enum timekeeping_adv_mode mode)
 	int shift = 0, maxshift;
 	unsigned int clock_set = 0;
 	unsigned long flags;
-#if defined (CONFIG_SOC_SOPHGO) && (CONFIG_NR_CPUS > 64)
-	u64 now, last;
-#endif
 
 	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 
 	/* Make sure we're fully resumed: */
 	if (unlikely(timekeeping_suspended))
 		goto out;
-#if defined (CONFIG_SOC_SOPHGO) && (CONFIG_NR_CPUS > 64)
-	now = tk_clock_read(&tk->tkr_mono);
-	last = tk->tkr_mono.cycle_last;
-	if (now < last) {
-		pr_warn("cpu(%d) - current cycle(0x%llx) is less than last cycle(0x%llx)\n",
-			 smp_processor_id(), now, last);
-		goto out;
-	}
 
-	offset = clocksource_delta(now, last, tk->tkr_mono.mask);
-#else
 	offset = clocksource_delta(tk_clock_read(&tk->tkr_mono),
 				   tk->tkr_mono.cycle_last, tk->tkr_mono.mask);
-#endif
 
 	/* Check if there's really nothing to do */
 	if (offset < real_tk->cycle_interval && mode == TK_ADV_TICK)

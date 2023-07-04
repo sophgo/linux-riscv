@@ -463,6 +463,26 @@
 			riscv,ndev = <224>;
 		};
 
+		timer0: dw-apb-timer0@7030003000 {
+			compatible = "snps,dw-apb-timer";
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(100) IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0x70 0x30003000 0x0 0x14>;
+			clocks = <&div_clk GATE_CLK_APB_TIMER>;
+			clock-names = "timer";
+			clk-drv-rating = <300>;
+		};
+
+		timer1: dw-apb-timer1@7030003014 {
+			compatible = "snps,dw-apb-timer";
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(100) IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0x70 0x30003014 0x0 0x10>;
+			clocks = <&div_clk GATE_CLK_APB_TIMER>;
+			clock-names = "timer";
+			clk-drv-rating = <300>;
+		};
+
 		top_misc: top_misc_ctrl@7030010000 {
 			compatible = "syscon";
 			reg = <0x70 0x30010000 0x0 0x8000>;

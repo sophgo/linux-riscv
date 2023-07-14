@@ -519,7 +519,7 @@
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(100) IRQ_TYPE_LEVEL_HIGH>;
 			reg = <0x70 0x30003000 0x0 0x14>;
-			clocks = <&div_clk GATE_CLK_APB_TIMER>;
+			clocks = <&div_clk GATE_CLK_TIMER1>;
 			clock-names = "timer";
 			clk-drv-rating = <300>;
 		};
@@ -529,7 +529,7 @@
 			interrupt-parent = <&intc>;
 			interrupts = <SOC_PERIPHERAL_IRQ(100) IRQ_TYPE_LEVEL_HIGH>;
 			reg = <0x70 0x30003014 0x0 0x10>;
-			clocks = <&div_clk GATE_CLK_APB_TIMER>;
+			clocks = <&div_clk GATE_CLK_TIMER2>;
 			clock-names = "timer";
 			clk-drv-rating = <300>;
 		};

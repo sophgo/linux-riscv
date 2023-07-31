@@ -196,7 +196,7 @@ static void print_isa_ext(struct seq_file *f)
  * Some of the extension may just be a place holder for now (B, K, P, J).
  * This should be updated once corresponding extensions are ratified.
  */
-static const char base_riscv_exts[13] = "imafdqcbkjpvh";
+static const char base_riscv_exts[12] = "imafdqcbkjph";
 
 static void print_isa(struct seq_file *f, const char *isa)
 {

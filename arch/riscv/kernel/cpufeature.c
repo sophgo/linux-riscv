@@ -257,8 +257,11 @@ void __init riscv_fill_hwcap(void)
 	}
 
 	#ifdef CONFIG_VECTOR
-		if (elf_hwcap & COMPAT_HWCAP_ISA_V)
+		if (elf_hwcap & COMPAT_HWCAP_ISA_V) {
 			static_branch_enable(&cpu_hwcap_vector);
+			/* Mask V 0.7.1 */
+			elf_hwcap &= ~COMPAT_HWCAP_ISA_V;
+		}
 	#endif
 }
 

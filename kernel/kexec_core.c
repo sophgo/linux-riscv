@@ -53,6 +53,7 @@ note_buf_t __percpu *crash_notes;
 
 /* Flag to indicate we are going to kexec a new kernel */
 bool kexec_in_progress = false;
+EXPORT_SYMBOL(kexec_in_progress);
 
 
 /* Location of the reserved area for the crash kernel */

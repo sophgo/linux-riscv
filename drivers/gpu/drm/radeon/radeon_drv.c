@@ -36,6 +36,7 @@
 #include <linux/vga_switcheroo.h>
 #include <linux/mmu_notifier.h>
 #include <linux/pci.h>
+#include <linux/kexec.h>
 
 #include <drm/drm_aperture.h>
 #include <drm/drm_drv.h>
@@ -336,10 +337,10 @@ radeon_pci_remove(struct pci_dev *pdev)
 static void
 radeon_pci_shutdown(struct pci_dev *pdev)
 {
-	/* if we are running in a VM, make sure the device
-	 * torn down properly on reboot/shutdown
+	/* if we are running in a VM or kexec another kernel,
+	 * make sure the device torn down properly on reboot/shutdown
 	 */
-	if (radeon_device_is_virtual())
+	if (radeon_device_is_virtual() || kexec_in_progress)
 		radeon_pci_remove(pdev);
 
 #if defined(CONFIG_PPC64) || defined(CONFIG_MACH_LOONGSON64)

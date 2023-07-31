@@ -51,7 +51,7 @@ atomic_t __kexec_lock = ATOMIC_INIT(0);
 
 /* Flag to indicate we are going to kexec a new kernel */
 bool kexec_in_progress = false;
-
+EXPORT_SYMBOL(kexec_in_progress);
 
 /* Location of the reserved area for the crash kernel */
 struct resource crashk_res = {

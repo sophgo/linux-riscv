@@ -6,6 +6,7 @@
  * Copyright (C) 2017 SiFive
  */
 
+#include <linux/init.h>
 #include <linux/bitmap.h>
 #include <linux/ctype.h>
 #include <linux/libfdt.h>
@@ -34,6 +35,16 @@ EXPORT_SYMBOL(riscv_isa_ext_keys);
 
 #ifdef CONFIG_VECTOR
 __ro_after_init DEFINE_STATIC_KEY_FALSE(cpu_hwcap_vector);
+
+static int __init do_hide_v0p7_ext(char *str)
+{
+	bitmap_clear(riscv_isa, RISCV_ISA_EXT_v, RISCV_ISA_EXT_MAX);
+	elf_hwcap &= ~COMPAT_HWCAP_ISA_V;
+
+	pr_notice("Hide vector 0.7 extension\n");
+	return 1;
+}
+__setup("hide_v0p7_ext", do_hide_v0p7_ext);
 #endif
 
 /**
@@ -257,8 +268,8 @@ void __init riscv_fill_hwcap(void)
 	}
 
 	#ifdef CONFIG_VECTOR
-		if (elf_hwcap & COMPAT_HWCAP_ISA_V)
-			static_branch_enable(&cpu_hwcap_vector);
+	if (elf_hwcap & COMPAT_HWCAP_ISA_V)
+		static_branch_enable(&cpu_hwcap_vector);
 	#endif
 }
 

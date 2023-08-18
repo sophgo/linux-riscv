@@ -57,6 +57,7 @@
 		link-id = /bits/ 16 <0x1>;
 		top-intc-used = <1>;
 		top-intc-id = <0>;
+		msix-supported = <0>;
 		interrupt-parent = <&intc1>;
 		//interrupts = <SOC_PERIPHERAL_IRQ(122) IRQ_TYPE_LEVEL_HIGH>;
 		//interrupt-names = "msi";

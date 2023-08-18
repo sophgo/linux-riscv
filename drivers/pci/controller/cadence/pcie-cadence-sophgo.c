@@ -90,6 +90,7 @@ struct cdns_mango_pcie_rc {
 	u16			pcie_id;
 	u16			link_id;
 	u32			top_intc_used;
+	u32			msix_supported;
 	struct irq_domain	*msi_domain;
 	int			msi_irq;
 	struct irq_domain	*irq_domain;
@@ -453,14 +454,29 @@ static struct msi_domain_info cdns_pcie_msi_domain_info = {
 	.chip	= &cdns_pcie_msi_irq_chip,
 };
 
+static struct msi_domain_info cdns_pcie_top_intr_msi_domain_info = {
+	.flags	= (MSI_FLAG_USE_DEF_DOM_OPS | MSI_FLAG_USE_DEF_CHIP_OPS
+		   | MSI_FLAG_PCI_MSIX | MSI_FLAG_MULTI_PCI_MSI),
+	.chip	= &cdns_pcie_msi_irq_chip,
+};
+
 static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc, int intc_id)
 {
 	struct irq_domain *irq_parent = cdns_pcie_get_parent_irq_domain(intc_id);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(rc->dev->of_node);
 
-	rc->msi_domain = pci_msi_create_irq_domain(fwnode,
-						   &cdns_pcie_msi_domain_info,
-						   irq_parent);
+	if (rc->msix_supported == 1) {
+		rc->msi_domain = pci_msi_create_irq_domain(fwnode,
+							   &cdns_pcie_top_intr_msi_domain_info,
+							   irq_parent);
+
+	} else {
+		rc->msi_domain = pci_msi_create_irq_domain(fwnode,
+							   &cdns_pcie_msi_domain_info,
+							   irq_parent);
+
+	}
+
 	if (!rc->msi_domain) {
 		dev_err(rc->dev, "create msi irq domain failed\n");
 		return -ENODEV;
@@ -783,6 +799,9 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 
 	rc->link_id = 0xffff;
 	of_property_read_u16(np, "link-id", &rc->link_id);
+
+	rc->msix_supported = 0;
+	of_property_read_u32(np, "msix-supported", &rc->msix_supported);
 
 	rc->top_intc_used = 0;
 	of_property_read_u32(np, "top-intc-used", &rc->top_intc_used);

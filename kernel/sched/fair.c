@@ -10602,6 +10602,9 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	if (kthread_is_per_cpu(p))
 		return 0;
 
+	if (is_migration_disabled(p))
+		return 0;
+
 #ifdef CONFIG_QOS_SCHED_DYNAMIC_AFFINITY
 	set_task_select_cpus(p, NULL, 0);
 	if (!cpumask_test_cpu(env->dst_cpu, p->select_cpus)) {

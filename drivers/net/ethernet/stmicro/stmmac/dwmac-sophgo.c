@@ -62,7 +62,7 @@ static int bm_eth_reset_phy(struct platform_device *pdev)
 	return 0;
 }
 
-static void bm_mac_fix_speed(void *priv, unsigned int speed)
+static void bm_mac_fix_speed(void *priv, unsigned int speed, unsigned int mode)
 {
 	struct bm_mac *bsp_priv = priv;
 	unsigned long rate = 125000000;
@@ -152,9 +152,9 @@ static void bm_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_s
 								 plat->unicast_filter_entries);
 	plat->multicast_filter_bins = bm_validate_mcast_bins(&pdev->dev,
 							     plat->multicast_filter_bins);
+	plat->flags |= (STMMAC_FLAG_TSO_EN);
 	plat->has_gmac4 = 1;
 	plat->has_gmac = 0;
-	plat->tso_en = 1;
 	plat->pmt = 0;
 }
 

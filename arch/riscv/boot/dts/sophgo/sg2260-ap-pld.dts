@@ -7,7 +7,7 @@
 
 	memory@0 {
 		device_type = "memory";
-		reg = <0x00000000 0x00200000 0x00000000 0x7fe00000>;
+		reg = <0x00000000 0x00200000 0x00000000 0xfe00000>;
 	};
 
 	cpus {
@@ -19,7 +19,7 @@
 			reg = <0>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv";
+			riscv,isa = "rv64imafdcv_sstc";
 			mmu-type = "riscv,sv48";
 			cpu0_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -32,7 +32,7 @@
 			reg = <1>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv";
+			riscv,isa = "rv64imafdcv_sstc";
 			mmu-type = "riscv,sv48";
 			cpu1_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -45,7 +45,7 @@
 			reg = <2>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv";
+			riscv,isa = "rv64imafdcv_sstc";
 			mmu-type = "riscv,sv48";
 			cpu2_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -58,7 +58,7 @@
 			reg = <3>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv";
+			riscv,isa = "rv64imafdcv_sstc";
 			mmu-type = "riscv,sv48";
 			cpu3_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -73,6 +73,28 @@
 		#size-cells = <2>;
 		compatible = "simple-bus";
 		ranges;
+
+		clint_mswi: clint-mswi@6844000000 {
+			compatible = "thead,c900-clint-mswi";
+			reg = <0x00000068 0x44000000 0x00000000 0x00004000>;
+			interrupts-extended = <
+				&cpu0_intc 3
+				&cpu1_intc 3
+				&cpu2_intc 3
+				&cpu3_intc 3
+				>;
+		};
+
+		clint_mtimer0: clint-mtimer@70ac000000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000068 0x44000000 0x00000000 0x00008000>;
+			interrupts-extended = <
+				&cpu0_intc 7
+				&cpu1_intc 7
+				&cpu2_intc 7
+				&cpu3_intc 7
+				>;
+		};
 
 		//4cores PLIC2
 		intc: interrupt-controller@6e00000000 {
@@ -116,7 +138,7 @@
 			compatible = "sophgo,sg2260-uart","snps,dw-apb-uart";
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
-			interrupts = <73>;
+			interrupts = <80>;
 			clock-frequency = <153600>;
 			clock-names = "baudclk";
 			reg-shift = <2>;
@@ -129,7 +151,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/sbin/init root=/dev/ram0 rw initrd=0x30000000,32M retain_initrd rdmem=0x80000000,2040M";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init  rw initrd=0xb000000,32M retain_initrd rdmem=0x80000000,2040M maxcpus=1";
 		stdout-path = "serial0";
 	};
 };

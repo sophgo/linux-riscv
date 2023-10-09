@@ -12,6 +12,7 @@
 
 #include "../pci.h"
 #include "msi.h"
+#include "../controller/cadence/pcie-cadence-sophgo.h"
 
 static int pci_msi_enable = 1;
 int pci_msi_ignore_mask;
@@ -932,33 +933,37 @@ static int __pci_enable_msix_range(struct pci_dev *dev,
 {
 	int rc, nvec = maxvec;
 
-	if (maxvec < minvec)
-		return -ERANGE;
+	if (check_vendor_id(dev, vendor_id_list, vendor_id_list_num)) {
+		if (maxvec < minvec)
+			return -ERANGE;
 
-	if (WARN_ON_ONCE(dev->msix_enabled))
-		return -EINVAL;
+		if (WARN_ON_ONCE(dev->msix_enabled))
+			return -EINVAL;
 
-	rc = pci_setup_msi_context(dev);
-	if (rc)
-		return rc;
-
-	for (;;) {
-		if (affd) {
-			nvec = irq_calc_affinity_vectors(minvec, nvec, affd);
-			if (nvec < minvec)
-				return -ENOSPC;
-		}
-
-		rc = __pci_enable_msix(dev, entries, nvec, affd, flags);
-		if (rc == 0)
-			return nvec;
-
-		if (rc < 0)
+		rc = pci_setup_msi_context(dev);
+		if (rc)
 			return rc;
-		if (rc < minvec)
-			return -ENOSPC;
 
-		nvec = rc;
+		for (;;) {
+			if (affd) {
+				nvec = irq_calc_affinity_vectors(minvec, nvec, affd);
+				if (nvec < minvec)
+					return -ENOSPC;
+			}
+
+			rc = __pci_enable_msix(dev, entries, nvec, affd, flags);
+			if (rc == 0)
+				return nvec;
+
+			if (rc < 0)
+				return rc;
+			if (rc < minvec)
+				return -ENOSPC;
+
+			nvec = rc;
+		}
+	} else {
+		return -1;
 	}
 }
 

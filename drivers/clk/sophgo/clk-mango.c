@@ -100,8 +100,7 @@ static const struct mango_divider_clock s0_div_clks[] = {
 		0, 0x204c, 16, 16, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, MANGO_CLK_USE_REG_VAL, },
 	{ DIV_CLK_FPLL_UART_500M, "clk_div_uart_500m", "fpll_clock",
-		0, 0x2050, 16, 8, CLK_DIVIDER_ONE_BASED |
-			CLK_DIVIDER_ALLOW_ZERO, MANGO_CLK_USE_REG_VAL, },
+		0, 0x2050, 16, 7, CLK_DIVIDER_READ_ONLY, MANGO_CLK_USE_REG_VAL, },
 	{ DIV_CLK_FPLL_AHB_LPC, "clk_div_ahb_lpc", "fpll_clock",
 		0, 0x2054, 16, 16, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, MANGO_CLK_USE_REG_VAL, },
@@ -420,8 +419,7 @@ static const struct mango_divider_clock s1_div_clks[] = {
 		0, 0x204c, 16, 16, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, MANGO_CLK_USE_REG_VAL, },
 	{ DIV_CLK_FPLL_UART_500M, "s1_clk_div_uart_500m", "s1_fpll_clock",
-		0, 0x2050, 16, 8, CLK_DIVIDER_ONE_BASED |
-			CLK_DIVIDER_ALLOW_ZERO, MANGO_CLK_USE_REG_VAL, },
+		0, 0x2050, 16, 7, CLK_DIVIDER_READ_ONLY, MANGO_CLK_USE_REG_VAL, },
 	{ DIV_CLK_FPLL_AHB_LPC, "s1_clk_div_ahb_lpc", "s1_fpll_clock",
 		0, 0x2054, 16, 16, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, MANGO_CLK_USE_REG_VAL, },

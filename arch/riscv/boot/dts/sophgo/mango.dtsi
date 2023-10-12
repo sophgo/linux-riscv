@@ -663,7 +663,7 @@
 			interrupts = <SOC_PERIPHERAL_IRQ(112) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <500000000>;
 			clocks = <&div_clk GATE_CLK_UART_500M>,
-				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+				 <&div_clk GATE_CLK_APB_UART>;
 			clock-names = "baudclk", "apb_pclk";
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -676,7 +676,7 @@
 			interrupts = <SOC_PERIPHERAL_IRQ(113) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <500000000>;
 			clocks = <&div_clk GATE_CLK_UART_500M>,
-				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+				 <&div_clk GATE_CLK_APB_UART>;
 			clock-names = "baudclk", "apb_pclk";
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -689,7 +689,7 @@
 			interrupts = <SOC_PERIPHERAL_IRQ(114) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <500000000>;
 			clocks = <&div_clk GATE_CLK_UART_500M>,
-				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+				 <&div_clk GATE_CLK_APB_UART>;
 			clock-names = "baudclk", "apb_pclk";
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -702,7 +702,7 @@
 			interrupts = <SOC_PERIPHERAL_IRQ(115) IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <500000000>;
 			clocks = <&div_clk GATE_CLK_UART_500M>,
-				   <&div_clk GATE_CLK_SYSDMA_AXI>;
+				 <&div_clk GATE_CLK_APB_UART>;
 			clock-names = "baudclk", "apb_pclk";
 			reg-shift = <2>;
 			reg-io-width = <4>;

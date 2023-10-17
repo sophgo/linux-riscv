@@ -1780,6 +1780,7 @@ phys_addr_t __init_memblock memblock_end_of_DRAM(void)
 
 static phys_addr_t __init_memblock __find_max_addr(phys_addr_t limit)
 {
+	phys_addr_t phys_ram_base = memblock_start_of_DRAM();
 	phys_addr_t max_addr = PHYS_ADDR_MAX;
 	struct memblock_region *r;
 
@@ -1789,11 +1790,10 @@ static phys_addr_t __init_memblock __find_max_addr(phys_addr_t limit)
 	 * of those regions, max_addr will keep original value PHYS_ADDR_MAX
 	 */
 	for_each_mem_region(r) {
-		if (limit <= r->size) {
-			max_addr = r->base + limit;
+		if ((r->base + r->size) >= (phys_ram_base + limit)) {
+			max_addr = phys_ram_base + limit;
 			break;
 		}
-		limit -= r->size;
 	}
 
 	return max_addr;

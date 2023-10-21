@@ -78,7 +78,7 @@ int tick_switch_to_oneshot(void (*handler)(struct clock_event_device *))
 	if (!dev || !(dev->features & CLOCK_EVT_FEAT_ONESHOT) ||
 		    !tick_device_is_functional(dev)) {
 
-		pr_info("Clockevents: could not switch to one-shot mode:");
+		pr_warn("Clockevents: could not switch to one-shot mode:");
 		if (!dev) {
 			pr_cont(" no tick device\n");
 		} else {

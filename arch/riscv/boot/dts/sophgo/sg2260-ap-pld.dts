@@ -74,9 +74,9 @@
 		compatible = "simple-bus";
 		ranges;
 
-		clint_mswi: clint-mswi@6844000000 {
+		clint_mswi: clint-mswi@6e04000000 {
 			compatible = "thead,c900-clint-mswi";
-			reg = <0x00000068 0x44000000 0x00000000 0x00004000>;
+			reg = <0x0000006e 0x04000000 0x00000000 0x00004000>;
 			interrupts-extended = <
 				&cpu0_intc 3
 				&cpu1_intc 3
@@ -85,9 +85,9 @@
 				>;
 		};
 
-		clint_mtimer0: clint-mtimer@70ac000000 {
+		clint_mtimer0: clint-mtimer@6840000000 {
 			compatible = "thead,c900-clint-mtimer";
-			reg = <0x00000068 0x44000000 0x00000000 0x00008000>;
+			reg = <0x00000068 0x40000000 0x00000000 0x00008000>;
 			interrupts-extended = <
 				&cpu0_intc 7
 				&cpu1_intc 7
@@ -138,7 +138,7 @@
 			compatible = "snps,dw-apb-uart";
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
-			interrupts = <80>;
+			interrupts = <40>;
 			clock-frequency = <153600>;
 			clock-names = "baudclk";
 			reg-shift = <2>;
@@ -151,7 +151,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xb000000,32M rdmem=0x80000000,2040M maxcpus=1";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xb000000,32M rdmem=0x80000000,2040M maxcpus=4";
 		stdout-path = "serial0";
 	};
 };

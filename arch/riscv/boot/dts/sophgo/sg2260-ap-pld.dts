@@ -7,7 +7,7 @@
 
 	memory@0 {
 		device_type = "memory";
-		reg = <0x00000000 0x00200000 0x00000000 0xfe00000>;
+		reg = <0x00000000 0x80200000 0x00000000 0xfe00000>;
 	};
 
 	cpus {
@@ -138,7 +138,7 @@
 			compatible = "snps,dw-apb-uart";
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
-			interrupts = <40>;
+			interrupts = <41>;
 			clock-frequency = <153600>;
 			clock-names = "baudclk";
 			reg-shift = <2>;
@@ -151,7 +151,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xb000000,32M rdmem=0x80000000,2040M maxcpus=4";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x40000000,1016M maxcpus=4";
 		stdout-path = "serial0";
 	};
 };

@@ -463,6 +463,7 @@ static struct msi_domain_info cdns_pcie_top_intr_msi_domain_info = {
 struct vendor_id_list vendor_id_list[] = {
 	{"Inter X520", 0x8086},
 	{"WangXun RP1000", 0x8088},
+	{"Switchtec", 0x11f8},
 };
 
 size_t vendor_id_list_num = ARRAY_SIZE(vendor_id_list);

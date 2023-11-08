@@ -52,7 +52,7 @@ struct pcie_intc_data {
 // workaround for using in other modules
 struct pcie_intc_data *pic_data[PCIE_INTC_NUM];
 
-struct irq_domain *dw_pcie_get_parent_irq_domain(int intc_id)
+struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(int intc_id)
 {
 	if (intc_id >= PCIE_INTC_NUM)
 		return NULL;

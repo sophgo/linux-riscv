@@ -39,20 +39,6 @@
 				  <3 3 10>;
 	};
 
-	reserved-memory {
-		#address-cells = <0x2>;
-		#size-cells = <0x2>;
-		ranges;
-		linux,cma {
-			compatible = "shared-dma-pool";
-			size = <0x00000000 0x10000000>;
-			alloc-ranges = <0x00000000 0xc0000000
-					0x00000000 0xd0000000>;
-			reusable;
-			linux,cma-default;
-		};
-	};
-
 	pmu {
 		compatible = "riscv,pmu";
 		riscv,event-to-mhpmevent =

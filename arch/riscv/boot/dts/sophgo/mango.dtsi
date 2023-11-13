@@ -39,28 +39,6 @@
 				  <3 3 10>;
 	};
 
-	/* the mem node will be updated by ZSBL. */
-	memory@0 {
-		device_type = "memory";
-		reg = <0x00000000 0x00000000 0x00000000 0x00000000>;
-		numa-node-id = <0>;
-	};
-	memory@1 {
-		device_type = "memory";
-		reg = <0x00000000 0x00000001 0x00000000 0x00000000>;
-		numa-node-id = <1>;
-	};
-	memory@2 {
-		device_type = "memory";
-		reg = <0x00000000 0x00000002 0x00000000 0x00000000>;
-		numa-node-id = <2>;
-	};
-	memory@3 {
-		device_type = "memory";
-		reg = <0x00000000 0x00000003 0x00000000 0x00000000>;
-		numa-node-id = <3>;
-	};
-
 	reserved-memory {
 		#address-cells = <0x2>;
 		#size-cells = <0x2>;

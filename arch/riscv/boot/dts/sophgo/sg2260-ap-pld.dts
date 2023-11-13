@@ -4,8 +4,9 @@
 	compatible = "sophgo, sg2260_pld";
 	#address-cells = <2>;
 	#size-cells = <2>;
+	dma-noncoherent;
 
-	memory@0 {
+	memory@80200000 {
 		device_type = "memory";
 		reg = <0x00000000 0x80200000 0x00000000 0xfe00000>;
 	};
@@ -19,7 +20,9 @@
 			reg = <0>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_sstc";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
 			cpu0_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -32,7 +35,9 @@
 			reg = <1>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_sstc";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
 			cpu1_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -45,7 +50,9 @@
 			reg = <2>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_sstc";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
 			cpu2_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -58,7 +65,9 @@
 			reg = <3>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_sstc";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
 			cpu3_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -110,7 +119,7 @@
 			reg = <0x0000006e 0x00000000 0x00000000 0x10000000>;
 			reg-names = "control";
 			riscv,max-priority = <7>;
-			riscv,ndev = <179>;
+			riscv,ndev = <415>;
 		};
 
 		dummy_apb: apb-clock {
@@ -144,14 +153,78 @@
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
+
+		stmmac_axi_setup: stmmac-axi-config {
+			snps,wr_osr_lmt = <1>;
+			snps,rd_osr_lmt = <2>;
+			snps,blen = <4 8 16 0 0 0 0>;
+		};
+
+		mtl_rx_setup: rx-queues-config {
+			snps,rx-queues-to-use = <8>;
+			queue0 {};
+			queue1 {};
+			queue2 {};
+			queue3 {};
+			queue4 {};
+			queue5 {};
+			queue6 {};
+			queue7 {};
+		};
+
+		mtl_tx_setup: tx-queues-config {
+			snps,tx-queues-to-use = <8>;
+			queue0 {};
+			queue1 {};
+			queue2 {};
+			queue3 {};
+			queue4 {};
+			queue5 {};
+			queue6 {};
+			queue7 {};
+		};
+
+		ethernet0: ethernet@7030006000 {
+			compatible = "sophgo,ethernet";
+			reg = <0x70 0x30006000 0x0 0x4000>;
+			interrupt-names = "macirq";
+			interrupt-parent = <&intc>;
+			interrupts = <296>;
+			#if 0
+			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
+			clocks = <&div_clk DIV_CLK_FPLL_TX_ETH0>,
+				<&div_clk GATE_CLK_ETH0_TX>,
+				<&div_clk GATE_CLK_AXI6_ETH0>,
+				<&div_clk GATE_CLK_PTP_REF_I_ETH0>,
+				<&div_clk GATE_CLK_REF_ETH0>;
+			#endif
+			/* no hash filter and perfect filter support */
+			snps,multicast-filter-bins = <0>;
+			snps,perfect-filter-entries = <1>;
+
+			snps,txpbl = <32>;
+			snps,rxpbl = <32>;
+			snps,aal;
+
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+
+			phy-mode = "rgmii-id";
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
 	};
 
 	aliases {
 		serial0 = &uart0;
+		ethernet0 = &ethernet0;
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x40000000,1016M maxcpus=4";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x100000000,2040M maxcpus=4";
 		stdout-path = "serial0";
 	};
 };

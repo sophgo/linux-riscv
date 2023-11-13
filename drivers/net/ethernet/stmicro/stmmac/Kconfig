@@ -121,6 +121,16 @@ config DWMAC_MESON
 	  the stmmac device driver. This driver is used for Meson6,
 	  Meson8, Meson8b and GXBB SoCs.
 
+config DWMAC_SOPHGO
+	tristate "Sophgo dwmac support"
+	default ARCH_SOPHGO
+	depends on OF && COMMON_CLK
+	help
+	  Support for Ethernet controller on Sophgo sg2260 SoCs.
+
+	  This selects the Sophgo SoC glue layer support for the
+	  stmmac device driver. This driver is used for sg2260 SoCs.
+
 config DWMAC_OXNAS
 	tristate "Oxford Semiconductor OXNAS dwmac support"
 	default ARCH_OXNAS

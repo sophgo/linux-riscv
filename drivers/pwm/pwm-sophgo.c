@@ -165,7 +165,6 @@ static const struct pwm_ops pwm_sophgo_ops = {
 	.request	= pwm_sophgo_request,
 	.free		= pwm_sophgo_free,
 	.apply		= pwm_sophgo_apply,
-	.owner		= THIS_MODULE,
 };
 
 static const struct of_device_id sophgo_pwm_match[] = {

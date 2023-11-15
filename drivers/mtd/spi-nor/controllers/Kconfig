@@ -19,7 +19,7 @@ config SPI_NXP_SPIFI
 
 config SPI_SOPHGO_SPIFMC
 	tristate "Sophgo SPI Flash Master Controller (SPIFMC)"
-	depends on SOC_SOPHGO || COMPILE_TEST
+	depends on ARCH_SOPHGO || COMPILE_TEST
 	depends on HAS_IOMEM
 	help
 	  Enable support for the Sophgo SPI Flash Master controller.

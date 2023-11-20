@@ -80,7 +80,7 @@ config SOC_CANAAN_K210_DTB_SOURCE
 
 endif # SOC_CANAAN
 
-config SOC_SOPHGO
+config ARCH_SOPHGO
 	bool "Sophgo SoCs"
 	select SIFIVE_PLIC
 	select DW_APB_TIMER_OF
@@ -89,7 +89,7 @@ config SOC_SOPHGO
 
 config SOPHGO_MULTI_CHIP_CLOCK_SYNC
 	bool "Sophgo multi-chip clock synchronous"
-	depends on SOC_SOPHGO
+	depends on ARCH_SOPHGO
 	default n
 	help
 	  To solve the problem of asynchronous multi-chip clocks,

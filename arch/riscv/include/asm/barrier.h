@@ -29,7 +29,7 @@
 #define __smp_rmb()	RISCV_FENCE(r,r)
 #define __smp_wmb()	RISCV_FENCE(w,w)
 
-#ifdef CONFIG_SOC_SOPHGO
+#ifdef CONFIG_ARCH_SOPHGO
 #define __smp_store_release(p, v)					\
 do {									\
 	compiletime_assert_atomic_type(*p);				\

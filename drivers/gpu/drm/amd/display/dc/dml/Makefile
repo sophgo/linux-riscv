@@ -33,6 +33,12 @@ ifdef CONFIG_PPC64
 dml_ccflags := -mhard-float -maltivec
 endif
 
+ifdef CONFIG_RISCV
+include $(srctree)/arch/riscv/Makefile.isa
+# Remove V from the ISA string, like in arch/riscv/Makefile, but keep F and D.
+dml_ccflags := -march=$(subst v0p7,,$(riscv-march-y))
+endif
+
 ifdef CONFIG_CC_IS_GCC
 ifneq ($(call gcc-min-version, 70100),y)
 IS_OLD_GCC = 1

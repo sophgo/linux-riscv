@@ -153,7 +153,7 @@
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
-
+#if 0
 		stmmac_axi_setup: stmmac-axi-config {
 			snps,wr_osr_lmt = <1>;
 			snps,rd_osr_lmt = <2>;
@@ -185,7 +185,7 @@
 		};
 
 		ethernet0: ethernet@7030006000 {
-			compatible = "sophgo,ethernet";
+			compatible = "sophgo,ethernet", "snps,dwmac-4.00";
 			reg = <0x70 0x30006000 0x0 0x4000>;
 			interrupt-names = "macirq";
 			interrupt-parent = <&intc>;
@@ -205,6 +205,7 @@
 			snps,txpbl = <32>;
 			snps,rxpbl = <32>;
 			snps,aal;
+			snps,tso;
 
 			snps,axi-config = <&stmmac_axi_setup>;
 			snps,mtl-rx-config = <&mtl_rx_setup>;
@@ -216,11 +217,39 @@
 				full-duplex;
 			};
 		};
+
+		dwcxlg0: dwcxlg@6c08000000 {
+			compatible = "sophgo,ethernet", "snps,dwxgmac";
+			reg = <0x6c 0x08000000 0x0 0x40000>;
+			interrupt-parent = <&intc>;
+			interrupts = <92 93 94 95 96 97 98 99 100
+						  109 110 111 112 113 114 115 116
+							>;
+			interrupt-names = "macirq", "tx_ch0", "tx_ch1", "tx_ch2", "tx_ch3",
+							   "tx_ch4", "tx_ch5", "tx_ch6", "tx_ch7",
+							   "rx_ch0", "rx_ch1", "rx_ch2", "rx_ch3",
+							   "rx_ch4", "rx_ch5", "rx_ch6", "rx_ch7";
+			snps,tso;
+			snps,multi_msi_en;
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+
+			phy-mode = "xlgmii";
+			fixed-link {
+				speed = <100000>;
+				full-duplex;
+			};
+		};
+#endif
 	};
 
 	aliases {
 		serial0 = &uart0;
+#if 0
 		ethernet0 = &ethernet0;
+		dwcxlg0 = &dwcxlg0;
+#endif
 	};
 
 	chosen {

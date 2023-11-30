@@ -142,6 +142,29 @@ static int sg_validate_mcast_bins(struct device *dev, int mcast_bins)
 	return x;
 }
 
+static int sophgo_get_platform_resources(struct platform_device *pdev,
+				  struct stmmac_resources *stmmac_res)
+{
+	char *tx_ch = "tx_ch";
+	char *rx_ch = "rx_ch";
+	char int_name[8];
+
+	for (int i = 0; i < 8; i++) {
+		sprintf(int_name, "%s%d", tx_ch, i);
+		stmmac_res->tx_irq[i] = platform_get_irq_byname(pdev, int_name);
+		if (stmmac_res->tx_irq[i] < 0)
+			return stmmac_res->tx_irq[i];
+	}
+	for (int i = 0; i < 8; i++) {
+		sprintf(int_name, "%s%d", rx_ch, i);
+		stmmac_res->rx_irq[i] = platform_get_irq_byname(pdev, int_name);
+		if (stmmac_res->rx_irq[i] < 0)
+			return stmmac_res->rx_irq[i];
+	}
+
+	return 0;
+}
+
 static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_stmmacenet_data *plat)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -152,10 +175,7 @@ static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_s
 								 plat->unicast_filter_entries);
 	plat->multicast_filter_bins = sg_validate_mcast_bins(&pdev->dev,
 							     plat->multicast_filter_bins);
-	plat->has_gmac4 = 1;
-	plat->has_gmac = 0;
-	plat->tso_en = 1;
-	plat->pmt = 0;
+	plat->sph_disable = 1;
 }
 
 static int sg_dwmac_probe(struct platform_device *pdev)
@@ -163,6 +183,7 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 	struct plat_stmmacenet_data *plat_dat;
 	struct stmmac_resources stmmac_res;
 	struct sg_mac *bsp_priv = NULL;
+	struct device_node *np = pdev->dev.of_node;
 	// struct phy_device *phydev = NULL;
 	// struct stmmac_priv *priv = NULL;
 	// struct net_device *ndev = NULL;
@@ -180,6 +201,13 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 	plat_dat = stmmac_probe_config_dt(pdev, stmmac_res.mac);
 	if (IS_ERR(plat_dat))
 		return PTR_ERR(plat_dat);
+
+	plat_dat->multi_msi_en = of_property_read_bool(np, "snps,multi_msi_en");
+	if (plat_dat->multi_msi_en) {
+		ret = sophgo_get_platform_resources(pdev, &stmmac_res);
+		if (ret)
+			return ret;
+	}
 
 	sg_dwmac_probe_config_dt(pdev, plat_dat);
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
@@ -263,6 +291,6 @@ static struct platform_driver sg_dwmac_driver = {
 };
 module_platform_driver(sg_dwmac_driver);
 
-MODULE_AUTHOR("Sheep<dong.yang@sophgo.com>");
+MODULE_AUTHOR("sheep004@sophgo.com>");
 MODULE_DESCRIPTION("Sophgo DWMAC specific glue layer");
 MODULE_LICENSE("GPL");

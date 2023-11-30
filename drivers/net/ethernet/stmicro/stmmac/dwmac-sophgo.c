@@ -291,6 +291,6 @@ static struct platform_driver sg_dwmac_driver = {
 };
 module_platform_driver(sg_dwmac_driver);
 
-MODULE_AUTHOR("sheep004@sophgo.com>");
+MODULE_AUTHOR("杨东 (Yang Dong) <dong.yang@sophgo.com>");
 MODULE_DESCRIPTION("Sophgo DWMAC specific glue layer");
 MODULE_LICENSE("GPL");

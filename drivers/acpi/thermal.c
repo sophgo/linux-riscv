@@ -297,9 +297,8 @@ static void __acpi_thermal_trips_update(struct acpi_thermal *tz, int flag)
 	}
 	if ((flag & ACPI_TRIPS_DEVICES) && tz->trips.passive.trip.valid) {
 		memset(&devices, 0, sizeof(struct acpi_handle_list));
-		status = acpi_evaluate_reference(tz->device->handle, "_PSL",
-						 NULL, &devices);
-		if (ACPI_FAILURE(status)) {
+		if (!acpi_evaluate_reference(tz->device->handle, "_PSL",
+						 NULL, &devices)) {
 			acpi_handle_info(tz->device->handle,
 					 "Invalid passive threshold\n");
 			tz->trips.passive.trip.valid = false;
@@ -362,9 +361,8 @@ static void __acpi_thermal_trips_update(struct acpi_thermal *tz, int flag)
 		name[2] = 'L';
 		if ((flag & ACPI_TRIPS_DEVICES) && tz->trips.active[i].trip.valid) {
 			memset(&devices, 0, sizeof(struct acpi_handle_list));
-			status = acpi_evaluate_reference(tz->device->handle,
-							 name, NULL, &devices);
-			if (ACPI_FAILURE(status)) {
+			if (!acpi_evaluate_reference(tz->device->handle,
+							 name, NULL, &devices)) {
 				acpi_handle_info(tz->device->handle,
 						 "Invalid active%d threshold\n", i);
 				tz->trips.active[i].trip.valid = false;
@@ -389,9 +387,8 @@ static void __acpi_thermal_trips_update(struct acpi_thermal *tz, int flag)
 
 	if (flag & ACPI_TRIPS_DEVICES) {
 		memset(&devices, 0, sizeof(devices));
-		status = acpi_evaluate_reference(tz->device->handle, "_TZD",
-						 NULL, &devices);
-		if (ACPI_SUCCESS(status) &&
+		if (!acpi_evaluate_reference(tz->device->handle, "_TZD",
+						 NULL, &devices) &&
 		    memcmp(&tz->devices, &devices, sizeof(devices))) {
 			tz->devices = devices;
 			ACPI_THERMAL_TRIPS_EXCEPTION(flag, tz, "device");

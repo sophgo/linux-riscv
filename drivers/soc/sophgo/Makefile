@@ -1,4 +1,7 @@
 #obj-$(CONFIG_ARCH_SOPHGO)		+= top/top-mango.o
 obj-$(CONFIG_ARCH_SOPHGO)		+= top/top_intc.o
+obj-$(CONFIG_ARCH_SOPHGO)		+= umcu/bmwdt.o
 obj-$(CONFIG_ARCH_SOPHGO)		+= umcu/mcu.o
+obj-$(CONFIG_ARCH_SOPHGO)		+= umcu/eeprom.o
+obj-$(CONFIG_ARCH_SOPHGO)		+= umcu/wdt.o
 obj-$(CONFIG_ARCH_SOPHGO)		+= tach/sophgo-tach.o

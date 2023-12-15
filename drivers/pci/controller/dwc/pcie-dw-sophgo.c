@@ -17,6 +17,7 @@
 #include "../../pci.h"
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
+#include <linux/of_pci.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
@@ -526,14 +527,14 @@ static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 	sophgo_dw_pcie_msi_setup(pp, 0);
 
 	/* Setup RC BARs */
-	sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0x00000004);
-	sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_1, 0x00000000);
+	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0x00000004);
+	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_1, 0x00000000);
 
 	/* Setup interrupt pins */
-	val = sophgo_dw_pcie_readl_dbi(pcie, PCI_INTERRUPT_LINE);
-	val &= 0xffff00ff;
-	val |= 0x00000100;
-	sophgo_dw_pcie_writel_dbi(pcie, PCI_INTERRUPT_LINE, val);
+	//val = sophgo_dw_pcie_readl_dbi(pcie, PCI_INTERRUPT_LINE);
+	//val &= 0xffff00ff;
+	//val |= 0x00000100;
+	//sophgo_dw_pcie_writel_dbi(pcie, PCI_INTERRUPT_LINE, val);
 
 	/* Setup bus numbers */
 	val = sophgo_dw_pcie_readl_dbi(pcie, PCI_PRIMARY_BUS);
@@ -559,14 +560,14 @@ static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 			return ret;
 	}
 
-	sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0);
+	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0);
 
 	/* Program correct class for RC */
 	sophgo_dw_pcie_writew_dbi(pcie, PCI_CLASS_DEVICE, PCI_CLASS_BRIDGE_PCI);
 
-	val = sophgo_dw_pcie_readl_dbi(pcie, PCIE_LINK_WIDTH_SPEED_CONTROL);
-	val |= PORT_LOGIC_SPEED_CHANGE;
-	sophgo_dw_pcie_writel_dbi(pcie, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
+	//val = sophgo_dw_pcie_readl_dbi(pcie, PCIE_LINK_WIDTH_SPEED_CONTROL);
+	//val |= PORT_LOGIC_SPEED_CHANGE;
+	//sophgo_dw_pcie_writel_dbi(pcie, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
 
 	sophgo_dw_pcie_dbi_ro_wr_dis(pcie);
 
@@ -720,50 +721,17 @@ static int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	/* Set default bus ops */
 	bridge->ops = &sophgo_dw_pcie_ops;
 	bridge->child_ops = &sophgo_dw_child_pcie_ops;
-
-	if (pp->ops->host_init) {
-		ret = pp->ops->host_init(pp);
-		if (ret)
-			return ret;
-	}
-#if 0
-	if (pci_msi_enabled()) {
-		pp->has_msi_ctrl = !(pp->ops->msi_host_init ||
-				     of_property_read_bool(np, "msi-parent") ||
-				     of_property_read_bool(np, "msi-map"));
-
-		/*
-		 * For the has_msi_ctrl case the default assignment is handled
-		 * in the dw_pcie_msi_host_init().
-		 */
-		if (!pp->has_msi_ctrl && !pp->num_vectors) {
-			pp->num_vectors = MSI_DEF_NUM_VECTORS;
-		} else if (pp->num_vectors > MAX_MSI_IRQS) {
-			dev_err(dev, "Invalid number of vectors\n");
-			ret = -EINVAL;
-			goto err_deinit_host;
-		}
-
-		if (pp->ops->msi_host_init) {
-			ret = pp->ops->msi_host_init(pp);
-			if (ret < 0)
-				goto err_deinit_host;
-		} else if (pp->has_msi_ctrl) {
-			ret = dw_pcie_msi_host_init(pp);
-			if (ret < 0)
-				goto err_deinit_host;
-		}
-	}
-#endif
 	sophgo_dw_pcie_version_detect(pcie);
-
 	sophgo_dw_pcie_iatu_detect(pcie);
-
 	ret = sophgo_dw_pcie_setup_rc(pp);
 	if (ret)
 		return ret;
 
 	bridge->sysdata = pp;
+	bridge->dev.parent = dev;
+	bridge->ops = &sophgo_dw_pcie_ops;
+	bridge->map_irq = of_irq_parse_and_map_pci;
+	bridge->swizzle_irq = pci_common_swizzle;
 
 	ret = pci_host_probe(bridge);
 	if (ret)

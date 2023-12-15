@@ -11,8 +11,8 @@
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
 
-#define MAX_IRQ_NUMBER 512
-#define PCIE_INTC_NUM 2
+#define MAX_IRQ_NUMBER 64
+#define PCIE_INTC_NUM 1
 /*
  * here we assume all plic hwirq and pic(PCIe Interrupt
  * Controller) hwirq should be contiguous.
@@ -37,7 +37,6 @@ struct pcie_intc_data {
 	DECLARE_BITMAP(irq_bitmap, MAX_IRQ_NUMBER);
 	spinlock_t lock;
 
-	void __iomem *reg_sta;
 	void __iomem *reg_set;
 	void __iomem *reg_clr;
 
@@ -165,12 +164,11 @@ static const struct irq_domain_ops pcie_intc_domain_ops = {
 static void pcie_intc_ack_irq(struct irq_data *d)
 {
 	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
-	int reg_off, bit_off;
+	int reg_off = 0;
 	struct irq_data *plic_irq_data = data->plic_irq_datas[d->hwirq];
 
-	reg_off = d->hwirq / data->reg_bitwidth;
-	bit_off = d->hwirq - data->reg_bitwidth * reg_off;
-	writel(1 << bit_off, (unsigned int *)data->reg_clr + reg_off);
+	reg_off = d->hwirq;
+	writel(0, (unsigned int *)data->reg_clr + reg_off);
 
 	pr_debug("%s %ld, parent %s/%ld\n", __func__, d->hwirq,
 		plic_irq_data->domain->name, plic_irq_data->hwirq);
@@ -202,9 +200,9 @@ static void pcie_intc_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 {
 	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
 
-	msg->address_lo = lower_32_bits(data->reg_set_phys);
+	msg->address_lo = lower_32_bits(data->reg_set_phys) + 4 * (d->hwirq / 32);
 	msg->address_hi = upper_32_bits(data->reg_set_phys);
-	msg->data = 1 << d->hwirq;
+	msg->data = d->hwirq % 32;
 
 	pr_debug("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
 		(int)d->hwirq, msg->address_hi, msg->address_lo, msg->data);
@@ -300,14 +298,6 @@ static int pcie_intc_probe(struct platform_device *pdev)
 	if (device_property_read_u32(&pdev->dev, "reg-bitwidth", &data->reg_bitwidth))
 		data->reg_bitwidth = 32;
 
-	// get register address
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sta");
-	data->reg_sta = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(data->reg_sta)) {
-		dev_err(&pdev->dev, "failed map status register\n");
-		ret = PTR_ERR(data->reg_sta);
-		goto out;
-	}
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "set");
 	data->reg_set = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(data->reg_set)) {
@@ -378,8 +368,6 @@ static int pcie_intc_probe(struct platform_device *pdev)
 	return ret;
 
 out:
-	if (data->reg_sta)
-		iounmap(data->reg_sta);
 	if (data->reg_set)
 		iounmap(data->reg_set);
 	if (data->reg_clr)

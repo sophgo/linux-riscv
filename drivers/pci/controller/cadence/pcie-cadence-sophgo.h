@@ -5,6 +5,7 @@
 struct vendor_id_list {
 	const char  *name;
 	uint16_t    vendor_id;
+	uint16_t    device_id;
 };
 
 extern struct vendor_id_list vendor_id_list[];

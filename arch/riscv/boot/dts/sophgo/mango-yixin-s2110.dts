@@ -1,10 +1,10 @@
 #include "mango-2sockets.dtsi"
 #include "mango-top-intc2.dtsi"
-#include "mango-pcie-2rc.dtsi"
+#include "mango-pcie-4rc-v2.dtsi"
 
 / {
 	info {
-		file-name = "mango-sophgo-pisces.dts";
+		file-name = "mango-yixin-s2110.dts";
 	};
 };
 
@@ -42,7 +42,7 @@
 
 	cpld_reboot: cpld-reboot {
 		compatible = "mango,cpld-reboot";
-		gpios = <&port0a 5 GPIO_ACTIVE_HIGH>;
+		gpios = <&port0a 29 GPIO_ACTIVE_HIGH>;
 	};
 };
 

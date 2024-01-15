@@ -32,6 +32,11 @@
 	};
 };
 
+&gpio0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&dbgi2c_release>;
+};
+
 &port0a {
 	compatible = "snps,dw-apb-gpio-port", "sophgo,gpio0";
 

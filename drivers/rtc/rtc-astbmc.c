@@ -27,6 +27,7 @@
 #include <linux/miscdevice.h>
 #include <linux/serial_core.h>
 #include <linux/serial_8250.h>
+#include <linux/jiffies.h>
 
 /* Registers in astbmcrtc rtc */
 
@@ -96,10 +97,6 @@ struct aspeed_pci_bmc_dev {
 #define BMC_MULTI_MSI	32
 
 #define DRIVER_NAME "ASPEED BMC DEVICE"
-
-#define VUART_MAX_PARMS		2
-static uint16_t vuart_ioport[VUART_MAX_PARMS];
-static uint16_t vuart_sirq[VUART_MAX_PARMS];
 
 static struct rtc_device *rtc;
 static int time64_flag = 1;
@@ -171,39 +168,40 @@ static irqreturn_t aspeed_pci_host_bmc_device_interrupt(int irq, void *dev_id)
 
 }
 
-static irqreturn_t aspeed_pci_host_mbox_interrupt(int irq, void *dev_id)
-{
-	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_id;
-	u32 isr = readl(pci_bmc_device->sio_mbox_reg + 0x94);
 
-	if (isr & BIT(7))
-		writel(BIT(7), pci_bmc_device->sio_mbox_reg + 0x94);
-
-	return IRQ_HANDLED;
-
-}
-
-
-static void clear_r_queue1(struct device *dev)
+static int clear_r_queue1(struct device *dev, int timeout)
 {
 	u32 value;
+	unsigned long tick_end = jiffies + timeout * HZ;
 	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
 	while (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS) & BMC2HOST_Q1_EMPTY)) {
 		value = readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_Q1);
 		writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
+
+		if (time_after(jiffies, tick_end)) {
+			return 0;
+		}
 	}
+	return 1;
 }
 
-static ssize_t read_8bytes_from_queue1(struct device *dev, time64_t * time_stamp)
+
+
+static ssize_t read_8bytes_from_queue1(struct device *dev, time64_t * time_stamp, int timeout)
 {
 	int i = 0;
 	u32 * time_buf = (u32*)time_stamp;
 	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
+	unsigned long tick_end = jiffies + timeout * HZ;
 
-	while(i < 2) {
+	while (i < 2) {
 		if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS) & BMC2HOST_Q1_EMPTY)) {
 			time_buf[i++] = readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_Q1);
 			writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
+		}
+
+		if (time_after(jiffies, tick_end)) {
+			return 0;
 		}
 	}
 	return sizeof(time64_t);
@@ -278,7 +276,7 @@ static ssize_t write_8bytes_to_queue2(struct device *dev, time64_t * time_stamp)
 	u32 * time_buf = (u32*)time_stamp;
 	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
 
-	while(i < 2) {
+	while (i < 2) {
 		if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q2_FULL)) {
 			writel(time_buf[i++], pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_Q2);
 			writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
@@ -295,17 +293,12 @@ static int astbmc_read_time(struct device *dev, struct rtc_time *dt)
 	time64_t time_stamp = 0;
 	u32 tx_cmd = 0x55555555;
 
-	clear_r_queue1(dev);
+	clear_r_queue1(dev, 5);
 
     write_queue1(dev, tx_cmd);
 
-	if (time64_flag) {
-		read_8bytes_from_queue1(dev, &time_stamp);
-	} else {
-		read_queue1(dev,(u32*)&time_stamp);
-	}
+	read_8bytes_from_queue1(dev, &time_stamp, 5);
 
-	// printk("r-t:0x%lx",time_stamp);
 	rtc_time64_to_tm(time_stamp, dt);
 
 	return 0;
@@ -319,14 +312,8 @@ static int astbmc_set_time(struct device *dev, struct rtc_time *dt)
 	write_queue2(dev, tx_cmd);
 
 	time_stamp = rtc_tm_to_time64(dt);
-	// printk("s-t:0x%lx",time_stamp);
 
-	if (time64_flag) {
-		write_8bytes_to_queue2(dev, &time_stamp);
-	} else {
-		write_queue2(dev, (u32)time_stamp);
-	}
-
+	write_8bytes_to_queue2(dev, &time_stamp);
 
 	return 0;
 }
@@ -337,21 +324,35 @@ static const struct rtc_class_ops astbmc_rtc_ops = {
 };
 
 
+//0-unenabled 1-enabled
+static int is_bmc_rtc_device_func_enable(struct device *dev)
+{
+	time64_t time_stamp = 0;
+	u32 tx_cmd = 0x55555555;
 
+	clear_r_queue1(dev, 5);
+
+    write_queue1(dev, tx_cmd);
+
+	if (read_8bytes_from_queue1(dev, &time_stamp, 5) == 0) {
+		pr_info("BMC has not enabled rtc device func!\n");
+		return 0;
+	}
+
+	pr_info("BMC has enabled rtc device func!\n");
+	return 1;
+
+}
 
 
 #define BMC_MSI_IDX_BASE	0
 static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-	struct uart_8250_port uart[VUART_MAX_PARMS];
 	struct aspeed_pci_bmc_dev *pci_bmc_dev;
 	struct device *dev = &pdev->dev;
-	void __iomem *pcie_sio_decode_addr;
 	u16 config_cmd_val;
 	int nr_entries;
-	unsigned long irqflags;
 	int rc = 0;
-	int i = 0;
 
 	pr_info("ASPEED BMC PCI ID %04x:%04x, IRQ=%u\n", pdev->vendor, pdev->device, pdev->irq);
 
@@ -434,75 +435,14 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 
 	pci_set_drvdata(pdev, pci_bmc_dev);
 
-	// irqflags = pci_dev_msi_enabled(pdev) ? IRQF_NO_THREAD : IRQF_SHARED;
 	rc = request_irq(pdev->irq, aspeed_pci_host_bmc_device_interrupt, IRQF_SHARED, "ASPEED BMC DEVICE", pci_bmc_dev);
 	if (rc) {
 		pr_err("host bmc device Unable to get IRQ %d\n", rc);
 		goto out_unreg;
 	}
 
-
-#if 1
-	/* setup mbox */
-	pcie_sio_decode_addr = pci_bmc_dev->msg_bar_reg + PCIE_DEVICE_SIO_ADDR;
-	writel(0xaa, pcie_sio_decode_addr);
-	writel(0xa5, pcie_sio_decode_addr);
-	writel(0xa5, pcie_sio_decode_addr);
-	writel(0x07, pcie_sio_decode_addr);
-	writel(0x0e, pcie_sio_decode_addr + 0x04);
-	/* disable */
-	writel(0x30, pcie_sio_decode_addr);
-	writel(0x00, pcie_sio_decode_addr + 0x04);
-	/* set decode address 0x100 */
-	writel(0x60, pcie_sio_decode_addr);
-	writel(0x01, pcie_sio_decode_addr + 0x04);
-	writel(0x61, pcie_sio_decode_addr);
-	writel(0x00, pcie_sio_decode_addr + 0x04);
-	/* enable */
-	writel(0x30, pcie_sio_decode_addr);
-	writel(0x01, pcie_sio_decode_addr + 0x04);
-	pci_bmc_dev->sio_mbox_reg = pci_bmc_dev->msg_bar_reg + 0x400;
-
-	if (pci_bmc_dev->legency_irq)
-		pci_bmc_dev->sio_mbox_irq = pdev->irq;
-	else
-		// pci_bmc_dev->sio_mbox_irq = pci_irq_vector(pdev, 0x10 + 9 - BMC_MSI_IDX_BASE);
-		pci_bmc_dev->sio_mbox_irq = pci_irq_vector(pdev, 0);
-
-	rc = request_irq(pci_bmc_dev->sio_mbox_irq, aspeed_pci_host_mbox_interrupt, IRQF_SHARED, "ASPEED SIO MBOX", pci_bmc_dev);
-	if (rc)
-		pr_err("host bmc device Unable to get IRQ %d\n", rc);
-
-	/* setup VUART */
-	memset(uart, 0, sizeof(uart));
-
-	for (i = 0; i < VUART_MAX_PARMS; i++) {
-		vuart_ioport[i] = 0x3F8 - (i * 0x100);
-		vuart_sirq[i] = 0x10 + 4 - i - BMC_MSI_IDX_BASE;
-		uart[i].port.flags = UPF_SKIP_TEST | UPF_BOOT_AUTOCONF | UPF_SHARE_IRQ;
-		uart[i].port.uartclk = 115200 * 16;
-
-		if (pci_bmc_dev->legency_irq)
-			uart[i].port.irq = pdev->irq;
-		else
-			uart[i].port.irq = pci_irq_vector(pdev, 0);
-			// uart[i].port.irq = pci_irq_vector(pdev, vuart_sirq[i]);
-		uart[i].port.dev = &pdev->dev;
-		uart[i].port.iotype = UPIO_MEM32;
-		uart[i].port.iobase = 0;
-		uart[i].port.mapbase = pci_bmc_dev->message_bar_base + (vuart_ioport[i] << 2);
-		uart[i].port.membase = 0;
-		uart[i].port.type = PORT_16550A;
-		uart[i].port.flags |= (UPF_IOREMAP | UPF_FIXED_PORT | UPF_FIXED_TYPE);
-		uart[i].port.regshift = 2;
-
-		rc = serial8250_register_8250_port(&uart[i]);
-		if (rc < 0) {
-			dev_err(dev, "cannot setup VUART@%xh over PCIe, rc=%d\n", vuart_ioport[i], rc);
-			goto out_unreg;
-		}
-	}
-#endif
+	if (!is_bmc_rtc_device_func_enable(dev))
+		return 0;
 
     //register rtc device
     rtc = devm_rtc_allocate_device(dev);

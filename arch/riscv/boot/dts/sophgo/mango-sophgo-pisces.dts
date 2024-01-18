@@ -53,6 +53,6 @@
 		/* valid values are: full-function, xmr */
 		chip-package = "full-function";
 		/* valid values are: x4, x8 */
-		ddr-pcb-type = "x8";
+		ddr-pcb-type = "x4";
 	};
 };

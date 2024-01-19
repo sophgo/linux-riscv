@@ -42,9 +42,9 @@ static int __init do_hide_v0p7_ext(char *str)
 	hide_v0p7 = 1;
 
 	pr_notice("Hide vector 0.7 extension\n");
-	return 1;
+	return 0;
 }
-__setup("hide_v0p7_ext", do_hide_v0p7_ext);
+early_param("hide_v0p7_ext", do_hide_v0p7_ext);
 #endif
 
 /**

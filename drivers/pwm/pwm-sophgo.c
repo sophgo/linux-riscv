@@ -188,7 +188,6 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 
 	chip->chip.dev = &pdev->dev;
 	chip->chip.ops = &pwm_sophgo_ops;
-	chip->chip.base = -1;
 	chip->polarity_mask = 0;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

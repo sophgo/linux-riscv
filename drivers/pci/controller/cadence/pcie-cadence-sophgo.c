@@ -456,9 +456,44 @@ static struct msi_domain_info cdns_pcie_msi_domain_info = {
 
 static struct msi_domain_info cdns_pcie_top_intr_msi_domain_info = {
 	.flags	= (MSI_FLAG_USE_DEF_DOM_OPS | MSI_FLAG_USE_DEF_CHIP_OPS
-		   | MSI_FLAG_PCI_MSIX | MSI_FLAG_MULTI_PCI_MSI),
+		   | MSI_FLAG_PCI_MSIX),
 	.chip	= &cdns_pcie_msi_irq_chip,
 };
+
+struct vendor_id_list vendor_id_list[] = {
+	{"Inter X520", 0x8086, 0x10fb},
+    //{"WangXun RP1000", 0x8088},
+	{"Switchtec", 0x11f8,4052},
+};
+
+size_t vendor_id_list_num = ARRAY_SIZE(vendor_id_list);
+
+int check_vendor_id(struct pci_dev *dev, struct vendor_id_list vendor_id_list[],
+			size_t vendor_id_list_num)
+{
+	uint16_t device_vendor_id;
+	uint16_t device_id;
+
+	if (pci_read_config_word(dev, PCI_VENDOR_ID, &device_vendor_id) != 0) {
+		pr_err("Failed to read device vendor ID\n");
+		return 0;
+	}
+
+	if (pci_read_config_word(dev, PCI_DEVICE_ID, &device_id) != 0) {
+		pr_err("Failed to read device vendor ID\n");
+		return 0;
+	}
+
+	for (int i = 0; i < vendor_id_list_num; ++i) {
+		if (device_vendor_id == vendor_id_list[i].vendor_id && device_id == vendor_id_list[i].device_id) {
+			pr_info("dev: %s vendor ID: 0x%04x device ID: 0x%04x Enable MSI-X IRQ\n",
+				vendor_id_list[i].name, device_vendor_id, device_id);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 
 static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc, int intc_id)
 {
@@ -469,12 +504,10 @@ static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc, int i
 		rc->msi_domain = pci_msi_create_irq_domain(fwnode,
 							   &cdns_pcie_top_intr_msi_domain_info,
 							   irq_parent);
-
 	} else {
 		rc->msi_domain = pci_msi_create_irq_domain(fwnode,
 							   &cdns_pcie_msi_domain_info,
 							   irq_parent);
-
 	}
 
 	if (!rc->msi_domain) {

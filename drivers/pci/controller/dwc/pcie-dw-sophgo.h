@@ -31,19 +31,19 @@ struct sophgo_dw_pcie {
 	struct device		*dev;
 	void __iomem		*dbi_base;
 	void __iomem		*atu_base;
-	size_t				atu_size;
-	u32					num_ib_windows;
-	u32					num_ob_windows;
-	u32					region_align;
-	u64					region_limit;
+	size_t			atu_size;
+	u32			num_ib_windows;
+	u32			num_ob_windows;
+	u32			region_align;
+	u64			region_limit;
 	struct dw_pcie_rp	pp;
 	const struct dw_pcie_ops *ops;
-	u32					version;
-	u32					type;
+	u32			version;
+	u32			type;
 	unsigned long		caps;
-	int					num_lanes;
-	int					link_gen;
-	u8					n_fts[2];
+	int			num_lanes;
+	int			link_gen;
+	u8			n_fts[2];
 	struct dw_edma_chip	edma;
 	struct clk_bulk_data	app_clks[DW_PCIE_NUM_APP_CLKS];
 	struct clk_bulk_data	core_clks[DW_PCIE_NUM_CORE_CLKS];
@@ -54,7 +54,7 @@ struct sophgo_dw_pcie {
 
 #define to_sophgo_dw_pcie_from_pp(port) container_of((port), struct sophgo_dw_pcie, pp)
 
-extern struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(int intc_id);
+extern struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void);
 
 u32 sophgo_dw_pcie_read_dbi(struct sophgo_dw_pcie *pcie, u32 reg, size_t size);
 void sophgo_dw_pcie_write_dbi(struct sophgo_dw_pcie *pcie, u32 reg, size_t size, u32 val);

@@ -11,8 +11,7 @@
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
 
-#define MAX_IRQ_NUMBER 64
-#define PCIE_INTC_NUM 1
+#define MAX_IRQ_NUMBER 512
 /*
  * here we assume all plic hwirq and pic(PCIe Interrupt
  * Controller) hwirq should be contiguous.
@@ -31,7 +30,6 @@ struct pcie_intc_data {
 	int irq_num;
 	struct irq_domain *domain;
 	struct irq_chip *chip;
-	int for_msi;
 	int reg_bitwidth;
 
 	DECLARE_BITMAP(irq_bitmap, MAX_IRQ_NUMBER);
@@ -49,15 +47,12 @@ struct pcie_intc_data {
 };
 
 // workaround for using in other modules
-struct pcie_intc_data *pic_data[PCIE_INTC_NUM];
+struct pcie_intc_data *pic_data;
 
-struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(int intc_id)
+struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void)
 {
-	if (intc_id >= PCIE_INTC_NUM)
-		return NULL;
-
-	if (pic_data[intc_id])
-		return pic_data[intc_id]->domain;
+	if (pic_data)
+		return pic_data->domain;
 	else
 		return NULL;
 }
@@ -86,53 +81,27 @@ static int pcie_intc_domain_alloc(struct irq_domain *domain,
 {
 	unsigned long flags;
 	irq_hw_number_t hwirq;
-	int i, type, ret = -1;
+	int i, ret = -1;
 	struct pcie_intc_data *data = domain->host_data;
 
-	if (data->for_msi) {
-		// dynamically alloc hwirq
-		spin_lock_irqsave(&data->lock, flags);
-		ret = bitmap_find_free_region(data->irq_bitmap, data->irq_num,
-						order_base_2(nr_irqs));
-		spin_unlock_irqrestore(&data->lock, flags);
+	// dynamically alloc hwirq
+	spin_lock_irqsave(&data->lock, flags);
+	ret = bitmap_find_free_region(data->irq_bitmap, data->irq_num,
+				      order_base_2(nr_irqs));
+	spin_unlock_irqrestore(&data->lock, flags);
 
-		if (ret < 0) {
-			pr_err("%s failed to alloc irq %d, total %d\n", __func__, virq, nr_irqs);
-			return -ENOSPC;
-		}
+	if (ret < 0) {
+		pr_err("%s failed to alloc irq %d, total %d\n", __func__, virq, nr_irqs);
+		return -ENOSPC;
+	}
 
-		hwirq = ret;
-		for (i = 0; i < nr_irqs; i++) {
-			irq_domain_set_info(domain, virq + i, hwirq + i,
-						data->chip,
-						data, handle_edge_irq,
-						NULL, NULL);
-			data->pic_to_plic[hwirq + i] = data->plic_hwirqs[hwirq + i];
-		}
-	} else {
-		// try use hwirq specified in parameter
-		ret = pcie_intc_domain_translate(domain, args, &hwirq, &type);
-		if (ret) {
-			pr_err("%s failed to translate virq %d, %d\n", __func__, virq, ret);
-			return ret;
-		}
-
-		// try to occupy bitmap for the given hwirq
-		spin_lock_irqsave(&data->lock, flags);
-		ret = bitmap_allocate_region(data->irq_bitmap, hwirq, order_base_2(1));
-		spin_unlock_irqrestore(&data->lock, flags);
-		if (ret < 0) {
-			pr_err("%s virq %d found hwirq %ld occupied\n", __func__, virq, hwirq);
-			return -EBUSY;
-		}
-
-		irq_domain_set_info(domain, virq, hwirq,
-					data->chip,
-					data, handle_edge_irq,
-					NULL, NULL);
-
-		// explicitly set parent
-		data->pic_to_plic[hwirq] = data->plic_hwirqs[hwirq];
+	hwirq = ret;
+	for (i = 0; i < nr_irqs; i++) {
+		irq_domain_set_info(domain, virq + i, hwirq + i,
+				    data->chip,
+				    data, handle_edge_irq,
+				    NULL, NULL);
+		data->pic_to_plic[hwirq + i] = data->plic_hwirqs[hwirq + i];
 	}
 
 	pr_debug("%s hwirq %ld, irq %d, plic irq %d, total %d\n", __func__,
@@ -204,7 +173,7 @@ static void pcie_intc_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 	msg->address_hi = upper_32_bits(data->reg_set_phys);
 	msg->data = d->hwirq % 32;
 
-	pr_debug("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
+	pr_info("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
 		(int)d->hwirq, msg->address_hi, msg->address_lo, msg->data);
 }
 
@@ -277,11 +246,6 @@ static int pcie_intc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pdev->dev.of_node);
 	int ret = 0, i;
-	int intc_id = 0;
-
-	device_property_read_u32(&pdev->dev, "pcie-intc-id", &intc_id);
-	if (intc_id >= PCIE_INTC_NUM)
-		return -EINVAL;
 
 	// alloc private data
 	data = kzalloc(sizeof(struct pcie_intc_data), GFP_KERNEL);
@@ -291,10 +255,6 @@ static int pcie_intc_probe(struct platform_device *pdev)
 	data->pdev = pdev;
 	spin_lock_init(&data->lock);
 
-	if (device_property_read_bool(&pdev->dev, "for-msi")) {
-		dev_info(&pdev->dev, "is a msi parent\n");
-		data->for_msi = 1;
-	}
 	if (device_property_read_u32(&pdev->dev, "reg-bitwidth", &data->reg_bitwidth))
 		data->reg_bitwidth = 32;
 
@@ -327,11 +287,11 @@ static int pcie_intc_probe(struct platform_device *pdev)
 		data->plic_irqs[i] = irq;
 		data->plic_irq_datas[i] = irq_get_irq_data(irq);
 		data->plic_hwirqs[i] = data->plic_irq_datas[i]->hwirq;
-		dev_dbg(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
+		dev_info(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
 				data->plic_hwirqs[i], data->plic_irqs[i]);
 	}
 	data->irq_num = i;
-	dev_dbg(&pdev->dev, "got %d plic irqs\n", data->irq_num);
+	dev_info(&pdev->dev, "got %d plic irqs\n", data->irq_num);
 
 	// create IRQ domain
 	data->domain = irq_domain_create_linear(fwnode, data->irq_num,
@@ -352,19 +312,12 @@ static int pcie_intc_probe(struct platform_device *pdev)
 		irq_set_chained_handler_and_data(data->plic_irqs[i],
 							pcie_intc_irq_handler, data);
 
-	if (data->for_msi) {
-		irq_domain_update_bus_token(data->domain, DOMAIN_BUS_NEXUS);
-		if (pic_data[intc_id])
-			dev_err(&pdev->dev, "pic_data is not empty, %s\n",
-				dev_name(&pic_data[intc_id]->pdev->dev));
-		pic_data[intc_id] = data;
-	}  else {
-		/*
-		 * populate child nodes. when test device node is a child, it will not be
-		 * automatically enumerated as a platform device.
-		 */
-		of_platform_populate(pdev->dev.of_node, NULL, NULL, NULL);
-	}
+	irq_domain_update_bus_token(data->domain, DOMAIN_BUS_NEXUS);
+	if (pic_data)
+		dev_err(&pdev->dev, "pic_data is not empty, %s\n",
+			dev_name(&pic_data->pdev->dev));
+	pic_data = data;
+
 	return ret;
 
 out:

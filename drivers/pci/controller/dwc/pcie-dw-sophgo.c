@@ -56,9 +56,9 @@ static struct msi_domain_info sophgo_dw_pcie_msi_domain_info = {
 	.chip	= &sophgo_dw_pcie_msi_irq_chip,
 };
 
-static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp, u32 intc_id)
+static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp)
 {
-	struct irq_domain *irq_parent = sophgo_dw_pcie_get_parent_irq_domain(intc_id);
+	struct irq_domain *irq_parent = sophgo_dw_pcie_get_parent_irq_domain();
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pcie->dev->of_node);
 
@@ -524,7 +524,7 @@ static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 		}
 	}
 
-	sophgo_dw_pcie_msi_setup(pp, 0);
+	sophgo_dw_pcie_msi_setup(pp);
 
 	/* Setup RC BARs */
 	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0x00000004);

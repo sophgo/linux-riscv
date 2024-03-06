@@ -236,3 +236,6 @@ void __init arch_task_cache_init(void)
 {
 	riscv_v_setup_ctx_cache();
 }
+
+EXPORT_SYMBOL_GPL(__fstate_save);
+EXPORT_SYMBOL_GPL(__fstate_restore);

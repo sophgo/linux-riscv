@@ -11,4 +11,10 @@
 #define DPLL0_CLK			2
 #define DPLL1_CLK			3
 
+/* clock mode*/
+#define NORMAL_MODE 0
+#define FAST_MODE   1
+#define SAFE_MODE   2
+#define BYPASS_MODE 3
+
 #endif /* __DT_BINDINGS_SOPHGO_SG2042_PLL_H__ */

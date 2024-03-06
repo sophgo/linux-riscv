@@ -108,4 +108,9 @@
 #define MUX_CLK_RP_CPU_NORMAL		89
 #define MUX_CLK_AXI_DDR			90
 
+#define S0_DIV_CLK_TABLE        0
+#define S1_DIV_CLK_TABLE        1
+#define S0_MUX_CLK_TABLE        2
+#define S1_MUX_CLK_TABLE        3
+
 #endif /* __DT_BINDINGS_SOPHGO_SG2042_CLKGEN_H__ */

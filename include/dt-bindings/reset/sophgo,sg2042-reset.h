@@ -84,4 +84,6 @@
 #define RST_RXU30			75
 #define RST_RXU31			76
 
+#define RST_MAX_NUM  (RST_RXU31+1)
+
 #endif /* __DT_BINDINGS_RESET_SOPHGO_SG2042_H_ */

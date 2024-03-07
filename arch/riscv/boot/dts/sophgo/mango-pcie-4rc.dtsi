@@ -17,10 +17,14 @@
 		device-id = /bits/ 16 <0x2042>;
 		pcie-id = /bits/ 16 <0x0>;
 		link-id = /bits/ 16 <0x0>;
-		top-intc-used = <0>;
-		interrupt-parent = <&intc>;
-		interrupts = <SOC_PERIPHERAL_IRQ(122) IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "msi";
+		top-intc-used = <1>;
+		top-intc-id = <0>;
+		msix-supported = <1>;
+		interrupt-parent = <&intc1>;
+		//top-intc-used = <0>;
+		//interrupt-parent = <&intc>;
+		//interrupts = <SOC_PERIPHERAL_IRQ(122) IRQ_TYPE_LEVEL_HIGH>;
+		//interrupt-names = "msi";
 		reg = <0x70 0x60000000  0x0 0x02000000>,
 		      <0x40 0x00000000  0x0 0x00001000>;
 		reg-names = "reg", "cfg";
@@ -38,7 +42,7 @@
 
 		status = "okay";
 	};
-
+#if 0
 	pcie@7060800000 {
 		compatible = "sophgo,cdns-pcie-host";
 		device_type = "pci";
@@ -73,7 +77,7 @@
 
 		status = "okay";
 	};
-
+#endif
 	pcie@7062000000 {
 		compatible = "sophgo,cdns-pcie-host";
 		device_type = "pci";
@@ -81,7 +85,7 @@
 		#size-cells = <2>;
 
 		bus-range = <0x80 0xbf>;
-		linux,pci-domain = <2>;
+		linux,pci-domain = <1>;
 		cdns,max-outbound-regions = <16>;
 		cdns,no-bar-match-nbits = <48>;
 		vendor-id = /bits/ 16 <0x1E30>;
@@ -117,7 +121,7 @@
 		#size-cells = <2>;
 
 		bus-range = <0xc0 0xff>;
-		linux,pci-domain = <3>;
+		linux,pci-domain = <2>;
 		cdns,max-outbound-regions = <16>;
 		cdns,no-bar-match-nbits = <48>;
 		vendor-id = /bits/ 16 <0x1E30>;

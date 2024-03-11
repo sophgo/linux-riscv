@@ -305,13 +305,8 @@ static int __set_memory(unsigned long addr, int numpages, pgprot_t set_mask,
 				goto unlock;
 		}
 	} else if (is_kernel_mapping(start) || is_linear_mapping(start)) {
-		if (is_kernel_mapping(start)) {
-			lm_start = (unsigned long)lm_alias(start);
-			lm_end = (unsigned long)lm_alias(end);
-		} else {
-			lm_start = start;
-			lm_end = end;
-		}
+		lm_start = (unsigned long)lm_alias(start);
+		lm_end = (unsigned long)lm_alias(end);
 
 		ret = split_linear_mapping(lm_start, lm_end);
 		if (ret)

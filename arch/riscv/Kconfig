@@ -407,6 +407,15 @@ config TUNE_GENERIC
 
 endchoice
 
+config HIGHMEM
+	bool "High Memory Support"
+	depends on MMU
+	select KMAP_LOCAL
+	default y
+	help
+	  Enable high memory support on riscv64 which uses supports
+	  max 39-bit virtual address spaces.
+
 # Common NUMA Features
 config NUMA
 	bool "NUMA Memory Allocation and Scheduler Support"

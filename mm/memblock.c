@@ -1752,6 +1752,28 @@ static phys_addr_t __init_memblock __find_max_addr(phys_addr_t limit)
 	return max_addr;
 }
 
+#ifdef CONFIG_HIGHMEM
+phys_addr_t __init_memblock find_max_low_addr(phys_addr_t limit)
+{
+	phys_addr_t max_low_addr = PHYS_ADDR_MAX;
+	phys_addr_t max_low_addr_limit;
+	struct memblock_region *r;
+
+	max_low_addr_limit = memblock_start_of_DRAM() + limit;
+
+	for_each_mem_region(r) {
+		if ((r->base+r->size) <= max_low_addr_limit)
+			max_low_addr = r->base + r->size;
+		else if (r->base < max_low_addr_limit)
+			max_low_addr = max_low_addr_limit;
+		else
+			continue;
+	}
+
+	return max_low_addr;
+}
+#endif
+
 void __init memblock_enforce_memory_limit(phys_addr_t limit)
 {
 	phys_addr_t max_addr;

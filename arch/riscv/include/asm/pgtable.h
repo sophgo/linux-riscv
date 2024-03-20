@@ -94,7 +94,12 @@
 #ifdef CONFIG_64BIT
 #define MAX_FDT_SIZE	 PMD_SIZE
 #define FIX_FDT_SIZE	 (MAX_FDT_SIZE + SZ_2M)
+#ifdef CONFIG_HIGHMEM
+#define FIXADDR_PMD_NUM  20
+#define FIXADDR_SIZE     ((PMD_SIZE * FIXADDR_PMD_NUM) + FIX_FDT_SIZE)
+#else
 #define FIXADDR_SIZE     (PMD_SIZE + FIX_FDT_SIZE)
+#endif
 #else
 #define MAX_FDT_SIZE	 PGDIR_SIZE
 #define FIX_FDT_SIZE	 MAX_FDT_SIZE
@@ -102,6 +107,14 @@
 #endif
 #define FIXADDR_START    (FIXADDR_TOP - FIXADDR_SIZE)
 
+#endif
+
+#ifdef CONFIG_HIGHMEM
+#define PKMAP_BASE       ((FIXADDR_START - PMD_SIZE) & (PMD_MASK))
+#define LAST_PKMAP       (PMD_SIZE >> PAGE_SHIFT)
+#define LAST_PKMAP_MASK  (LAST_PKMAP - 1)
+#define PKMAP_NR(virt)   (((virt) - PKMAP_BASE) >> PAGE_SHIFT)
+#define PKMAP_ADDR(nr)   (PKMAP_BASE + ((nr) << PAGE_SHIFT))
 #endif
 
 #ifdef CONFIG_XIP_KERNEL
@@ -521,12 +534,17 @@ static inline void set_pte(pte_t *ptep, pte_t pteval)
 
 void flush_icache_pte(pte_t pte);
 
-static inline void __set_pte_at(pte_t *ptep, pte_t pteval)
+static inline void __set_pte_at(struct mm_struct *mm, unsigned long addr,
+		pte_t *ptep, pte_t pteval)
 {
 	if (pte_present(pteval) && pte_exec(pteval))
 		flush_icache_pte(pteval);
 
 	set_pte(ptep, pteval);
+
+#ifdef CONFIG_HIGHMEM
+	local_flush_tlb_page(addr);
+#endif
 }
 
 static inline void set_ptes(struct mm_struct *mm, unsigned long addr,
@@ -535,9 +553,10 @@ static inline void set_ptes(struct mm_struct *mm, unsigned long addr,
 	page_table_check_ptes_set(mm, ptep, pteval, nr);
 
 	for (;;) {
-		__set_pte_at(ptep, pteval);
+		__set_pte_at(mm, addr, ptep, pteval);
 		if (--nr == 0)
 			break;
+		addr += PAGE_SIZE;
 		ptep++;
 		pte_val(pteval) += 1 << _PAGE_PFN_SHIFT;
 	}
@@ -547,7 +566,7 @@ static inline void set_ptes(struct mm_struct *mm, unsigned long addr,
 static inline void pte_clear(struct mm_struct *mm,
 	unsigned long addr, pte_t *ptep)
 {
-	__set_pte_at(ptep, __pte(0));
+	__set_pte_at(mm, addr, ptep, __pte(0));
 }
 
 #define __HAVE_ARCH_PTEP_SET_ACCESS_FLAGS	/* defined in mm/pgtable.c */
@@ -712,14 +731,14 @@ static inline void set_pmd_at(struct mm_struct *mm, unsigned long addr,
 				pmd_t *pmdp, pmd_t pmd)
 {
 	page_table_check_pmd_set(mm, pmdp, pmd);
-	return __set_pte_at((pte_t *)pmdp, pmd_pte(pmd));
+	return __set_pte_at(mm, addr, (pte_t *)pmdp, pmd_pte(pmd));
 }
 
 static inline void set_pud_at(struct mm_struct *mm, unsigned long addr,
 				pud_t *pudp, pud_t pud)
 {
 	page_table_check_pud_set(mm, pudp, pud);
-	return __set_pte_at((pte_t *)pudp, pud_pte(pud));
+	return __set_pte_at(mm, addr, (pte_t *)pudp, pud_pte(pud));
 }
 
 #ifdef CONFIG_PAGE_TABLE_CHECK

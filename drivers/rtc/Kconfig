@@ -1985,4 +1985,10 @@ config RTC_DRV_POLARFIRE_SOC
 	  This driver can also be built as a module, if so, the module
 	  will be called "rtc-mpfs".
 
+config RTC_DRV_ASTBMC
+	tristate "SG2042 server get rtc time from bmc via pci bus"
+	help
+	  This driver can also be built as a module, if so, the module
+	  will be called "rtc-astbmc".
+
 endif # RTC_CLASS

@@ -2156,7 +2156,8 @@ skip_fallback_noirq:
 		return 0;
 	}
 }
-module_init(init_ipmi_si);
+// module_init(init_ipmi_si);
+late_initcall(init_ipmi_si);
 
 static void wait_msg_processed(struct smi_info *smi_info)
 {

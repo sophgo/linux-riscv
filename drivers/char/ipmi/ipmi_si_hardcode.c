@@ -6,7 +6,7 @@
 #include <linux/platform_device.h>
 #include "ipmi_si.h"
 #include "ipmi_plat_data.h"
-
+#include <linux/pci.h>
 /*
  * There can be 4 IO ports passed in (with or without IRQs), 4 addresses,
  * a default IO port, and 1 ACPI/SPMI address.  That sets SI_MAX_DRIVERS.
@@ -90,6 +90,24 @@ static void __init ipmi_hardcode_init_one(const char *si_type_str,
 	ipmi_platform_add("hardcode-ipmi-si", i, &p);
 }
 
+#ifdef CONFIG_ARCH_SOPHGO
+static void variable_init(struct pci_dev *pdev)
+{
+	unsigned long addr_data = pci_resource_start(pdev, 1) + 0x0e80;
+	// printk("addr_data=0x%lx\n", addr_data);
+	strcpy(si_type_str, "kcs");
+	addrs[0]        = addr_data;
+	num_addrs       = 1;
+	regspacings[0]  = 4;
+	num_regspacings = 1;
+	regsizes[0]     = 4;
+	num_regsizes    = 1;
+	irqs[0]         = 0;
+	num_irqs        = 1;
+	slave_addrs[0]  = 0;
+	num_slave_addrs = 1;
+}
+#endif
 void __init ipmi_hardcode_init(void)
 {
 	unsigned int i;
@@ -97,7 +115,11 @@ void __init ipmi_hardcode_init(void)
 	char *si_type[SI_MAX_PARMS];
 
 	memset(si_type, 0, sizeof(si_type));
-
+#ifdef CONFIG_ARCH_SOPHGO
+	struct pci_dev *pdev = pci_get_device(0x1A03, 0x2402, NULL);
+	if (pdev != NULL)
+		variable_init(pdev);
+#endif
 	/* Parse out the si_type string into its components. */
 	str = si_type_str;
 	if (*str != '\0') {

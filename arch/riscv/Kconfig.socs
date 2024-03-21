@@ -24,8 +24,17 @@ config SOC_SIFIVE
 
 config ARCH_SOPHGO
 	bool "Sophgo SoCs"
+	select DW_APB_TIMER_OF
 	help
 	  This enables support for Sophgo SoC platform hardware.
+
+config SOPHGO_MULTI_CHIP_CLOCK_SYNC
+	bool "Sophgo multi-chip clock synchronous"
+	depends on ARCH_SOPHGO
+	default n
+	help
+	  To solve the problem of asynchronous multi-chip clocks,
+	  the local timer has been replaced with an APB timer.
 
 config ARCH_STARFIVE
 	def_bool SOC_STARFIVE

@@ -84,6 +84,14 @@ static __always_inline const struct vdso_data *__arch_get_vdso_data(void)
 	return _vdso_data;
 }
 
+#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+static inline bool arch_vdso_clocksource_ok(const struct vdso_data *vd)
+{
+	return false;
+}
+#define vdso_clocksource_ok arch_vdso_clocksource_ok
+#endif
+
 #ifdef CONFIG_TIME_NS
 static __always_inline
 const struct vdso_data *__arch_get_timens_vdso_data(const struct vdso_data *vd)

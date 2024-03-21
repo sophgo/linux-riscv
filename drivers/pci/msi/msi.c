@@ -13,6 +13,7 @@
 
 #include "../pci.h"
 #include "msi.h"
+#include "../controller/cadence/pcie-cadence-sophgo.h"
 
 int pci_msi_enable = 1;
 int pci_msi_ignore_mask;
@@ -779,6 +780,9 @@ int __pci_enable_msix_range(struct pci_dev *dev, struct msix_entry *entries, int
 			    int maxvec, struct irq_affinity *affd, int flags)
 {
 	int hwsize, rc, nvec = maxvec;
+
+	if (!check_vendor_id(dev, vendor_id_list, vendor_id_list_num))
+		return -EPERM;
 
 	if (maxvec < minvec)
 		return -ERANGE;

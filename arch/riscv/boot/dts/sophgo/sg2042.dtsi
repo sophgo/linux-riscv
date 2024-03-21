@@ -13,6 +13,8 @@
 
 #include "sg2042-cpus.dtsi"
 
+#define SOC_PERIPHERAL_IRQ(nr)	(nr)
+
 / {
 	compatible = "sophgo,sg2042";
 	#address-cells = <2>;
@@ -227,16 +229,6 @@
 			#clock-cells = <1>;
 		};
 
-		msi: msi-controller@7030010304 {
-			compatible = "sophgo,sg2042-msi";
-			reg = <0x70 0x30010304 0x0 0x4>,
-			      <0x70 0x30010300 0x0 0x4>;
-			reg-names = "clr", "doorbell";
-			msi-controller;
-			#msi-cells = <0>;
-			msi-ranges = <&intc 64 IRQ_TYPE_LEVEL_HIGH 32>;
-		};
-
 		rpgate: clock-controller@7030010368 {
 			compatible = "sophgo,sg2042-rpgate";
 			reg = <0x70 0x30010368 0x0 0x98>;
@@ -262,88 +254,6 @@
 				      "dpll0",
 				      "dpll1";
 			#clock-cells = <1>;
-		};
-
-		pcie_rc0: pcie@7060000000 {
-			compatible = "sophgo,sg2042-pcie-host";
-			device_type = "pci";
-			reg-names = "reg", "cfg";
-			#address-cells = <3>;
-			#size-cells = <2>;
-			ranges = <0x01000000 0x0  0xc0000000  0x40 0xc0000000  0x0 0x00400000>,
-				 <0x42000000 0x0  0xd0000000  0x40 0xd0000000  0x0 0x10000000>,
-				 <0x02000000 0x0  0xe0000000  0x40 0xe0000000  0x0 0x20000000>,
-				 <0x43000000 0x42 0x00000000  0x42 0x00000000  0x2 0x00000000>,
-				 <0x03000000 0x41 0x00000000  0x41 0x00000000  0x1 0x00000000>;
-			cdns,no-bar-match-nbits = <48>;
-			sophgo,link-id = <0>;
-			sophgo,syscon-pcie-ctrl = <&cdns_pcie0_ctrl>;
-			msi-parent = <&msi>;
-			status = "disabled";
-		};
-
-		pcie_rc1: pcie@7060800000 {
-			compatible = "sophgo,sg2042-pcie-host";
-			device_type = "pci";
-			reg-names = "reg", "cfg";
-			#address-cells = <3>;
-			#size-cells = <2>;
-			ranges = <0x01000000 0x0  0xc0400000  0x44 0xc0400000  0x0 0x00400000>,
-				 <0x42000000 0x0  0xd0000000  0x44 0xd0000000  0x0 0x10000000>,
-				 <0x02000000 0x0  0xe0000000  0x44 0xe0000000  0x0 0x20000000>,
-				 <0x43000000 0x46 0x00000000  0x46 0x00000000  0x2 0x00000000>,
-				 <0x03000000 0x45 0x00000000  0x45 0x00000000  0x1 0x00000000>;
-			cdns,no-bar-match-nbits = <48>;
-			sophgo,link-id = <1>;
-			sophgo,syscon-pcie-ctrl = <&cdns_pcie0_ctrl>;
-			msi-parent = <&msi>;
-			status = "disabled";
-		};
-
-		cdns_pcie0_ctrl: syscon@7061800000 {
-			compatible = "sophgo,sg2042-pcie-ctrl", "syscon";
-			reg = <0x70 0x61800000 0x0 0x800000>;
-		};
-
-		pcie_rc2: pcie@7062000000 {
-			compatible = "sophgo,sg2042-pcie-host";
-			device_type = "pci";
-			reg-names = "reg", "cfg";
-			#address-cells = <3>;
-			#size-cells = <2>;
-			ranges = <0x01000000 0x0  0xc0800000  0x48 0xc0800000  0x0 0x00400000>,
-				 <0x42000000 0x0  0xd0000000  0x48 0xd0000000  0x0 0x10000000>,
-				 <0x02000000 0x0  0xe0000000  0x48 0xe0000000  0x0 0x20000000>,
-				 <0x03000000 0x49 0x00000000  0x49 0x00000000  0x1 0x00000000>,
-				 <0x43000000 0x4a 0x00000000  0x4a 0x00000000  0x2 0x00000000>;
-			cdns,no-bar-match-nbits = <48>;
-			sophgo,link-id = <0>;
-			sophgo,syscon-pcie-ctrl = <&cdns_pcie1_ctrl>;
-			msi-parent = <&msi>;
-			status = "disabled";
-		};
-
-		pcie_rc3: pcie@7062800000 {
-			compatible = "sophgo,sg2042-pcie-host";
-			device_type = "pci";
-			reg-names = "reg", "cfg";
-			#address-cells = <3>;
-			#size-cells = <2>;
-			ranges = <0x01000000 0x0  0xc0c00000  0x4c 0xc0c00000  0x0 0x00400000>,
-				 <0x42000000 0x0  0xf8000000  0x4c 0xf8000000  0x0 0x04000000>,
-				 <0x02000000 0x0  0xfc000000  0x4c 0xfc000000  0x0 0x04000000>,
-				 <0x43000000 0x4e 0x00000000  0x4e 0x00000000  0x2 0x00000000>,
-				 <0x03000000 0x4d 0x00000000  0x4d 0x00000000  0x1 0x00000000>;
-			cdns,no-bar-match-nbits = <48>;
-			sophgo,link-id = <1>;
-			sophgo,syscon-pcie-ctrl = <&cdns_pcie1_ctrl>;
-			msi-parent = <&msi>;
-			status = "disabled";
-		};
-
-		cdns_pcie1_ctrl: syscon@7063800000 {
-			compatible = "sophgo,sg2042-pcie-ctrl", "syscon";
-			reg = <0x70 0x63800000 0x0 0x800000>;
 		};
 
 		clint_mswi: interrupt-controller@7094000000 {
@@ -785,4 +695,61 @@
 			status = "disabled";
 		};
 	};
+
+	intc1: top_intc@7030010300 {
+		compatible = "sophgo,top-intc";
+		reg = <0x70 0x300102E0 0x0 0x4>,
+		      <0x70 0x30010300 0x0 0x4>,
+		      <0x70 0x30010304 0x0 0x4>;
+		reg-names = "sta", "set", "clr";
+		reg-bitwidth = <32>;
+		top_intc_id = <0>;
+		interrupt-controller;
+		#interrupt-cells = <0x1>; // only applies to child node
+		for-msi;
+
+		interrupt-parent = <&intc>;
+		interrupts = <SOC_PERIPHERAL_IRQ(64) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(65) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(66) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(67) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(68) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(69) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(70) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(71) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(72) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(73) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(74) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(75) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(76) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(77) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(78) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(79) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(80) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(81) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(82) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(83) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(84) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(85) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(86) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(87) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(88) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(89) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(90) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(91) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(92) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(93) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(94) IRQ_TYPE_LEVEL_HIGH>,
+			     <SOC_PERIPHERAL_IRQ(95) IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "msi0",  "msi1",  "msi2",  "msi3",
+				  "msi4",  "msi5",  "msi6",  "msi7",
+				  "msi8",  "msi9",  "msi10", "msi11",
+				  "msi12", "msi13", "msi14", "msi15",
+				  "msi16", "msi17", "msi18", "msi19",
+				  "msi20", "msi21", "msi22", "msi23",
+				  "msi24", "msi25", "msi26", "msi27",
+				  "msi28", "msi29", "msi30", "msi31";
+
+	};
+
 };

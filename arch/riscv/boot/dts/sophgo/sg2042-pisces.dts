@@ -519,6 +519,30 @@
 			riscv,ndev = <448>;
 		};
 
+		timer0: dw-apb-timer0@7030003000 {
+			compatible = "snps,dw-apb-timer";
+			interrupt-parent = <&intc>;
+			interrupts = <100 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0x70 0x30003000 0x0 0x14>;
+			clocks = <&clkgen GATE_CLK_TIMER1>,
+				 <&clkgen GATE_CLK_APB_TIMER>;
+			clock-names = "timer", "pclk";
+			clock-freq = <50000000>;
+			clk-drv-rating = <300>;
+		};
+
+		timer1: dw-apb-timer1@7030003014 {
+			compatible = "snps,dw-apb-timer";
+			interrupt-parent = <&intc>;
+			interrupts = <100 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0x70 0x30003014 0x0 0x10>;
+			clocks = <&clkgen GATE_CLK_TIMER2>,
+				 <&clkgen GATE_CLK_APB_TIMER>;
+			clock-names = "timer", "pclk";
+			clock-freq = <50000000>;
+			clk-drv-rating = <300>;
+		};
+
 		gpio-poweroff {
 			compatible = "gpio-keys";
 			input-name = "gpio-keys";

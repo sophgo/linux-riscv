@@ -107,8 +107,29 @@ static int __init add_clockevent(struct device_node *event_timer)
 	return 0;
 }
 
+#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+void __iomem *sched_io_base;
+EXPORT_SYMBOL_GPL(sched_io_base);
+static struct dw_apb_clocksource *cs_g;
+#else
 static void __iomem *sched_io_base;
+#endif
 static u32 sched_rate;
+
+#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+u64 dw_timer_read_counter(void)
+{
+	return ~readl_relaxed(sched_io_base);
+}
+EXPORT_SYMBOL_GPL(dw_timer_read_counter);
+
+void dw_cs_get_mult_shift(u32 *mult, u32 *shift)
+{
+	*mult = cs_g->cs.mult;
+	*shift = cs_g->cs.shift;
+}
+EXPORT_SYMBOL_GPL(dw_cs_get_mult_shift);
+#endif
 
 static int __init add_clocksource(struct device_node *source_timer)
 {
@@ -135,6 +156,9 @@ static int __init add_clocksource(struct device_node *source_timer)
 	 */
 	sched_io_base = iobase + 0x04;
 	sched_rate = rate;
+#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+	cs_g = cs;
+#endif
 
 	return 0;
 }

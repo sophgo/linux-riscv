@@ -227,6 +227,13 @@ config DWMAC_XUANTIE
 	  the stmmac device driver. This driver is used for XuanTie TH1520
 	  ethernet controller.
 
+config DWMAC_SOPHGO
+	tristate "SOPHGO SG2042 GMAC support"
+	default ARCH_SOPHGO
+	depends on OF && (ARCH_SOPHGO || COMPILE_TEST)
+	help
+	  BM-ethernet for sg2042
+
 config DWMAC_IMX8
 	tristate "NXP IMX8 DWMAC support"
 	default ARCH_MXC

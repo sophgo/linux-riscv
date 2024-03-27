@@ -254,7 +254,7 @@
 			reg = <64>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu64_intc: interrupt-controller {
@@ -268,7 +268,7 @@
 			reg = <65>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu65_intc: interrupt-controller {
@@ -282,7 +282,7 @@
 			reg = <66>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu66_intc: interrupt-controller {
@@ -296,7 +296,7 @@
 			reg = <67>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu67_intc: interrupt-controller {
@@ -310,7 +310,7 @@
 			reg = <68>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu68_intc: interrupt-controller {
@@ -324,7 +324,7 @@
 			reg = <69>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu69_intc: interrupt-controller {
@@ -338,7 +338,7 @@
 			reg = <70>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu70_intc: interrupt-controller {
@@ -352,7 +352,7 @@
 			reg = <71>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu71_intc: interrupt-controller {
@@ -366,7 +366,7 @@
 			reg = <72>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu72_intc: interrupt-controller {
@@ -380,7 +380,7 @@
 			reg = <73>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu73_intc: interrupt-controller {
@@ -394,7 +394,7 @@
 			reg = <74>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu74_intc: interrupt-controller {
@@ -408,7 +408,7 @@
 			reg = <75>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu75_intc: interrupt-controller {
@@ -422,7 +422,7 @@
 			reg = <76>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu76_intc: interrupt-controller {
@@ -436,7 +436,7 @@
 			reg = <77>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu77_intc: interrupt-controller {
@@ -450,7 +450,7 @@
 			reg = <78>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu78_intc: interrupt-controller {
@@ -464,7 +464,7 @@
 			reg = <79>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu79_intc: interrupt-controller {
@@ -478,7 +478,7 @@
 			reg = <80>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu80_intc: interrupt-controller {
@@ -492,7 +492,7 @@
 			reg = <81>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu81_intc: interrupt-controller {
@@ -506,7 +506,7 @@
 			reg = <82>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu82_intc: interrupt-controller {
@@ -520,7 +520,7 @@
 			reg = <83>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu83_intc: interrupt-controller {
@@ -534,7 +534,7 @@
 			reg = <84>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu84_intc: interrupt-controller {
@@ -548,7 +548,7 @@
 			reg = <85>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu85_intc: interrupt-controller {
@@ -562,7 +562,7 @@
 			reg = <86>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu86_intc: interrupt-controller {
@@ -576,7 +576,7 @@
 			reg = <87>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <4>;
 			cpu87_intc: interrupt-controller {
@@ -590,7 +590,7 @@
 			reg = <88>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu88_intc: interrupt-controller {
@@ -604,7 +604,7 @@
 			reg = <89>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu89_intc: interrupt-controller {
@@ -618,7 +618,7 @@
 			reg = <90>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu90_intc: interrupt-controller {
@@ -632,7 +632,7 @@
 			reg = <91>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu91_intc: interrupt-controller {
@@ -646,7 +646,7 @@
 			reg = <92>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu92_intc: interrupt-controller {
@@ -660,7 +660,7 @@
 			reg = <93>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu93_intc: interrupt-controller {
@@ -674,7 +674,7 @@
 			reg = <94>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu94_intc: interrupt-controller {
@@ -688,7 +688,7 @@
 			reg = <95>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <5>;
 			cpu95_intc: interrupt-controller {
@@ -702,7 +702,7 @@
 			reg = <96>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu96_intc: interrupt-controller {
@@ -716,7 +716,7 @@
 			reg = <97>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu97_intc: interrupt-controller {
@@ -730,7 +730,7 @@
 			reg = <98>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu98_intc: interrupt-controller {
@@ -744,7 +744,7 @@
 			reg = <99>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu99_intc: interrupt-controller {
@@ -758,7 +758,7 @@
 			reg = <100>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu100_intc: interrupt-controller {
@@ -772,7 +772,7 @@
 			reg = <101>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu101_intc: interrupt-controller {
@@ -786,7 +786,7 @@
 			reg = <102>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu102_intc: interrupt-controller {
@@ -800,7 +800,7 @@
 			reg = <103>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu103_intc: interrupt-controller {
@@ -814,7 +814,7 @@
 			reg = <104>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu104_intc: interrupt-controller {
@@ -828,7 +828,7 @@
 			reg = <105>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu105_intc: interrupt-controller {
@@ -842,7 +842,7 @@
 			reg = <106>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu106_intc: interrupt-controller {
@@ -856,7 +856,7 @@
 			reg = <107>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu107_intc: interrupt-controller {
@@ -870,7 +870,7 @@
 			reg = <108>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu108_intc: interrupt-controller {
@@ -884,7 +884,7 @@
 			reg = <109>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu109_intc: interrupt-controller {
@@ -898,7 +898,7 @@
 			reg = <110>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu110_intc: interrupt-controller {
@@ -912,7 +912,7 @@
 			reg = <111>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu111_intc: interrupt-controller {
@@ -926,7 +926,7 @@
 			reg = <112>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu112_intc: interrupt-controller {
@@ -940,7 +940,7 @@
 			reg = <113>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu113_intc: interrupt-controller {
@@ -954,7 +954,7 @@
 			reg = <114>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu114_intc: interrupt-controller {
@@ -968,7 +968,7 @@
 			reg = <115>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu115_intc: interrupt-controller {
@@ -982,7 +982,7 @@
 			reg = <116>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu116_intc: interrupt-controller {
@@ -996,7 +996,7 @@
 			reg = <117>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu117_intc: interrupt-controller {
@@ -1010,7 +1010,7 @@
 			reg = <118>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu118_intc: interrupt-controller {
@@ -1024,7 +1024,7 @@
 			reg = <119>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <6>;
 			cpu119_intc: interrupt-controller {
@@ -1038,7 +1038,7 @@
 			reg = <120>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu120_intc: interrupt-controller {
@@ -1052,7 +1052,7 @@
 			reg = <121>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu121_intc: interrupt-controller {
@@ -1066,7 +1066,7 @@
 			reg = <122>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu122_intc: interrupt-controller {
@@ -1080,7 +1080,7 @@
 			reg = <123>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu123_intc: interrupt-controller {
@@ -1094,7 +1094,7 @@
 			reg = <124>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu124_intc: interrupt-controller {
@@ -1108,7 +1108,7 @@
 			reg = <125>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu125_intc: interrupt-controller {
@@ -1122,7 +1122,7 @@
 			reg = <126>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu126_intc: interrupt-controller {
@@ -1136,7 +1136,7 @@
 			reg = <127>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdc";
+			riscv,isa = "rv64imafdc_xtheadvector";
 			mmu-type = "riscv,sv39";
 			numa-node-id = <7>;
 			cpu127_intc: interrupt-controller {

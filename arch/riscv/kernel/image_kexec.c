@@ -24,6 +24,8 @@
 #include <asm/byteorder.h>
 #include <asm/image.h>
 
+#ifdef CONFIG_CRASH_DUMP
+
 static int prepare_elf_headers(void **addr, unsigned long *sz)
 {
 	struct crash_mem *cmem;
@@ -303,3 +305,5 @@ const struct kexec_file_ops image_kexec_ops = {
 	.verify_sig = image_verify_sig,
 #endif
 };
+
+#endif

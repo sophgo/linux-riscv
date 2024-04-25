@@ -1,4 +1,11 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
 /dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+
 / {
 	model = "sophgo sg2260";
 	compatible = "sophgo, sg2260_pld";
@@ -20,7 +27,7 @@
 			reg = <0>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
 			riscv,cbom-block-size = <64>;
 			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
@@ -35,7 +42,7 @@
 			reg = <1>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
 			riscv,cbom-block-size = <64>;
 			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
@@ -50,7 +57,7 @@
 			reg = <2>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
 			riscv,cbom-block-size = <64>;
 			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
@@ -65,7 +72,7 @@
 			reg = <3>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt_xtheadc_xtheadvdot";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
 			riscv,cbom-block-size = <64>;
 			riscv,cboz-block-size = <64>;
 			mmu-type = "riscv,sv48";
@@ -83,7 +90,7 @@
 		compatible = "simple-bus";
 		ranges;
 
-		clint_mswi: clint-mswi@6e04000000 {
+		clint_mswi: interrupt-controller@6e04000000 {
 			compatible = "thead,c900-clint-mswi";
 			reg = <0x0000006e 0x04000000 0x00000000 0x00004000>;
 			interrupts-extended = <
@@ -94,7 +101,7 @@
 				>;
 		};
 
-		clint_mtimer0: clint-mtimer@6840000000 {
+		clint_mtimer0: timer@6840000000 {
 			compatible = "thead,c900-clint-mtimer";
 			reg = <0x00000068 0x40000000 0x00000000 0x00008000>;
 			interrupts-extended = <
@@ -107,8 +114,9 @@
 
 		//4cores PLIC2
 		intc: interrupt-controller@6e00000000 {
-			#interrupt-cells = <1>;
-			compatible = "riscv,plic0";
+			compatible = "thead,c900-plic";
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
 			interrupt-controller;
 			interrupts-extended = <
 				&cpu0_intc  0xffffffff &cpu0_intc  9
@@ -147,7 +155,7 @@
 			compatible = "snps,dw-apb-uart";
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
-			interrupts = <41>;
+			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <153600>;
 			clock-names = "baudclk";
 			reg-shift = <2>;
@@ -162,14 +170,14 @@
 
 		mtl_rx_setup: rx-queues-config {
 			snps,rx-queues-to-use = <8>;
-			queue0 {};
-			queue1 {};
-			queue2 {};
-			queue3 {};
-			queue4 {};
-			queue5 {};
-			queue6 {};
-			queue7 {};
+			queue0 {snps,rx-sched-wsp;};
+			queue1 {snps,rx-sched-wsp;};
+			queue2 {snps,rx-sched-wsp;};
+			queue3 {snps,rx-sched-wsp;};
+			queue4 {snps,rx-sched-wsp;};
+			queue5 {snps,rx-sched-wsp;};
+			queue6 {snps,rx-sched-wsp;};
+			queue7 {snps,rx-sched-wsp;};
 		};
 
 		mtl_tx_setup: tx-queues-config {
@@ -184,12 +192,43 @@
 			queue7 {};
 		};
 
+		xlgmac_axi_setup: xlgmac-axi-config {
+			snps,wr_osr_lmt = <63>;
+			snps,rd_osr_lmt = <3>;
+			snps,blen = <4 8 16 32 64 128 256>;
+		};
+
+		xlg_mtl_rx_setup: xlg-rx-queues-config {
+			snps,rx-queues-to-use = <8>;
+			queue0 {snps,rx-sched-wsp;};
+			queue1 {snps,rx-sched-wsp;};
+			queue2 {snps,rx-sched-wsp;};
+			queue3 {snps,rx-sched-wsp;};
+			queue4 {snps,rx-sched-wsp;};
+			queue5 {snps,rx-sched-wsp;};
+			queue6 {snps,rx-sched-wsp;};
+			queue7 {snps,rx-sched-wsp;};
+		};
+
+		xlg_mtl_tx_setup: xlg-tx-queues-config {
+			snps,tx-queues-to-use = <8>;
+			queue0 {};
+			queue1 {};
+			queue2 {};
+			queue3 {};
+			queue4 {};
+			queue5 {};
+			queue6 {};
+			queue7 {};
+		};
+#endif
+#if 0
 		ethernet0: ethernet@7030006000 {
 			compatible = "sophgo,ethernet", "snps,dwmac-4.00";
 			reg = <0x70 0x30006000 0x0 0x4000>;
 			interrupt-names = "macirq";
 			interrupt-parent = <&intc>;
-			interrupts = <296>;
+			interrupts = <296 IRQ_TYPE_LEVEL_HIGH>;
 			#if 0
 			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
 			clocks = <&div_clk DIV_CLK_FPLL_TX_ETH0>,
@@ -217,23 +256,35 @@
 				full-duplex;
 			};
 		};
-
+#endif
+#if 0
 		dwcxlg0: dwcxlg@6c08000000 {
-			compatible = "sophgo,ethernet", "snps,dwxgmac";
+			compatible = "sophgo,ethernet";
 			reg = <0x6c 0x08000000 0x0 0x40000>;
 			interrupt-parent = <&intc>;
-			interrupts = <92 93 94 95 96 97 98 99 100
-						  109 110 111 112 113 114 115 116
-							>;
+			#if 1
+			interrupts = <92 IRQ_TYPE_LEVEL_HIGH 93 IRQ_TYPE_LEVEL_HIGH
+						  94 IRQ_TYPE_LEVEL_HIGH 95 IRQ_TYPE_LEVEL_HIGH
+						  96 IRQ_TYPE_LEVEL_HIGH 97 IRQ_TYPE_LEVEL_HIGH
+						  98 IRQ_TYPE_LEVEL_HIGH 99 IRQ_TYPE_LEVEL_HIGH
+						  100 IRQ_TYPE_LEVEL_HIGH
+						  109 IRQ_TYPE_LEVEL_HIGH 110 IRQ_TYPE_LEVEL_HIGH
+						  111 IRQ_TYPE_LEVEL_HIGH 112 IRQ_TYPE_LEVEL_HIGH
+						  113 IRQ_TYPE_LEVEL_HIGH 114 IRQ_TYPE_LEVEL_HIGH
+						  115 IRQ_TYPE_LEVEL_HIGH 116 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "macirq", "tx_ch0", "tx_ch1", "tx_ch2", "tx_ch3",
-							   "tx_ch4", "tx_ch5", "tx_ch6", "tx_ch7",
+							   "tx_ch4", "tx_ch5", "tx_ch6",
 							   "rx_ch0", "rx_ch1", "rx_ch2", "rx_ch3",
 							   "rx_ch4", "rx_ch5", "rx_ch6", "rx_ch7";
-			snps,tso;
 			snps,multi_msi_en;
-			snps,axi-config = <&stmmac_axi_setup>;
-			snps,mtl-rx-config = <&mtl_rx_setup>;
-			snps,mtl-tx-config = <&mtl_tx_setup>;
+			#else
+			interrupts = <92 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			#endif
+			snps,tso;
+			snps,axi-config = <&xlgmac_axi_setup>;
+			snps,mtl-rx-config = <&xlg_mtl_rx_setup>;
+			snps,mtl-tx-config = <&xlg_mtl_tx_setup>;
 
 			phy-mode = "xlgmii";
 			fixed-link {
@@ -246,10 +297,10 @@
 
 	aliases {
 		serial0 = &uart0;
-#if 0
+		#if 0
 		ethernet0 = &ethernet0;
 		dwcxlg0 = &dwcxlg0;
-#endif
+		#endif
 	};
 
 	chosen {

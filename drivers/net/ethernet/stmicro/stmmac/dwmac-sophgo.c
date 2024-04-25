@@ -175,7 +175,10 @@ static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_s
 								 plat->unicast_filter_entries);
 	plat->multicast_filter_bins = sg_validate_mcast_bins(&pdev->dev,
 							     plat->multicast_filter_bins);
-	plat->sph_disable = 1;
+	plat->sph_disable = 0;
+	plat->has_xgmac = 1;
+	plat->pmt = 1;
+	plat->tso_en = of_property_read_bool(np, "snps,tso");
 }
 
 static int sg_dwmac_probe(struct platform_device *pdev)

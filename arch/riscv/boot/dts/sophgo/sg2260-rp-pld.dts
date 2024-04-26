@@ -1323,6 +1323,17 @@
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
+
+		p2p:  p2p {
+			compatible = "sophgon, p2p";
+			reg = <0x0000006c 0x08790000 0x00000000 0x000010000>,
+			      <0x0000006c 0x087D0000 0x00000000 0x000010000>;
+			reg-names = "cdma_cfg","cxp_top_cfg";
+			interrupt-parent = <&intc>;
+			interrupts = <127 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "CXP_CDMA0";
+		};
+
 	};
 
 	aliases {

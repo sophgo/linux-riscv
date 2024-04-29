@@ -162,6 +162,84 @@
 			reg-io-width = <4>;
 		};
 
+		gpio0: gpio@7040009000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x40009000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#if 0
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+			#endif
+
+			port0a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <26>;
+			};
+		};
+
+		gpio1: gpio@704000a000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x4000a000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#if 0
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+			#endif
+
+			port1a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <27>;
+			};
+		};
+
+		gpio2: gpio@704000b000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x4000b000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#if 0
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+			#endif
+
+			port2a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <28>;
+			};
+		};
+
 		p2p:  p2p {
 			compatible = "sophgon, p2p";
 			reg = <0x0000006c 0x08790000 0x00000000 0x000010000>,

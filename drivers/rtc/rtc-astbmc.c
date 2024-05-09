@@ -441,6 +441,8 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 		goto out_unreg;
 	}
 
+	return 0;
+
 	if (!is_bmc_rtc_device_func_enable(dev))
 		return 0;
 

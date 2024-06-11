@@ -8,6 +8,7 @@
 #include <dt-bindings/reset/sophgo,sg2044-reset.h>
 #include <dt-bindings/clock/sophgo,sg2044-clock.h>
 #include "sg2044-clock.dtsi"
+#include "sg2044-pinctrl.dtsi"
 
 / {
 	model = "sophgo sg2260";
@@ -283,7 +284,8 @@
 			queue6 {};
 			queue7 {};
 		};
-
+#endif
+#if 0
 		xlgmac_axi_setup: xlgmac-axi-config {
 			snps,wr_osr_lmt = <63>;
 			snps,rd_osr_lmt = <3>;
@@ -321,14 +323,12 @@
 			interrupt-names = "macirq";
 			interrupt-parent = <&intc>;
 			interrupts = <296 IRQ_TYPE_LEVEL_HIGH>;
-			#if 0
 			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
-			clocks = <&div_clk DIV_CLK_FPLL_TX_ETH0>,
-				<&div_clk GATE_CLK_ETH0_TX>,
-				<&div_clk GATE_CLK_AXI6_ETH0>,
-				<&div_clk GATE_CLK_PTP_REF_I_ETH0>,
+			clocks = <&div_clk DIV_CLK_FPLL0_TX_ETH0>,
+				<&div_clk GATE_CLK_TX_ETH0>,
+				<&div_clk GATE_CLK_AXI_ETH0>,
+				<&div_clk DIV_CLK_FPLL0_PTP_REF_I_ETH0>,
 				<&div_clk GATE_CLK_REF_ETH0>;
-			#endif
 			/* no hash filter and perfect filter support */
 			snps,multicast-filter-bins = <0>;
 			snps,perfect-filter-entries = <1>;
@@ -401,15 +401,15 @@
 	};
 
 	top_misc: top_misc_ctrl@7050000000 {
-			compatible = "syscon";
-			reg = <0x70 0x50000000 0x0 0x8000>;
-		};
+		compatible = "syscon";
+		reg = <0x70 0x50000000 0x0 0x8000>;
+	};
 
 	rst: reset-controller {
-			#reset-cells = <1>;
-			compatible = "sophgo,reset";
-			subctrl-syscon = <&top_misc>;
-			top_rst_offset = <0x3000>;
-			nr_resets = <RST_MAX_NUM>;
-		};
+		#reset-cells = <1>;
+		compatible = "sophgo,reset";
+		subctrl-syscon = <&top_misc>;
+		top_rst_offset = <0x3000>;
+		nr_resets = <RST_MAX_NUM>;
+	};
 };

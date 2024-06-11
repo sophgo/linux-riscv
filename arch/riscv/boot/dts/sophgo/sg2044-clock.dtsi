@@ -92,16 +92,6 @@
 			clock-output-names = "fpll1_clock";
 		};
 
-        fpll2: fpll2 {
-			compatible = "sg2044, pll-clock";
-			#clock-cells = <0>;
-			id = <FPLL2_CLK>;
-			mode = <NORMAL_MODE>;
-			subctrl-syscon = <&top_misc>;
-			clocks = <&cgi>;
-			clock-output-names = "fpll2_clock";
-		};
-
         dpll0: dpll0 {
 			compatible = "sg2044, pll-clock";
 			#clock-cells = <0>;
@@ -202,7 +192,7 @@
 			clocks = \
 				<&mpll0>, <&mpll1>, <&mpll2>, <&mpll3>,
                 <&mpll4>, <&mpll5>,
-                <&fpll0>, <&fpll1>, <&fpll2>,
+                <&fpll0>, <&fpll1>,
 
 				<&div_clk DIV_CLK_MPLL0_AP_CPU_NORMAL_0>,
 				<&div_clk DIV_CLK_MPLL1_RP_SYS_0>,
@@ -243,13 +233,12 @@
 				<&div_clk DIV_CLK_FPLL0_DIV_GPIO_DB>,
 				<&div_clk DIV_CLK_FPLL0_TOP_AXI_HSPERI>,
 				<&div_clk DIV_CLK_FPLL1_CXP_MAC_0>,
-				<&div_clk DIV_CLK_FPLL1_PCIE_1G>,
-				<&div_clk DIV_CLK_FPLL2_CXP_TEST_ETH_PHY>;
+				<&div_clk DIV_CLK_FPLL1_PCIE_1G>;
 
 			clock-rates = \
 				<2000000000>, <2200000000>, <1200000000>, <2000000000>,
 				<1050000000>, <900000000>,
-				<2000000000>, <1000000000>, <1600000000>,
+				<2000000000>, <1000000000>,
 				/* MPLL */
 				<2000000000>, <2200000000>, <1200000000>,
 				<2000000000>, <1050000000>, <900000000>,
@@ -265,8 +254,7 @@
 				<25000000>, <100000000>, <100000000>,
 
 				<100000000>, <100000>, <100000>, <100000>,
-				<250000000>, <1000000000>, <1000000000>,
-				<1600000000>;
+				<250000000>, <1000000000>, <1000000000>;
 		};
     };
 };

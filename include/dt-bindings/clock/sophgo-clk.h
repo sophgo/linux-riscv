@@ -10,15 +10,14 @@
 #define MPLL5_CLK	5
 #define FPLL0_CLK	6
 #define FPLL1_CLK	7
-#define FPLL2_CLK	8
-#define DPLL0_CLK	9
-#define DPLL1_CLK	10
-#define DPLL2_CLK	11
-#define DPLL3_CLK	12
-#define DPLL4_CLK	13
-#define DPLL5_CLK	14
-#define DPLL6_CLK	15
-#define DPLL7_CLK	16
+#define DPLL0_CLK	8
+#define DPLL1_CLK	9
+#define DPLL2_CLK	10
+#define DPLL3_CLK	11
+#define DPLL4_CLK	12
+#define DPLL5_CLK	13
+#define DPLL6_CLK	14
+#define DPLL7_CLK	15
 
 //clock mode
 #define NORMAL_MODE	0

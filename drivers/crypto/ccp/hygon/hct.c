@@ -40,12 +40,13 @@
  *        and performance optimization in virtual machines (enable caching).
  * 0.4 -- support compiling hct.ko when mdev module is disabled.
  * 0.5 -- change the maximum number of supported ccps from 16 to 48.
+ * 0.6 -- sharing CCP resources between host and virtual machines.
  */
 
 #undef  pr_fmt
 #define pr_fmt(fmt)				"hct: " fmt
 
-#define VERSION_STRING				"0.5"
+#define VERSION_STRING				"0.6"
 #define DRIVER_AUTHOR				"HYGON Corporation"
 #define VERSION_SIZE				16
 
@@ -92,6 +93,7 @@
 #define MCCP_INSTANCE_OFFSET			8
 #define MCCP_INSTANCE_MASK			(~((1u << MCCP_INSTANCE_OFFSET) - 1))
 #define MCCP_PASID_SIZE                         (1 << 8)
+#define MCCP_PASID_MASK_BIT			0x03
 #define MCCP_IOVA_MAX_SLOT			1024
 #define MCCP_DEV_MAX				48
 #define MCCP_DEV_QUEUE_MAX			8
@@ -136,13 +138,26 @@ struct hct_shared_cfg {
 	unsigned int ccp_state[MCCP_DEV_MAX];
 } __aligned(PAGE_SIZE);
 
+struct hct_shr_pg_cfg {
+	unsigned long mdev_bitmap[BITS_TO_LONGS(MCCP_INSTANCE_MAX)];
+	unsigned int ccp_queue_state[MCCP_DEV_QUEUE];
+	unsigned int userid[MCCP_DEV_QUEUE];
+	unsigned int vq_work_mode[MCCP_DEV_QUEUE];
+	unsigned int dev_lock_state;
+	unsigned int dev_init_state;
+	unsigned int vq_sync_count;
+	unsigned int vq_async_count;
+	unsigned int numa_node;
+} ____cacheline_aligned;
+
 struct hct_dev_ctrl {
 	unsigned char op;
 	unsigned char rsvd[3];
 	union {
 		unsigned char version[VERSION_SIZE];
-		unsigned int id;
 		unsigned long sme_mask;
+		unsigned int id;
+		unsigned int pasid;
 		struct {
 			unsigned long vaddr;
 			unsigned long iova;
@@ -208,6 +223,7 @@ static struct hct_data {
 	unsigned long dma_share_ref;
 	unsigned long mdev_ref;
 	unsigned long ids[BITS_TO_LONGS(MCCP_INSTANCE_MAX)];
+	unsigned long pasids[BITS_TO_LONGS(MCCP_PASID_SIZE)];
 } hct_data;
 
 static struct hct_share_cfg {
@@ -1258,6 +1274,7 @@ struct hct_private {
 	struct list_head head;
 	struct mutex lock;
 	unsigned int id;
+	unsigned int pasid;
 };
 
 static int hct_share_open(struct inode *inode, struct file *file)
@@ -1757,7 +1774,8 @@ static void hct_iommu_unmap_all(struct hct_private *private)
 
 static struct page *hct_get_page(pgoff_t page_idx)
 {
-	u64 *node;
+	struct hct_shr_pg_cfg *shr_cfg = NULL;
+	int numa_node;
 
 	mutex_lock(&hct_share.lock);
 	if (!hct_share.pages[page_idx]) {
@@ -1770,8 +1788,12 @@ static struct page *hct_get_page(pgoff_t page_idx)
 	}
 	get_page(hct_share.pages[page_idx]);
 
-	node = page_to_virt(hct_share.pages[page_idx]) + PAGE_SIZE - 8;
-	*node = hct_data.iommu[page_idx].pdev->dev.numa_node;
+	numa_node = hct_data.iommu[page_idx].pdev->dev.numa_node;
+	if (numa_node < 0)
+		numa_node = 0;
+
+	shr_cfg = (void *)page_to_virt(hct_share.pages[page_idx]);
+	shr_cfg->numa_node = numa_node;
 	mutex_unlock(&hct_share.lock);
 
 	return hct_share.pages[page_idx];
@@ -1790,22 +1812,24 @@ static void hct_put_pages(void)
 	}
 }
 
-/* Clear status information when exiting abnormally. */
-static void hct_clear_shared_lock_memory(unsigned int gid)
+static void hct_shared_page_memory_clear(unsigned int gid)
 {
-	int *base;
-	int *queue_lck;
-	int dev_idx;
-	int queue_idx;
+	struct hct_shr_pg_cfg *shr_cfg = NULL;
+	int i, q;
 
-	for (dev_idx = 0; dev_idx < MCCP_DEV_MAX &&
-			hct_share.pages[dev_idx]; dev_idx++) {
-		base = (int *)page_to_virt(hct_share.pages[dev_idx]);
-		for (queue_idx = 0; queue_idx < MCCP_DEV_QUEUE; queue_idx++) {
-			queue_lck = base + queue_idx;
-			if (*queue_lck == gid)
-				*queue_lck = 0; /* vq userid will be changed. */
-		}
+	for (i = 0; i < MCCP_DEV_MAX; i++) {
+		if (!hct_share.pages[i])
+			continue;
+
+		shr_cfg = (void *)page_to_virt(hct_share.pages[i]);
+		if ((shr_cfg->dev_init_state & MCCP_INSTANCE_MASK) == gid)
+			shr_cfg->dev_init_state = 0;
+		if (shr_cfg->dev_lock_state == gid)
+			shr_cfg->dev_lock_state = 0;
+
+		for (q = 0; q < MCCP_DEV_QUEUE; q++)
+			if (shr_cfg->ccp_queue_state[q] == gid)
+				shr_cfg->ccp_queue_state[q] = MCCP_QUEUE_NEED_INIT;
 	}
 }
 
@@ -1854,14 +1878,14 @@ static long hct_share_ioctl(struct file *file, unsigned int ioctl, unsigned long
 			ret = 0;
 		break;
 	case MCCP_SHARE_OP_GET_PASID:
-		/* The different virtual machines is distinguished through pasid. */
-		pasid = private->id >> MCCP_INSTANCE_OFFSET;
+		pasid = find_first_zero_bit(hct_data.pasids, MCCP_PASID_SIZE);
 		if (pasid >= MCCP_PASID_SIZE) {
 			ret = -EINVAL;
 			break;
 		}
-
-		dev_ctrl.id = pasid;
+		private->pasid = pasid;
+		dev_ctrl.pasid = pasid;
+		bitmap_set(hct_data.pasids, pasid, 1);
 		if (copy_to_user((void __user *)arg, &dev_ctrl, sizeof(dev_ctrl)))
 			ret = -EINVAL;
 		break;
@@ -1893,32 +1917,23 @@ static int hct_share_close(struct inode *inode, struct file *file)
 		if (private->id == cfg->ccps_ref_lock)
 			cfg->ccps_ref_lock = 0;
 
-		for (i = 0; i < MCCP_DEV_MAX; i++)
-			if (private->id == (MCCP_INSTANCE_MASK & cfg->ccp_state[i]))
-				cfg->ccp_state[i] = 0;
-
-		for (i = 0; i < MCCP_QUEUES_MAX; i++)
-			if (private->id == cfg->ccp_queue_state[i])
-				cfg->ccp_queue_state[i] = MCCP_QUEUE_NEED_INIT;
-
 		for (i = 0; i < MCCP_IOVA_MAX_SLOT; i++)
 			if (private->id == cfg->iova_slot[i])
 				cfg->iova_slot[i] = 0;
 	}
 
-	hct_clear_shared_lock_memory(private->id);
+	hct_shared_page_memory_clear(private->id);
 
 	hct_share.ref--;
-	if (!hct_share.ref) {
+	if (!hct_share.ref)
 		hct_put_pages();
-		if (hct_share.vaddr)
-			memset(hct_share.vaddr, 0x00, hct_share.size);
-	}
 	mutex_unlock(&hct_share.lock);
 
 	mutex_lock(&hct_data.lock);
 	if (--id < MCCP_INSTANCE_MAX)
 		bitmap_clear(hct_data.ids, id, 1);
+	if (private->pasid)
+		bitmap_clear(hct_data.pasids, private->pasid, 1);
 	mutex_unlock(&hct_data.lock);
 
 	mutex_lock(&private->lock);
@@ -2025,6 +2040,10 @@ static int hct_share_init(void)
 		hct_data.prot = IOMMU_READ | IOMMU_WRITE;
 	}
 
+	/* When the pasid value is 0 or 1, the address space overlaps with the host,
+	 * so the pasid needs to start from 2.
+	 */
+	hct_data.pasids[0] |= MCCP_PASID_MASK_BIT;
 	return ret;
 }
 

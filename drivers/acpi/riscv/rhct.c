@@ -9,6 +9,7 @@
 
 #include <linux/acpi.h>
 #include <linux/bits.h>
+#include "../acpica/accommon.h"
 
 static struct acpi_table_rhct *acpi_get_rhct(void)
 {
@@ -95,8 +96,10 @@ static void acpi_parse_hart_info_cmo_node(struct acpi_table_rhct *rhct,
 
 	hart_info_node_offset = ACPI_ADD_PTR(u32, hart_info, size_hartinfo);
 	for (int i = 0; i < hart_info->num_offsets; i++) {
+		u32 node_offset;
+		ACPI_MOVE_32_TO_32(&node_offset, &hart_info_node_offset[i]);
 		ref_node = ACPI_ADD_PTR(struct acpi_rhct_node_header,
-					rhct, hart_info_node_offset[i]);
+					rhct, node_offset);
 		if (ref_node->type == ACPI_RHCT_NODE_TYPE_CMO) {
 			cmo_node = ACPI_ADD_PTR(struct acpi_rhct_cmo_node,
 						ref_node, size_hdr);

@@ -697,4 +697,9 @@ static struct platform_driver plic_driver = {
 	},
 	.probe = plic_probe,
 };
-builtin_platform_driver(plic_driver);
+
+static int __init riscv_plic_init(void)
+{
+	return platform_driver_register(&plic_driver);
+}
+postcore_initcall(riscv_plic_init);

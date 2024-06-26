@@ -84,26 +84,6 @@ static __always_inline const struct vdso_data *__arch_get_vdso_data(void)
 	return _vdso_data;
 }
 
-#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
-static inline bool sophgo_vdso_hres_capable(void)
-{
-        return false;
-}
-#define __arch_vdso_hres_capable sophgo_vdso_hres_capable
-
-static inline bool sophgo_vdso_clocksource_ok(const struct vdso_data *vd)
-{
-	return false;
-}
-#define vdso_clocksource_ok sophgo_vdso_clocksource_ok
-
-static inline bool sophgo_vdso_cycles_ok(u64 cycles)
-{
-        return false;
-}
-#define vdso_cycles_ok sophgo_vdso_cycles_ok
-#endif
-
 #ifdef CONFIG_TIME_NS
 static __always_inline
 const struct vdso_data *__arch_get_timens_vdso_data(const struct vdso_data *vd)

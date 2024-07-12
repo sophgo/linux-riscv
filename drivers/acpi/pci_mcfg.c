@@ -182,6 +182,15 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	LOONGSON_ECAM_MCFG("\0", 1),
 	LOONGSON_ECAM_MCFG("LOONGSON", 1),
 #endif /* LOONGARCH */
+
+#ifdef CONFIG_RISCV
+#define RISCV_ECAM_MCFG(table_id, seg) \
+    { "SOPHGO", table_id, 1, seg, MCFG_BUS_ANY, &sophgo_pci_ecam_ops }
+
+	RISCV_ECAM_MCFG("2042    ", 0),
+	RISCV_ECAM_MCFG("2042    ", 1),
+	RISCV_ECAM_MCFG("2042    ", 2),
+#endif /* RISCV */
 };
 
 static char mcfg_oem_id[ACPI_OEM_ID_SIZE];

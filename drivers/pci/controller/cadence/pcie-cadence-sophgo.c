@@ -12,6 +12,10 @@
 #include <linux/irqchip/chained_irq.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/pci.h>
+#include <linux/pci-acpi.h>
+#include <linux/pci-ecam.h>
+#include "../../pci.h"
 
 #include "pcie-cadence.h"
 #include "pcie-cadence-sophgo.h"
@@ -120,8 +124,17 @@ static void __iomem *cdns_mango_pci_map_bus(struct pci_bus *bus, unsigned int de
 	struct pci_host_bridge *bridge = pci_find_host_bridge(bus);
 	struct cdns_mango_pcie_rc *rc = pci_host_bridge_priv(bridge);
 	struct cdns_pcie *pcie = &rc->pcie;
-	unsigned int busn = bus->number;
+	unsigned int busn = bus->number, busnr = bridge->busnr;
 	u32 addr0, desc0;
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+  if (!acpi_disabled){
+	  struct pci_config_window *cfg = bus->sysdata;
+	  rc = cfg->priv;
+	  pcie = &rc->pcie;
+	  busnr = cfg->busr.start;
+	}
+#endif
 
 	if (pci_is_root_bus(bus)) {
 		/*
@@ -153,7 +166,7 @@ static void __iomem *cdns_mango_pci_map_bus(struct pci_bus *bus, unsigned int de
 	 * The bus number was already set once for all in desc1 by
 	 * cdns_pcie_host_init_address_translation().
 	 */
-	if (busn == bridge->busnr + 1)
+	if (busn == busnr + 1)
 		desc0 |= CDNS_PCIE_AT_OB_REGION_DESC0_TYPE_CONF_TYPE0;
 	else
 		desc0 |= CDNS_PCIE_AT_OB_REGION_DESC0_TYPE_CONF_TYPE1;
@@ -300,8 +313,29 @@ static int cdns_pcie_host_init_address_translation(struct cdns_mango_pcie_rc *rc
 	u32 addr0, addr1, desc1;
 	u64 cpu_addr;
 	int r, busnr = 0;
+	struct list_head resource_list, *list = &bridge->windows;
 
-	entry = resource_list_first_type(&bridge->windows, IORESOURCE_BUS);
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+  if (!acpi_disabled){
+	  struct acpi_device *adev = to_acpi_device(rc->dev);
+	  unsigned long flags;
+		int ret;
+
+	  INIT_LIST_HEAD(&resource_list);
+	  flags = IORESOURCE_IO | IORESOURCE_MEM | IORESOURCE_BUS;
+	  ret = acpi_dev_get_resources(adev, &resource_list, acpi_dev_filter_resource_type_cb, (void *)flags);
+	  if (ret < 0) {
+		  pr_err("failed to parse _CRS method, error code %d\n", ret);
+		  return ret;
+	  } else if (ret == 0) {
+		  pr_err("no IO and memory resources present in _CRS\n");
+		  return -EINVAL;
+	  }
+		list = &resource_list;
+	}
+#endif
+
+	entry = resource_list_first_type(list, IORESOURCE_BUS);
 	if (entry)
 		busnr = entry->res->start;
 
@@ -323,7 +357,7 @@ static int cdns_pcie_host_init_address_translation(struct cdns_mango_pcie_rc *rc
 	cdns_pcie_writel(pcie, CDNS_PCIE_AT_OB_REGION_CPU_ADDR1(0), addr1);
 
 	r = 1;
-	resource_list_for_each_entry(entry, &bridge->windows) {
+	resource_list_for_each_entry(entry, list) {
 		struct resource *res = entry->res;
 		u64 pci_addr = res->start - entry->offset;
 
@@ -501,6 +535,12 @@ static int cdns_pcie_msi_setup_for_top_intc(struct cdns_mango_pcie_rc *rc, int i
 {
 	struct irq_domain *irq_parent = cdns_pcie_get_parent_irq_domain(intc_id);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(rc->dev->of_node);
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+    if (!acpi_disabled) {
+	    fwnode = acpi_fwnode_handle(to_acpi_device(rc->dev));
+	}
+#endif
 
 	if (rc->msix_supported == 1) {
 		rc->msi_domain = pci_msi_create_irq_domain(fwnode,
@@ -738,6 +778,12 @@ int cdns_pcie_allocate_domains(struct cdns_mango_pcie_rc *rc)
 {
 	struct fwnode_handle *fwnode = of_node_to_fwnode(rc->dev->of_node);
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+    if (!acpi_disabled) {
+	  fwnode = acpi_fwnode_handle(to_acpi_device(rc->dev));
+	}
+#endif
+
 	rc->irq_domain = irq_domain_create_linear(fwnode, rc->num_vectors,
 					       &cdns_pcie_msi_domain_ops, rc);
 	if (!rc->irq_domain) {
@@ -971,3 +1017,151 @@ static struct platform_driver cdns_pcie_host_driver = {
 	.shutdown = cdns_pcie_shutdown,
 };
 builtin_platform_driver(cdns_pcie_host_driver);
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+
+static u64 bm_dma_mask = DMA_BIT_MASK(40);
+
+static struct device *phb_dev;
+
+struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev)
+{
+	return acpi_fwnode_handle(to_acpi_device(phb_dev));
+}
+
+static int sophgo_pcie_init(struct pci_config_window *cfg)
+{
+	struct device *dev = cfg->parent;
+	struct cdns_mango_pcie_rc *rc;
+	struct cdns_pcie *pcie;
+	struct acpi_device *adev = to_acpi_device(dev);
+	const union acpi_object *obj;
+	struct acpi_pci_root *root = acpi_driver_data(adev);
+	acpi_status status;
+	struct acpi_buffer buffer = { ACPI_ALLOCATE_BUFFER, NULL };
+	struct acpi_pci_routing_table *entry;
+	struct resource *res;
+	int ret;
+	int top_intc_id = -1;
+
+	rc = devm_kzalloc(dev, sizeof(*rc), GFP_KERNEL);
+	if (!rc)
+		return -ENOMEM;
+
+	dev->dma_mask = &bm_dma_mask;
+	dev->coherent_dma_mask = bm_dma_mask;
+
+    phb_dev = dev;
+	rc->dev = dev;
+
+	rc->cfg_res = &cfg->res;
+	rc->cfg_base = cfg->win;
+
+	acpi_dev_get_property(adev, "cdns,max-outbound-regions", ACPI_TYPE_INTEGER, &obj);
+	rc->max_regions = obj->integer.value;
+
+	acpi_dev_get_property(adev, "cdns,no-bar-match-nbits", ACPI_TYPE_INTEGER, &obj);
+	rc->no_bar_nbits = obj->integer.value;
+
+	acpi_dev_get_property(adev, "vendor-id", ACPI_TYPE_INTEGER, &obj);
+	rc->vendor_id = obj->integer.value;
+
+	acpi_dev_get_property(adev, "device-id", ACPI_TYPE_INTEGER, &obj);
+	rc->device_id = obj->integer.value;
+
+	acpi_dev_get_property(adev, "pcie-id", ACPI_TYPE_INTEGER, &obj);
+	rc->pcie_id = obj->integer.value;
+
+	acpi_dev_get_property(adev, "link-id", ACPI_TYPE_INTEGER, &obj);
+	rc->link_id = obj->integer.value;
+
+	acpi_dev_get_property(adev, "msix-supported", ACPI_TYPE_INTEGER, &obj);
+	rc->msix_supported = obj->integer.value;
+
+	acpi_dev_get_property(adev, "top-intc-used", ACPI_TYPE_INTEGER, &obj);
+	rc->top_intc_used = obj->integer.value;
+	if (rc->top_intc_used == 1) {
+		acpi_dev_get_property(adev, "top-intc-id", ACPI_TYPE_INTEGER, &obj);
+	  top_intc_id = obj->integer.value;
+	}
+
+	pcie = &rc->pcie;
+	pcie->is_rc = true;
+	pcie->ops = &cdns_mango_ops;
+
+	/*
+	 * Retrieve RC base and size from a SGPH0001 device with _UID
+	 * matching our segment.
+	 */
+	res = devm_kzalloc(dev, sizeof(*res), GFP_KERNEL);
+	if (!res)
+		return -ENOMEM;
+
+	if (rc->link_id == 0) {
+		ret = acpi_get_rc_resources(dev, "SGPH0001", root->segment, res);
+		pcie->reg_base = devm_ioremap_resource(dev, res);
+		if (IS_ERR(pcie->reg_base)) {
+			dev_err(dev, "Can't get rc base address\n");
+			return PTR_ERR(pcie->reg_base);
+		}
+        cdns_pcie_db.pcie_reg_base = pcie->reg_base;
+	} else if(rc->link_id == 1) {
+		pcie->reg_base = cdns_pcie_db.pcie_reg_base + 0x800000;
+	}
+
+	ret = cdns_pcie_host_init(dev, rc);
+	if (ret)
+		return -ENOMEM;
+
+	if ((rc->top_intc_used == 0) && (IS_ENABLED(CONFIG_PCI_MSI))) {
+	    status = acpi_get_irq_routing_table(adev->handle, &buffer);
+	    if (ACPI_FAILURE(status)) {
+		    kfree(buffer.pointer);
+		    return -ENODEV;
+	    }
+	    entry = buffer.pointer;
+
+		ret = acpi_register_gsi(dev, entry->source_index, ACPI_LEVEL_SENSITIVE, ACPI_ACTIVE_HIGH);
+		if (ret < 0) {
+			dev_err(dev, "failed to get register irq\n");
+			return ret != -EPROBE_DEFER ? -EINVAL: ret;
+ 		}
+        rc->msi_irq = ret;
+
+		ret = devm_request_irq(dev, rc->msi_irq, cdns_pcie_irq_handler,
+				       IRQF_SHARED | IRQF_NO_THREAD,
+							 "cdns-pcie-irq", rc);
+		if (ret) {
+			dev_err(dev, "failed to request MSI irq\n");
+			return -EINVAL;
+		}
+	}
+	kfree(buffer.pointer);
+
+	if (rc->top_intc_used == 0) {
+		ret = cdns_pcie_msi_setup(rc);
+		if (ret < 0)
+			return -EINVAL;
+	} else if (rc->top_intc_used == 1) {
+		ret = cdns_pcie_msi_setup_for_top_intc(rc, top_intc_id);
+		if (ret < 0)
+			return -EINVAL;
+	}
+
+	pci_msi_register_fwnode_provider(&pci_host_bridge_acpi_get_fwnode);
+
+	cfg->priv = rc;
+
+	return 0;
+}
+
+const struct pci_ecam_ops sophgo_pci_ecam_ops = {
+	.init         =  sophgo_pcie_init,
+	.pci_ops      = {
+		.map_bus    = cdns_mango_pci_map_bus,
+		.read       = cdns_pcie_config_read,
+		.write      = cdns_pcie_config_write,
+	}
+};
+
+#endif

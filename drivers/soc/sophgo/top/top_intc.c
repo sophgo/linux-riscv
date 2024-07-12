@@ -6,6 +6,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_pci.h>
+#include <linux/acpi.h>
 #include <linux/msi.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
@@ -277,7 +278,7 @@ static int top_intc_probe(struct platform_device *pdev)
 {
 	struct top_intc_data *data;
 	struct resource *res;
-	struct fwnode_handle *fwnode = of_node_to_fwnode(pdev->dev.of_node);
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
 	int ret = 0, i;
 	int intc_id = 0;
 
@@ -301,14 +302,21 @@ static int top_intc_probe(struct platform_device *pdev)
 		data->reg_bitwidth = 32;
 
 	// get register address
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sta");
+	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+	  res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sta");
+	else if (ACPI_COMPANION(&pdev->dev))
+	  res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	data->reg_sta = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(data->reg_sta)) {
 		dev_err(&pdev->dev, "failed map status register\n");
 		ret = PTR_ERR(data->reg_sta);
 		goto out;
 	}
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "set");
+
+	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+	  res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "set");
+	else if (ACPI_COMPANION(&pdev->dev))
+	  res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	data->reg_set = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(data->reg_set)) {
 		dev_err(&pdev->dev, "failed map set register\n");
@@ -316,7 +324,11 @@ static int top_intc_probe(struct platform_device *pdev)
 		goto out;
 	}
 	data->reg_set_phys = res->start;
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "clr");
+
+  if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+	  res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "clr");
+	else if (ACPI_COMPANION(&pdev->dev))
+	  res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
 	data->reg_clr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(data->reg_clr)) {
 		dev_err(&pdev->dev, "failed map clear register\n");
@@ -330,7 +342,10 @@ static int top_intc_probe(struct platform_device *pdev)
 		int irq;
 
 		snprintf(name, ARRAY_SIZE(name), "msi%d", i);
-		irq = platform_get_irq_byname(pdev, name);
+		if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+		  irq = platform_get_irq_byname(pdev, name);
+		else if (ACPI_COMPANION(&pdev->dev))
+		  irq = platform_get_irq(pdev, i);
 		if (irq < 0)
 			break;
 
@@ -373,7 +388,8 @@ static int top_intc_probe(struct platform_device *pdev)
 		 * populate child nodes. when test device node is a child, it will not be
 		 * automatically enumerated as a platform device.
 		 */
-		of_platform_populate(pdev->dev.of_node, NULL, NULL, NULL);
+		if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+		  of_platform_populate(pdev->dev.of_node, NULL, NULL, NULL);
 	}
 	return ret;
 
@@ -395,11 +411,19 @@ static const struct of_device_id top_intc_of_match[] = {
 	{},
 };
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id top_intc_acpi_match[] = {
+	{ "SGPH0002", 0 },
+	{}
+};
+#endif
+
 static struct platform_driver top_intc_driver = {
 	.driver = {
 		.name = "sophgo,top-intc",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(top_intc_of_match),
+		.acpi_match_table = ACPI_PTR(top_intc_acpi_match),
 	},
 	.probe = top_intc_probe,
 };

@@ -21,7 +21,10 @@
 #include <linux/of_net.h>
 #include <linux/of_gpio.h>
 #include <linux/io.h>
+#include <linux/acpi.h>
+#include <linux/gpio/consumer.h>
 
+#include "../../../../gpio/gpiolib-acpi.h"
 #include "stmmac_platform.h"
 
 struct bm_mac {
@@ -37,16 +40,26 @@ static u64 bm_dma_mask = DMA_BIT_MASK(40);
 
 static int bm_eth_reset_phy(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
+	struct gpio_desc *desc;
 	int phy_reset_gpio;
 
-	if (!np)
-		return 0;
+	if (is_of_node(fwnode)) {
+		phy_reset_gpio = of_get_named_gpio(pdev->dev.of_node, "phy-reset-gpios", 0);
+    } else if (is_acpi_node(fwnode)) {
+	    desc = gpiod_get_index(&pdev->dev, "phy-reset", 0, GPIOD_OUT_HIGH);
+	    if (IS_ERR(desc)) {
+		    dev_warn(&pdev->dev, "Cannot find phy reset gpio desc!\n");
+		    return PTR_ERR(desc);
+	    }
 
-	phy_reset_gpio = of_get_named_gpio(np, "phy-reset-gpios", 0);
+	    phy_reset_gpio =  desc_to_gpio(desc);
+    }
 
-	if (phy_reset_gpio < 0)
+	if (phy_reset_gpio < 0) {
+		dev_warn(&pdev->dev, "Cannot get phy reset gpio!\n");
 		return 0;
+	}
 
 	if (gpio_request(phy_reset_gpio, "eth-phy-reset"))
 		return 0;
@@ -144,10 +157,8 @@ static int bm_validate_mcast_bins(struct device *dev, int mcast_bins)
 
 static void bm_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_stmmacenet_data *plat)
 {
-	struct device_node *np = pdev->dev.of_node;
-
-	of_property_read_u32(np, "snps,multicast-filter-bins", &plat->multicast_filter_bins);
-	of_property_read_u32(np, "snps,perfect-filter-entries", &plat->unicast_filter_entries);
+	device_property_read_u32(&pdev->dev, "snps,multicast-filter-bins", &plat->multicast_filter_bins);
+	device_property_read_u32(&pdev->dev, "snps,perfect-filter-entries", &plat->unicast_filter_entries);
 	plat->unicast_filter_entries = bm_validate_ucast_entries(&pdev->dev,
 								 plat->unicast_filter_entries);
 	plat->multicast_filter_bins = bm_validate_mcast_bins(&pdev->dev,
@@ -252,6 +263,14 @@ static const struct of_device_id bm_dwmac_match[] = {
 };
 MODULE_DEVICE_TABLE(of, bm_dwmac_match);
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id bm_dwmac_acpi_match[] = {
+	{ "SGPH0007", 0 },
+	{}
+};
+#endif
+MODULE_DEVICE_TABLE(acpi, bm_dwmac_acpi_match);
+
 static struct platform_driver bm_dwmac_driver = {
 	.probe  = bm_dwmac_probe,
 	.remove_new = stmmac_pltfr_remove,
@@ -259,6 +278,7 @@ static struct platform_driver bm_dwmac_driver = {
 		.name           = "bm-dwmac",
 		.pm		= &stmmac_pltfr_pm_ops,
 		.of_match_table = bm_dwmac_match,
+		.acpi_match_table = ACPI_PTR(bm_dwmac_acpi_match),
 	},
 };
 module_platform_driver(bm_dwmac_driver);

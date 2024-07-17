@@ -37,6 +37,8 @@
 
 #include "../kernel/head.h"
 
+u64 new_vmalloc[NR_CPUS / sizeof(u64) + 1];
+
 #ifdef CONFIG_HIGHMEM
 #include <asm/highmem.h>
 extern phys_addr_t __init_memblock find_max_low_addr(phys_addr_t limit);

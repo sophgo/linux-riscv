@@ -349,7 +349,7 @@ static int __get_pll_ctl_setting(struct sg2044_pll_ctrl *best,
 static unsigned long sg2044_clk_pll_recalc_rate(struct clk_hw *hw,
 					    unsigned long parent_rate)
 {
-	unsigned int value;
+	unsigned int value = 0;
 	unsigned long rate;
 	struct sg2044_pll_clock *sg2044_pll = to_sg2044_pll_clk(hw);
 

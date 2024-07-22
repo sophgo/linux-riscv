@@ -133,7 +133,7 @@
 			riscv,max-priority = <7>;
 			riscv,ndev = <415>;
 		};
-
+#if 0
 		dummy_apb: apb-clock {
 			compatible = "fixed-clock";
 			clock-frequency = <250000000>;
@@ -154,18 +154,21 @@
 			clock-output-names = "dummy_axi";
 			#clock-cells = <0>;
 		};
-
+#endif
 		uart0: serial@7030000000 {
 			compatible = "snps,dw-apb-uart";
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
 			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
-			clock-frequency = <153600>;
-			clock-names = "baudclk";
+			clock-frequency = <500000000>;
+			clocks = <&div_clk GATE_CLK_UART_500M>,
+					 <&div_clk GATE_CLK_APB_UART>;
+			clock-names = "baudclk", "apb_pclk";
+			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
-
+#if 0
 		gpio0: gpio@7040009000 {
 			compatible = "snps,dw-apb-gpio";
 			reg = <0x70 0x40009000 0x0 0x400>;
@@ -254,7 +257,6 @@
 			interrupt-names = "CXP_CDMA0";
 		};
 
-#if 0
 		stmmac_axi_setup: stmmac-axi-config {
 			snps,wr_osr_lmt = <1>;
 			snps,rd_osr_lmt = <2>;
@@ -396,7 +398,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x100000000,2040M maxcpus=4 no5lvl";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x100000000,2040M maxcpus=4 no5lvl";
 		stdout-path = "serial0";
 	};
 

@@ -5,6 +5,10 @@
 
 /dts-v1/;
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/clock/sophgo,sg2044-clock.h>
+#include <dt-bindings/reset/sophgo,sg2044-reset.h>
+#include "sg2044-clock.dtsi"
+#include "sg2044-pinctrl.dtsi"
 
 / {
 	model = "sophgo sg2260";
@@ -1318,8 +1322,11 @@
 			reg = <0x00000070 0x30001000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
 			interrupts = <42 IRQ_TYPE_LEVEL_HIGH>;
-			clock-frequency = <153600>;
-			clock-names = "baudclk";
+			clock-frequency = <500000000>;
+			clocks = <&div_clk GATE_CLK_UART_500M>,
+					 <&div_clk GATE_CLK_APB_UART>;
+			clock-names = "baudclk", "apb_pclk";
+			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
@@ -1341,7 +1348,20 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x100000000,4096M no5lvl";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x100000000,4096M no5lvl";
 		stdout-path = "serial0";
+	};
+
+	top_misc: top_misc_ctrl@7050000000 {
+		compatible = "syscon";
+		reg = <0x70 0x50000000 0x0 0x8000>;
+	};
+
+	rst: reset-controller {
+		#reset-cells = <1>;
+		compatible = "sophgo,reset";
+		subctrl-syscon = <&top_misc>;
+		top_rst_offset = <0x3000>;
+		nr_resets = <RST_MAX_NUM>;
 	};
 };

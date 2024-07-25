@@ -552,6 +552,20 @@
 			nr_resets = <RST_MAX_NUM>;
 		};
 
+		i2c4: i2c@f030005000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
+			clocks = <&s1_div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			reg = <0xf0 0x30005000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <SOC_PERIPHERAL_IRQ(325) IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			resets = <&rst1 RST_I2C0>;
+			reset-names = "i2c4";
+		};
+
 		gpio3: gpio@f030009000 {
 			compatible = "snps,dw-apb-gpio";
 			reg = <0xf0 0x30009000 0x0 0x400>;

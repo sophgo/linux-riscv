@@ -26,16 +26,17 @@
 #define CLK_MODE_MASK	0x3
 
 #define REFDIV_MIN 1
-#define REFDIV_MAX 64
-#define FBDIV_MIN 16
-#define FBDIV_MAX 321
+#define REFDIV_MAX 63
+#define FBDIV_MIN 8
+#define FBDIV_MAX 1066
 
 #define PLL_FREQ_MIN (16 * MHZ)
 #define PLL_FREQ_MAX (3200 * MHZ)
 
 #define div_mask(width) ((1 << (width)) - 1)
 #define TOP_PLL_CTRL(fbdiv, p1, p2, refdiv) \
-	(((p2 & 0x7) << 21) | ((p1 & 0x7) << 18) | ((refdiv & 0x3f) << 12) | (fbdiv & 0xfff))
+	(BIT(30) | BIT(28) | BIT(24) | ((p2 & 0x7) << 21) | \
+	((p1 & 0x7) << 18) | ((refdiv & 0x3f) << 12) | (fbdiv & 0xfff))
 
 struct sg2044_pll_ctrl {
 	unsigned int mode;

@@ -22,6 +22,7 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
+		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL1_CLK,
 		.name = "mpll1_clock",
@@ -29,6 +30,7 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
+		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL2_CLK,
 		.name = "mpll2_clock",
@@ -36,6 +38,7 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
+		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL3_CLK,
 		.name = "mpll3_clock",
@@ -43,6 +46,7 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
+		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL4_CLK,
 		.name = "mpll4_clock",
@@ -50,6 +54,7 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
+		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL5_CLK,
 		.name = "mpll5_clock",
@@ -57,6 +62,7 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
+		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = FPLL0_CLK,
 		.name = "fpll0_clock",

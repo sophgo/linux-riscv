@@ -84,6 +84,16 @@ static inline int sg2044_pll_read(struct regmap *map, int id, unsigned int *pval
 	return regmap_read(map, PLL_CTRL_OFFSET + (id << 3), pvalue);
 }
 
+static inline int sg2044_pll_write_l(struct regmap *map, int id, int value)
+{
+	return regmap_write(map, PLL_CTRL_OFFSET + (id << 3) - 4, value);
+}
+
+static inline int sg2044_pll_read_l(struct regmap *map, int id, unsigned int *pvalue)
+{
+	return regmap_read(map, PLL_CTRL_OFFSET + (id << 3) - 4, pvalue);
+}
+
 static unsigned int _get_table_div(const struct clk_div_table *table,
 				   unsigned int val)
 {
@@ -214,7 +224,7 @@ static inline unsigned long abs_diff(unsigned long a, unsigned long b)
  * @parent_rate: parent frequency
  *
  * This function is used to calculate below "rate" in equation
- * rate = (parent_rate/REFDIV) x FBDIV/POSTDIV1/POSTDIV2
+ * rate = (parent_rate/REFDIV) x FBDIV/(POSTDIV1+1)/(POSTDIV2+1)
  *      = (parent_rate x FBDIV) / (REFDIV x POSTDIV1 x POSTDIV2)
  */
 static unsigned long __pll_recalc_rate(unsigned int reg_value,
@@ -227,8 +237,8 @@ static unsigned long __pll_recalc_rate(unsigned int reg_value,
 	//FIXME: 2044 pll control high register
 	fbdiv = reg_value & 0xfff;
 	refdiv = (reg_value >> 12)& 0x3f;
-	postdiv1 = (reg_value >> 18) & 0x7;
-	postdiv2 = (reg_value >> 21) & 0x7;
+	postdiv1 = ((reg_value >> 18) & 0x7) + 1;
+	postdiv2 = ((reg_value >> 21) & 0x7) + 1;
 
 	numerator = parent_rate * fbdiv;
 	denominator = refdiv * postdiv1 * postdiv2;
@@ -410,6 +420,9 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		pr_warn("Can't disable pll(%s), status error\n", sg2044_pll->name);
 		goto out;
 	}
+
+	sg2044_pll_read_l(sg2044_pll->syscon_top, sg2044_pll->id, &value);
+	sg2044_pll_write_l(sg2044_pll->syscon_top, sg2044_pll->id, value);
 	sg2044_pll_read(sg2044_pll->syscon_top, sg2044_pll->id, &value);
 	__get_pll_ctl_setting(&pctrl_table, rate, parent_rate);
 	if (!pctrl_table.freq) {

@@ -348,7 +348,7 @@ dw8250_do_pm(struct uart_port *port, unsigned int state, unsigned int old)
 	if (state)
 		pm_runtime_put_sync_suspend(port->dev);
 }
-
+#ifndef CONFIG_SOC_SOPHGO
 static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
 			       const struct ktermios *old)
 {
@@ -372,7 +372,7 @@ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
 
 	dw8250_do_set_termios(p, termios, old);
 }
-
+#endif
 static void dw8250_set_ldisc(struct uart_port *p, struct ktermios *termios)
 {
 	struct uart_8250_port *up = up_to_u8250p(p);
@@ -539,7 +539,9 @@ static int dw8250_probe(struct platform_device *pdev)
 	p->serial_in	= dw8250_serial_in;
 	p->serial_out	= dw8250_serial_out;
 	p->set_ldisc	= dw8250_set_ldisc;
+	#ifndef CONFIG_SOC_SOPHGO
 	p->set_termios	= dw8250_set_termios;
+	#endif
 
 	p->membase = devm_ioremap(dev, regs->start, resource_size(regs));
 	if (!p->membase)

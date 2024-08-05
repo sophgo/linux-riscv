@@ -19,7 +19,7 @@
 
 	memory@80200000 {
 		device_type = "memory";
-		reg = <0x00000000 0x80200000 0x00000000 0xfe00000>;
+		reg = <0x00000000 0x80200000 0x00000000 0x7fe00000>;
 	};
 
 	cpus {
@@ -88,6 +88,19 @@
 		};
 	};
 
+	top_misc: top_misc_ctrl@7050000000 {
+		compatible = "syscon";
+		reg = <0x70 0x50000000 0x0 0x8000>;
+	};
+
+	rst: reset-controller {
+		#reset-cells = <1>;
+		compatible = "sophgo,reset";
+		subctrl-syscon = <&top_misc>;
+		top_rst_offset = <0x3000>;
+		nr_resets = <RST_MAX_NUM>;
+	};
+
 	soc {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -133,28 +146,7 @@
 			riscv,max-priority = <7>;
 			riscv,ndev = <415>;
 		};
-#if 0
-		dummy_apb: apb-clock {
-			compatible = "fixed-clock";
-			clock-frequency = <250000000>;
-			clock-output-names = "dummy_apb";
-			#clock-cells = <0>;
-		};
 
-		dummy_ahb: ahb-clock {
-			compatible = "fixed-clock";
-			clock-frequency = <250000000>;
-			clock-output-names = "dummy_ahb";
-			#clock-cells = <0>;
-		};
-
-		dummy_axi: axi-clock {
-			compatible = "fixed-clock";
-			clock-frequency = <25000000>;
-			clock-output-names = "dummy_axi";
-			#clock-cells = <0>;
-		};
-#endif
 		uart0: serial@7030000000 {
 			compatible = "snps,dw-apb-uart";
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
@@ -483,18 +475,5 @@
 	chosen {
 		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M rdmem=0x100000000,2040M maxcpus=4 no5lvl";
 		stdout-path = "serial0";
-	};
-
-	top_misc: top_misc_ctrl@7050000000 {
-		compatible = "syscon";
-		reg = <0x70 0x50000000 0x0 0x8000>;
-	};
-
-	rst: reset-controller {
-		#reset-cells = <1>;
-		compatible = "sophgo,reset";
-		subctrl-syscon = <&top_misc>;
-		top_rst_offset = <0x3000>;
-		nr_resets = <RST_MAX_NUM>;
 	};
 };

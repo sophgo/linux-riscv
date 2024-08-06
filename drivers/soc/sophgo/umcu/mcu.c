@@ -1,3 +1,4 @@
+#include <linux/acpi.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -1127,10 +1128,16 @@ static const struct i2c_device_id mcu_i2c_id_table[] = {
 	{},
 };
 
+static const struct acpi_device_id mcu_i2c_acpi_ids[] = {
+	{ "SGPH0022", 0 },
+	{},
+};
+
 static struct i2c_driver mcu_i2c_drv = {
 	.driver = {
 		.name = "sg20xx-mcu",
 		.of_match_table = mcu_i2c_dt_table,
+		.acpi_match_table = ACPI_PTR(mcu_i2c_acpi_ids),
 	},
 	.probe = mcu_i2c_probe,
 	.remove = mcu_i2c_remove,

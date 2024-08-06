@@ -1424,6 +1424,13 @@
 				  interrupts = <157 158 159 160 163 164 165 166 197 198 199 200 203 204 205 206
 				  				237 238 239 240 243 244 245 246 277 278 279 280 283 284 285 286>;
      	};
+
+		sg2260_host_driver@0 {
+			compatible = "sophgo,sg2260_host_driver";
+			chip_type = <0x1690>;
+			interrupt-parent = <&intc>;
+			interrupts = <352 IRQ_TYPE_LEVEL_HIGH>;
+		};
 	};
 
 	aliases {

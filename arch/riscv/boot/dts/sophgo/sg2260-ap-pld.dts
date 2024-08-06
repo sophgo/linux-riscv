@@ -161,6 +161,27 @@
 			reg-io-width = <4>;
 		};
 
+		sd: bm-sd@703000B000 {
+			compatible = "bitmain,bm-sd";
+			reg = <0x70 0x3000B000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <300 IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <4>;
+			no-sdio;
+			no-mmc;
+			resets = <&rst SG2044_RST_SD>;
+			reset-names = "sdio";
+			clocks =
+				<&div_clk DIV_CLK_FPLL0_SD>,
+				<&div_clk DIV_CLK_FPLL0_TOP_AXI_HSPERI>,
+				<&div_clk DIV_CLK_FPLL0_DIV_100K_SD>;
+			clock-names =
+				"clk_gate_sd",
+				"clk_gate_axi_sd",
+				"clk_gate_100k_sd";
+		};
+
 		// video & jpeg
 		vc_drv {
             #interrupt-cells = <1>;

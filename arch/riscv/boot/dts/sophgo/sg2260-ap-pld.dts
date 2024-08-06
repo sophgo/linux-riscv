@@ -173,9 +173,9 @@
 			resets = <&rst SG2044_RST_SD>;
 			reset-names = "sdio";
 			clocks =
-				<&div_clk DIV_CLK_FPLL0_SD>,
-				<&div_clk DIV_CLK_FPLL0_TOP_AXI_HSPERI>,
-				<&div_clk DIV_CLK_FPLL0_DIV_100K_SD>;
+				<&div_clk GATE_CLK_SD>,
+				<&div_clk GATE_CLK_AXI_SD>,
+				<&div_clk GATE_CLK_100K_SD>;
 			clock-names =
 				"clk_gate_sd",
 				"clk_gate_axi_sd",

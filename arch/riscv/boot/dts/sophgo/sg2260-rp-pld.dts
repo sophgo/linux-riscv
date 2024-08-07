@@ -1344,6 +1344,140 @@
 				"clk_gate_100k_sd";
 		};
 
+		gpio0: gpio@7040009000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x40009000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port0a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <26 IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		gpio1: gpio@704000a000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x4000a000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port1a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <27 IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		gpio2: gpio@704000b000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x70 0x4000b000 0x0 0x400>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&div_clk GATE_CLK_APB_GPIO>,
+				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
+				 <&div_clk GATE_CLK_GPIO_DB>;
+			clock-names = "base_clk", "intr_clk", "db_clk";
+
+			port2a: gpio-controller@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				bank-name = "port0a";
+				gpio-controller;
+				#gpio-cells = <2>;
+				snps,nr-gpios = <32>;
+				reg = <0>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupt-parent = <&intc>;
+				interrupts = <28 IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		stmmac_axi_setup: stmmac-axi-config {
+			snps,wr_osr_lmt = <1>;
+			snps,rd_osr_lmt = <2>;
+			snps,blen = <4 8 16 0 0 0 0>;
+		};
+
+		mtl_rx_setup: rx-queues-config {
+			snps,rx-queues-to-use = <8>;
+			queue0 {snps,rx-sched-wsp;};
+			queue1 {snps,rx-sched-wsp;};
+			queue2 {snps,rx-sched-wsp;};
+			queue3 {snps,rx-sched-wsp;};
+			queue4 {snps,rx-sched-wsp;};
+			queue5 {snps,rx-sched-wsp;};
+			queue6 {snps,rx-sched-wsp;};
+			queue7 {snps,rx-sched-wsp;};
+		};
+
+		mtl_tx_setup: tx-queues-config {
+			snps,tx-queues-to-use = <8>;
+			queue0 {};
+			queue1 {};
+			queue2 {};
+			queue3 {};
+			queue4 {};
+			queue5 {};
+			queue6 {};
+			queue7 {};
+		};
+
+		ethernet0: ethernet@7030006000 {
+			compatible = "sophgo,ethernet";
+			reg = <0x70 0x30006000 0x0 0x4000>;
+			interrupt-names = "macirq";
+			interrupt-parent = <&intc>;
+			interrupts = <296 IRQ_TYPE_LEVEL_HIGH>;
+			clock-names = "clk_tx", "gate_clk_tx", "stmmaceth", "ptp_ref", "gate_clk_ref";
+			clocks = <&div_clk DIV_CLK_FPLL0_TX_ETH0>,
+				<&div_clk GATE_CLK_TX_ETH0>,
+				<&div_clk GATE_CLK_AXI_ETH0>,
+				<&div_clk DIV_CLK_FPLL0_PTP_REF_I_ETH0>,
+				<&div_clk GATE_CLK_REF_ETH0>;
+			/* no hash filter and perfect filter support */
+			snps,multicast-filter-bins = <0>;
+			snps,perfect-filter-entries = <1>;
+
+			snps,txpbl = <32>;
+			snps,rxpbl = <32>;
+			snps,aal;
+			snps,tso;
+
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+
+			sophgo,gmac;
+
+			phy-mode = "rgmii-id";
+			phy-reset-gpios = <&port0a 28 0>;
+		};
+
 		p2p: p2p {
 			compatible = "sophgon, p2p";
 			reg = <0x0000006c 0x08790000 0x00000000 0x000010000>,

@@ -54,8 +54,7 @@ static int sg_eth_reset_phy(struct platform_device *pdev)
 	/* RESET_PU */
 	gpio_direction_output(phy_reset_gpio, 0);
 	mdelay(100);
-
-	gpio_direction_output(phy_reset_gpio, 1);
+	gpio_set_value(phy_reset_gpio, 1);
 	/* RC charging time */
 	mdelay(100);
 
@@ -176,9 +175,13 @@ static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_s
 	plat->multicast_filter_bins = sg_validate_mcast_bins(&pdev->dev,
 							     plat->multicast_filter_bins);
 	plat->sph_disable = 0;
-	plat->has_xgmac = 1;
-	plat->pmt = 1;
-	plat->tso_en = of_property_read_bool(np, "snps,tso");
+
+	if (of_find_property(np, "sophgo,gmac", NULL)) {
+		plat->has_gmac4 = 1;
+		plat->has_gmac = 0;
+		plat->pmt = 1;
+		plat->tso_en = of_property_read_bool(np, "snps,tso");
+	}
 }
 
 static int sg_dwmac_probe(struct platform_device *pdev)

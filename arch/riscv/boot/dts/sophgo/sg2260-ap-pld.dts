@@ -264,18 +264,16 @@
                     <283 IRQ_TYPE_LEVEL_HIGH>, <284 IRQ_TYPE_LEVEL_HIGH>,
                     <285 IRQ_TYPE_LEVEL_HIGH>, <286 IRQ_TYPE_LEVEL_HIGH>;
 		};
-#if 0
+
 		gpio0: gpio@7040009000 {
 			compatible = "snps,dw-apb-gpio";
 			reg = <0x70 0x40009000 0x0 0x400>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			#if 0
 			clocks = <&div_clk GATE_CLK_APB_GPIO>,
 				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
 				 <&div_clk GATE_CLK_GPIO_DB>;
 			clock-names = "base_clk", "intr_clk", "db_clk";
-			#endif
 
 			port0a: gpio-controller@0 {
 				compatible = "snps,dw-apb-gpio-port";
@@ -296,12 +294,11 @@
 			reg = <0x70 0x4000a000 0x0 0x400>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			#if 0
+
 			clocks = <&div_clk GATE_CLK_APB_GPIO>,
 				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
 				 <&div_clk GATE_CLK_GPIO_DB>;
 			clock-names = "base_clk", "intr_clk", "db_clk";
-			#endif
 
 			port1a: gpio-controller@0 {
 				compatible = "snps,dw-apb-gpio-port";
@@ -322,12 +319,10 @@
 			reg = <0x70 0x4000b000 0x0 0x400>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			#if 0
 			clocks = <&div_clk GATE_CLK_APB_GPIO>,
 				 <&div_clk GATE_CLK_APB_GPIO_INTR>,
 				 <&div_clk GATE_CLK_GPIO_DB>;
 			clock-names = "base_clk", "intr_clk", "db_clk";
-			#endif
 
 			port2a: gpio-controller@0 {
 				compatible = "snps,dw-apb-gpio-port";
@@ -351,6 +346,7 @@
 			interrupt-parent = <&intc>;
 			interrupts = <127 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "CXP_CDMA0";
+			status = "disabled";
 		};
 
 		stmmac_axi_setup: stmmac-axi-config {
@@ -382,7 +378,7 @@
 			queue6 {};
 			queue7 {};
 		};
-#endif
+
 #if 0
 		xlgmac_axi_setup: xlgmac-axi-config {
 			snps,wr_osr_lmt = <63>;
@@ -414,9 +410,8 @@
 			queue7 {};
 		};
 #endif
-#if 0
 		ethernet0: ethernet@7030006000 {
-			compatible = "sophgo,ethernet", "snps,dwmac-4.00";
+			compatible = "sophgo,ethernet";
 			reg = <0x70 0x30006000 0x0 0x4000>;
 			interrupt-names = "macirq";
 			interrupt-parent = <&intc>;
@@ -440,13 +435,11 @@
 			snps,mtl-rx-config = <&mtl_rx_setup>;
 			snps,mtl-tx-config = <&mtl_tx_setup>;
 
+			sophgo,gmac;
+
 			phy-mode = "rgmii-id";
-			fixed-link {
-				speed = <1000>;
-				full-duplex;
-			};
+			phy-reset-gpios = <&port0a 28 0>;
 		};
-#endif
 #if 0
 		dwcxlg0: dwcxlg@6c08000000 {
 			compatible = "sophgo,ethernet";
@@ -487,10 +480,9 @@
 
 	aliases {
 		serial0 = &uart0;
-		#if 0
 		ethernet0 = &ethernet0;
-		dwcxlg0 = &dwcxlg0;
-		#endif
+		//dwcxlg0 = &dwcxlg0;
+
 	};
 
 	chosen {

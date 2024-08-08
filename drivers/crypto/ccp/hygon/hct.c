@@ -139,9 +139,9 @@ struct hct_shared_cfg {
 } __aligned(PAGE_SIZE);
 
 struct hct_shr_pg_cfg {
+	unsigned int ccp_queue_state[MCCP_DEV_QUEUE];
 	unsigned long mdev_bitmap[BITS_TO_LONGS(MCCP_INSTANCE_MAX)];
 	unsigned long userid[MCCP_DEV_QUEUE];
-	unsigned int ccp_queue_state[MCCP_DEV_QUEUE];
 	unsigned int vq_work_mode[MCCP_DEV_QUEUE];
 	unsigned int dev_lock_state;
 	unsigned int dev_init_state;

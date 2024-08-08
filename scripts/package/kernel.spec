@@ -68,6 +68,16 @@ cp $(%{make} %{makeflags} -s image_name) %{buildroot}/boot/vmlinuz-%{KERNELRELEA
 cp System.map %{buildroot}/boot/System.map-%{KERNELRELEASE}
 cp .config %{buildroot}/boot/config-%{KERNELRELEASE}
 ln -fns /usr/src/kernels/%{KERNELRELEASE} %{buildroot}/lib/modules/%{KERNELRELEASE}/build
+# dtbs install
+%ifarch riscv64
+    mkdir -p %{buildroot}/boot/dtb-%{KERNELRELEASE}
+    install -m 644 $(find arch/riscv/boot -name "*.dtb") %{buildroot}/boot/dtb-%{KERNELRELEASE}/
+%endif
+# deal with riscv SoC dtb search path
+%ifarch riscv64
+    mkdir -p %{buildroot}/boot/dtb-%{KERNELRELEASE}/thead
+    mv $(find %{buildroot}/boot/dtb-%{KERNELRELEASE}/ -name "th1520*.dtb") %{buildroot}/boot/dtb-%{KERNELRELEASE}/thead
+%endif
 %if %{with_devel}
 %{make} %{makeflags} run-command KBUILD_RUN_COMMAND='${srctree}/scripts/package/install-extmod-build %{buildroot}/usr/src/kernels/%{KERNELRELEASE}'
 %endif

@@ -1363,7 +1363,7 @@
 
 		gpio0: gpio@7040009000 {
 			compatible = "snps,dw-apb-gpio";
-			reg = <0x70 0x40009000 0x0 0x400>;
+			reg = <0x70 0x40009000 0x0 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			clocks = <&div_clk GATE_CLK_APB_GPIO>,
@@ -1387,7 +1387,7 @@
 
 		gpio1: gpio@704000a000 {
 			compatible = "snps,dw-apb-gpio";
-			reg = <0x70 0x4000a000 0x0 0x400>;
+			reg = <0x70 0x4000a000 0x0 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 
@@ -1412,7 +1412,7 @@
 
 		gpio2: gpio@704000b000 {
 			compatible = "snps,dw-apb-gpio";
-			reg = <0x70 0x4000b000 0x0 0x400>;
+			reg = <0x70 0x4000b000 0x0 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			clocks = <&div_clk GATE_CLK_APB_GPIO>,

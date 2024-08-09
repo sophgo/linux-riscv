@@ -355,6 +355,62 @@
 			};
 		};
 
+		i2c0: i2c@7040005000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			reg = <0x70 0x40005000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <31 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			resets = <&rst SG2044_RST_I2C0>;
+			reset-names = "i2c0";
+		};
+
+		i2c1: i2c@7040006000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			reg = <0x70 0x40006000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <32 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			resets = <&rst SG2044_RST_I2C1>;
+			reset-names = "i2c1";
+		};
+
+		i2c2: i2c@7040007000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			reg = <0x70 0x40007000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <33 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			resets = <&rst SG2044_RST_I2C2>;
+			reset-names = "i2c2";
+		};
+
+		i2c3: i2c@7040008000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "snps,designware-i2c";
+			clocks = <&div_clk GATE_CLK_APB_I2C>;
+			clock-names = "clk_gate_apb_i2c";
+			reg = <0x70 0x40008000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <34 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			resets = <&rst SG2044_RST_I2C3>;
+			reset-names = "i2c3";
+		};
+
 		p2p:  p2p {
 			compatible = "sophgon, p2p";
 			reg = <0x0000006c 0x08790000 0x00000000 0x000010000>,

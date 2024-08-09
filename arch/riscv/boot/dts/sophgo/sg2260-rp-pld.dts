@@ -1318,6 +1318,28 @@
 			reg-io-width = <4>;
 		};
 
+		emmc: bm-emmc@703000A000 {
+			compatible = "bitmain,bm-emmc";
+			reg = <0x70 0x3000A000 0x0 0x1000>;
+			reg-names = "core_mem";
+			interrupt-parent = <&intc>;
+			interrupts = <298 IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <4>;
+			non-removable;
+			no-sdio;
+			no-sd;
+			resets = <&rst SG2044_RST_EMMC>;
+			reset-names = "emmc";
+			clocks =
+				<&div_clk GATE_CLK_EMMC>,
+				<&div_clk GATE_CLK_AXI_EMMC>,
+				<&div_clk GATE_CLK_100K_EMMC>;
+			clock-names =
+				"clk_gate_emmc",
+				"clk_gate_axi_emmc",
+				"clk_gate_100k_emmc";
+		};
+
 		sd: bm-sd@703000B000 {
 			compatible = "bitmain,bm-sd";
 			reg = <0x70 0x3000B000 0x0 0x1000>;

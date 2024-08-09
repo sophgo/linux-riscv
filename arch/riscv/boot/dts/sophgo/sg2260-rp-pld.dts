@@ -1490,6 +1490,13 @@
 			reset-names = "i2c3";
 		};
 
+		pwm0: pwm@704000c000 {
+			compatible = "cvitek,cvi-pwm";
+			reg = <0x70 0x4000c000 0x0 0x1000>;
+			clocks = <&div_clk GATE_CLK_APB_PWM>;
+			#pwm-cells = <2>;
+		};
+
 		stmmac_axi_setup: stmmac-axi-config {
 			snps,wr_osr_lmt = <1>;
 			snps,rd_osr_lmt = <2>;

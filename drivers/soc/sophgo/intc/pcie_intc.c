@@ -173,7 +173,7 @@ static void pcie_intc_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 	msg->address_hi = upper_32_bits(data->reg_set_phys);
 	msg->data = d->hwirq % 32;
 
-	pr_info("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
+	pr_debug("%s msi#%d: address_hi %#x, address_lo %#x, data %#x\n", __func__,
 		(int)d->hwirq, msg->address_hi, msg->address_lo, msg->data);
 }
 
@@ -287,11 +287,11 @@ static int pcie_intc_probe(struct platform_device *pdev)
 		data->plic_irqs[i] = irq;
 		data->plic_irq_datas[i] = irq_get_irq_data(irq);
 		data->plic_hwirqs[i] = data->plic_irq_datas[i]->hwirq;
-		dev_info(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
+		dev_dbg(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
 				data->plic_hwirqs[i], data->plic_irqs[i]);
 	}
 	data->irq_num = i;
-	dev_info(&pdev->dev, "got %d plic irqs\n", data->irq_num);
+	dev_dbg(&pdev->dev, "got %d plic irqs\n", data->irq_num);
 
 	// create IRQ domain
 	data->domain = irq_domain_create_linear(fwnode, data->irq_num,

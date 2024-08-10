@@ -1,7 +1,7 @@
 /*
  * DWMAC specific glue layer
  *
- * Copyright (c) 2018 Bitmain Ltd.
+ * Copyright (c) 2024 Sophgo Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -167,6 +167,8 @@ static int sophgo_get_platform_resources(struct platform_device *pdev,
 static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_stmmacenet_data *plat)
 {
 	struct device_node *np = pdev->dev.of_node;
+	void __iomem *top_addr;
+	unsigned int val;
 
 	of_property_read_u32(np, "snps,multicast-filter-bins", &plat->multicast_filter_bins);
 	of_property_read_u32(np, "snps,perfect-filter-entries", &plat->unicast_filter_entries);
@@ -174,7 +176,14 @@ static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_s
 								 plat->unicast_filter_entries);
 	plat->multicast_filter_bins = sg_validate_mcast_bins(&pdev->dev,
 							     plat->multicast_filter_bins);
-	plat->sph_disable = 0;
+	plat->sph_disable = 1;
+
+	if (of_find_property(np, "sophgo,gmac-no-rxdelay", NULL)) {
+		top_addr = devm_platform_ioremap_resource(pdev, 1);
+		val = readl(top_addr + 0x8);
+		writel(val | (1 << 16), top_addr + 0x8);
+		pr_info("sophgo gmac disable rx delay\n");
+	}
 
 	if (of_find_property(np, "sophgo,gmac", NULL)) {
 		plat->has_gmac4 = 1;

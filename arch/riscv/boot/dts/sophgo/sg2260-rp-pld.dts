@@ -1549,7 +1549,8 @@
 
 		ethernet0: ethernet@7030006000 {
 			compatible = "sophgo,ethernet";
-			reg = <0x70 0x30006000 0x0 0x4000>;
+			reg = <0x70 0x30006000 0x0 0x4000>,
+			      <0x70 0x50000000 0x0 0x0400>;
 			interrupt-names = "macirq";
 			interrupt-parent = <&intc>;
 			interrupts = <296 IRQ_TYPE_LEVEL_HIGH>;
@@ -1573,7 +1574,10 @@
 			snps,mtl-tx-config = <&mtl_tx_setup>;
 
 			sophgo,gmac;
+			/*gmac defaults to disabling txdelay and enabling rxdelay */
+			sophgo,gmac-no-rxdelay;
 
+			/* enable phy rx delay and tx delay */
 			phy-mode = "rgmii-id";
 			phy-reset-gpios = <&port0a 28 0>;
 		};

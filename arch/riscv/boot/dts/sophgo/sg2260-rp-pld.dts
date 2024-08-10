@@ -1705,5 +1705,5 @@
 		stdout-path = "serial0";
 	};
 };
-//#include "sg2260-pcie-intc-rp.dtsi"
-//#include "sg2260-pcie-5rc-rp.dtsi"
+#include "sg2260-pcie-intc-rp.dtsi"
+#include "sg2260-pcie-5rc-rp.dtsi"

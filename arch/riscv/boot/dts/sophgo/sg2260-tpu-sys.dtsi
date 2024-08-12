@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/ {
+	sg2260_host_driver@0 {
+		compatible = "sophgo,sg2260_host_driver";
+		chip_type = <0x1690>;
+		interrupt-parent = <&intc>;
+		interrupts = <352 IRQ_TYPE_LEVEL_HIGH>;
+	};
+};
+

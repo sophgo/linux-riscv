@@ -1273,6 +1273,7 @@ struct mdev_driver hct_mdev_driver = {
 struct hct_private {
 	struct list_head head;
 	struct mutex lock;
+	unsigned long vm_start;
 	unsigned int id;
 	unsigned int pasid;
 };
@@ -1946,8 +1947,9 @@ static int hct_share_close(struct inode *inode, struct file *file)
 
 static vm_fault_t hct_cdev_vma_fault(struct vm_fault *vmf)
 {
-	struct vm_area_struct *vma = vmf->vma;
-	pgoff_t page_idx = (vmf->address - vma->vm_start) >> PAGE_SHIFT;
+	struct file *file = vmf->vma->vm_file;
+	struct hct_private *private = file->private_data;
+	pgoff_t page_idx = (vmf->address - private->vm_start) >> PAGE_SHIFT;
 
 	if (page_idx >= hct_share.pagecount)
 		return VM_FAULT_SIGBUS;
@@ -1965,15 +1967,17 @@ static const struct vm_operations_struct hct_cdev_vm_ops = {
 
 static int hct_share_mmap(struct file *file, struct vm_area_struct *vma)
 {
+	struct hct_private *private = file->private_data;
 	unsigned long len;
 	int ret = 0;
 
 	mutex_lock(&hct_share.lock);
 	len = vma->vm_end - vma->vm_start;
 	if (len == MCCP_SHARED_SIZE) {
-		/* The required size for vm is 64KB,
+		/* The required size for vm is MCCP_DEV_MAX * PAGE_SIZE,
 		 * and will follow the pagefault process.
 		 */
+		private->vm_start = vma->vm_start;
 		vma->vm_ops = &hct_cdev_vm_ops;
 		goto exit;
 	}

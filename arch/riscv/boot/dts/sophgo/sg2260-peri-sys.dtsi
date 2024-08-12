@@ -306,6 +306,17 @@
 		};
 	};
 
+	watchdog0: bm-wd@7040004000 {
+			compatible = "snps,dw-wdt";
+			reg = <0x70 0x40004000 0x0 0x1000>;
+			subctrl-syscon = <&top_misc>;
+			interrupt-parent = <&intc>;
+			interrupts = <29 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&div_clk GATE_CLK_APB_WDT>;
+			resets = <&rst SG2044_RST_WDT>;
+			status = "disable";
+	};
+
 	base {
 			compatible = "sophon,base";
 	};

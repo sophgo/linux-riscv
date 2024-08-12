@@ -1179,6 +1179,9 @@ static int __init acpi_bus_init_irq(void)
 		message = "SWPIC";
 		break;
 #endif
+	case ACPI_IRQ_MODEL_RINTC:
+		message = "RINTC";
+		break;
 	default:
 		pr_info("Unknown interrupt routing model\n");
 		return -ENODEV;

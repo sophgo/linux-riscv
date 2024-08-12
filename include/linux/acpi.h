@@ -98,6 +98,7 @@ enum acpi_irq_model_id {
 #ifdef CONFIG_SW64
 	ACPI_IRQ_MODEL_SWPIC,
 #endif
+	ACPI_IRQ_MODEL_RINTC,
 	ACPI_IRQ_MODEL_COUNT
 };
 

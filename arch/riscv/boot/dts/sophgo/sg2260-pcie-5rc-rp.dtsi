@@ -66,7 +66,7 @@
 		status = "okay";
 	};
 
-	pcie@6c02400000 {
+	pcie@6c04400000 {
 		compatible = "sophgo,sg2260-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
@@ -75,8 +75,8 @@
 		bus-range = <0x80 0xbf>;
 		linux,pci-domain = <2>;
 		interrupt-parent = <&intc1>;
-		reg = <0x6c 0x02400000  0x0 0x00001000>,
-		      <0x6c 0x02700000  0x0 0x00004000>,
+		reg = <0x6c 0x04400000  0x0 0x00001000>,
+		      <0x6c 0x04700000  0x0 0x00004000>,
 		      <0x50 0x00000000  0x0 0x00001000>;
 		reg-names = "dbi", "atu", "config";
 		dma-coherent;
@@ -96,7 +96,7 @@
 		status = "okay";
 	};
 
-	pcie@6c02000000 {
+	pcie@6c04000000 {
 		compatible = "sophgo,sg2260-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
@@ -105,8 +105,8 @@
 		bus-range = <0xc0 0xdf>;
 		linux,pci-domain = <3>;
 		interrupt-parent = <&intc1>;
-		reg = <0x6c 0x02000000  0x0 0x00001000>,
-		      <0x6c 0x02300000  0x0 0x00004000>,
+		reg = <0x6c 0x04000000  0x0 0x00001000>,
+		      <0x6c 0x04300000  0x0 0x00004000>,
 		      <0x58 0x00000000  0x0 0x00001000>;
 		reg-names = "dbi", "atu", "config";
 		dma-coherent;

@@ -4,6 +4,9 @@
  */
 
 / {
+    base {
+        compatible = "sophon,base";
+    };
 	// video & jpeg
 	vc_drv {
 		#interrupt-cells = <1>;

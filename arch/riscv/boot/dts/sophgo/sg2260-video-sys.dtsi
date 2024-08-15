@@ -4,8 +4,11 @@
  */
 
 / {
+    base {
+        compatible = "sophon,base";
+    };
 	// video & jpeg
-	vc_drv {
+    vc_drv {
 		#interrupt-cells = <1>;
 		compatible = "sophgo,vc_drv";
 		reg = <0x6b 0x00180000 0x0 0x10000>, <0x6b 0x00190000 0x0 0x10000>,

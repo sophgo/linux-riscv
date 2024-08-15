@@ -339,7 +339,7 @@
 	};
 
 	mtl_rx_setup: rx-queues-config {
-		snps,rx-queues-to-use = <8>;
+		snps,rx-queues-to-use = <4>;
 		queue0 {snps,rx-sched-wsp;};
 		queue1 {snps,rx-sched-wsp;};
 		queue2 {snps,rx-sched-wsp;};
@@ -351,7 +351,7 @@
 	};
 
 	mtl_tx_setup: tx-queues-config {
-		snps,tx-queues-to-use = <8>;
+		snps,tx-queues-to-use = <4>;
 		queue0 {};
 		queue1 {};
 		queue2 {};
@@ -395,6 +395,23 @@
 		/* enable phy rx delay and tx delay */
 		phy-mode = "rgmii-id";
 		phy-reset-gpios = <&port0a 28 0>;
+		phy-handle = <&phy0>;
+
+		mdio {
+			#address-cells = <0x1>;
+			#size-cells = <0x0>;
+			compatible = "snps,dwmac-mdio";
+			phy0: phy@0 {
+				compatible = "ethernet-phy-ieee802.3-c22"; //yt8531
+				device_type = "ethernet-phy";
+				rx-internal-delay-ps = <2050>;
+				led0_config = <0x7>;
+				led1_config = <0x19f0>;
+				led2_config = <0x0>;
+				reg = <0x0>;
+			};
+		};
+
 	};
 #if 0
 	xlgmac_axi_setup: xlgmac-axi-config {

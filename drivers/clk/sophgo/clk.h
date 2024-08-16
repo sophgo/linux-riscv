@@ -22,6 +22,7 @@
 
 #define PLL_CTRL_OFFSET	0xC4
 #define PLL_STAT_LOCK_OFFSET	0x10
+#define PLL_SELECT_OFFSET	0x2020
 #define CLK_MODE	0x4
 #define CLK_MODE_MASK	0x3
 
@@ -35,8 +36,8 @@
 
 #define div_mask(width) ((1 << (width)) - 1)
 #define TOP_PLL_CTRL(fbdiv, p1, p2, refdiv) \
-	(BIT(30) | BIT(28) | BIT(24) | ((p2 & 0x7) << 21) | \
-	((p1 & 0x7) << 18) | ((refdiv & 0x3f) << 12) | (fbdiv & 0xfff))
+	(BIT(30) | (0x2 << 27) | BIT(24) | (((p2 - 1) & 0x7) << 21) | \
+	(((p1 - 1) & 0x7) << 18) | ((refdiv & 0x3f) << 12) | (fbdiv & 0xfff))
 
 struct sg2044_pll_ctrl {
 	unsigned int mode;

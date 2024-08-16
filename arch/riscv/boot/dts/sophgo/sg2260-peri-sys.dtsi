@@ -447,8 +447,11 @@
 	dwcxlg0: dwcxlg@6c08000000 {
 		compatible = "sophgo,ethernet";
 		reg = <0x6c 0x08000000 0x0 0x40000>;
+		clock-names = "clk_gate_cxp_mac", "clk_gate_cxp_cfg";
+		clocks = <&div_clk GATE_CLK_CXP_MAC>,
+			<&div_clk GATE_CLK_CXP_CFG>;
 		interrupt-parent = <&intc>;
-		#if 1
+		#if 0
 		interrupts = <92 IRQ_TYPE_LEVEL_HIGH 93 IRQ_TYPE_LEVEL_HIGH
 				94 IRQ_TYPE_LEVEL_HIGH 95 IRQ_TYPE_LEVEL_HIGH
 				96 IRQ_TYPE_LEVEL_HIGH 97 IRQ_TYPE_LEVEL_HIGH
@@ -468,6 +471,7 @@
 		interrupt-names = "macirq";
 		#endif
 		snps,tso;
+		sophgo,xlgmac;
 		snps,axi-config = <&xlgmac_axi_setup>;
 		snps,mtl-rx-config = <&xlg_mtl_rx_setup>;
 		snps,mtl-tx-config = <&xlg_mtl_tx_setup>;
@@ -478,11 +482,11 @@
 			full-duplex;
 		};
 	};
-
+#endif
 	aliases {
 		serial0 = &uart0;
 		ethernet0 = &ethernet0;
-		//dwcxlg0 = &dwcxlg0;
+		// dwcxlg0 = &dwcxlg0;
 	};
-#endif
+
 };

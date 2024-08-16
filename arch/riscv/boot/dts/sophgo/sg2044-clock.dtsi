@@ -195,6 +195,9 @@
 			compatible = "sg2044, clk-default-rates";
 			#clock-cells = <1>;
 			clocks = \
+				<&mpll0>, <&mpll1>, <&mpll2>, <&mpll3>,
+				<&mpll4>, <&mpll5>,
+
 				<&div_clk DIV_CLK_MPLL0_AP_CPU_NORMAL_0>,
 				<&div_clk DIV_CLK_MPLL1_RP_SYS_0>,
 				<&div_clk DIV_CLK_MPLL2_TPU_SYS_0>,
@@ -207,9 +210,7 @@
 				<&div_clk DIV_CLK_FPLL0_AP_CPU_NORMAL_1>,
 				<&div_clk DIV_CLK_FPLL0_SRC0_1>,
 				<&div_clk DIV_CLK_FPLL0_SRC1_1>,
-				<&div_clk DIV_CLK_FPLL0_CXP_TEST_PHY>,
-				<&div_clk DIV_CLK_FPLL0_C2C1_TEST_PHY>,
-				<&div_clk DIV_CLK_FPLL0_C2C0_TEST_PHY>,
+
 				<&div_clk DIV_CLK_FPLL0_TOP_50M>,
 				<&div_clk DIV_CLK_FPLL0_DIV_TMIER1>,
 				<&div_clk DIV_CLK_FPLL0_DIV_TMIER2>,
@@ -237,13 +238,15 @@
 				<&div_clk DIV_CLK_FPLL1_PCIE_1G>;
 
 			clock-rates = \
+				<2000000000>, <2200000000>, <1200000000>, <2000000000>,
+				<1050000000>, <900000000>,
 				/* MPLL */
-				<2000000000>, <2200000001>, <1200000000>,
+				<2000000000>, <2200000000>, <1200000000>,
 				<2000000000>, <1050000000>, <900000000>,
 				/* FPLL */
 				<2000000000>, <1200000000>, <2200000000>,
 				<2000000000>, <1050000000>, <900000000>,
-				<2000000000>, <2000000000>, <2000000000>,
+
 				<50000000>,
 				<50000000>, <50000000>, <50000000>, <50000000>,
 				<50000000>, <50000000>, <50000000>, <50000000>,

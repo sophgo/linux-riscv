@@ -30,6 +30,8 @@ struct sg_mac {
 	struct clk *clk_tx;
 	struct clk *gate_clk_tx;
 	struct clk *gate_clk_ref;
+	struct clk *gate_clk_cxp_mac;
+	struct clk *gate_clk_cxp_cfg;
 	struct gpio_desc *reset;
 };
 
@@ -190,6 +192,12 @@ static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_s
 		plat->has_gmac = 0;
 		plat->pmt = 1;
 		plat->tso_en = of_property_read_bool(np, "snps,tso");
+	} else if (of_find_property(np, "sophgo,xlgmac", NULL)) {
+		plat->has_gmac4 = 0;
+		plat->has_gmac = 0;
+		plat->has_xgmac = 1;
+		plat->pmt = 1;
+		plat->tso_en = of_property_read_bool(np, "snps,tso");
 	}
 }
 
@@ -236,24 +244,38 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 	bsp_priv->dev = &pdev->dev;
 
 	/* clock setup */
-	bsp_priv->clk_tx = devm_clk_get(&pdev->dev,
+	if (of_find_property(np, "sophgo,gmac", NULL)) {
+		bsp_priv->clk_tx = devm_clk_get(&pdev->dev,
 					"clk_tx");
-	if (IS_ERR(bsp_priv->clk_tx))
-		dev_warn(&pdev->dev, "Cannot get mac tx clock!\n");
-	else
-		plat_dat->fix_mac_speed = sg_mac_fix_speed;
+		if (IS_ERR(bsp_priv->clk_tx))
+			dev_warn(&pdev->dev, "Cannot get mac tx clock!\n");
+		else
+			plat_dat->fix_mac_speed = sg_mac_fix_speed;
 
-	bsp_priv->gate_clk_tx = devm_clk_get(&pdev->dev, "gate_clk_tx");
-	if (IS_ERR(bsp_priv->gate_clk_tx))
-		dev_warn(&pdev->dev, "Cannot get mac tx gating clock!\n");
-	else
-		clk_prepare_enable(bsp_priv->gate_clk_tx);
+		bsp_priv->gate_clk_tx = devm_clk_get(&pdev->dev, "gate_clk_tx");
+		if (IS_ERR(bsp_priv->gate_clk_tx))
+			dev_warn(&pdev->dev, "Cannot get mac tx gating clock!\n");
+		else
+			clk_prepare_enable(bsp_priv->gate_clk_tx);
 
-	bsp_priv->gate_clk_ref = devm_clk_get(&pdev->dev, "gate_clk_ref");
-	if (IS_ERR(bsp_priv->gate_clk_ref))
-		dev_warn(&pdev->dev, "Cannot get mac ref gating clock!\n");
-	else
-		clk_prepare_enable(bsp_priv->gate_clk_ref);
+		bsp_priv->gate_clk_ref = devm_clk_get(&pdev->dev, "gate_clk_ref");
+		if (IS_ERR(bsp_priv->gate_clk_ref))
+			dev_warn(&pdev->dev, "Cannot get mac ref gating clock!\n");
+		else
+			clk_prepare_enable(bsp_priv->gate_clk_ref);
+	} else if (of_find_property(np, "sophgo,xlgmac", NULL)) {
+		bsp_priv->gate_clk_cxp_mac = devm_clk_get(&pdev->dev, "clk_gate_cxp_mac");
+		if (IS_ERR(bsp_priv->gate_clk_cxp_mac))
+			dev_warn(&pdev->dev, "Cannot get cxp mac gating clock!\n");
+		else
+			clk_prepare_enable(bsp_priv->gate_clk_cxp_mac);
+
+		bsp_priv->gate_clk_cxp_cfg = devm_clk_get(&pdev->dev, "clk_gate_cxp_cfg");
+		if (IS_ERR(bsp_priv->gate_clk_cxp_cfg))
+			dev_warn(&pdev->dev, "Cannot get cxp cfg gating clock!\n");
+		else
+			clk_prepare_enable(bsp_priv->gate_clk_cxp_cfg);
+	}
 
 	plat_dat->bsp_priv = bsp_priv;
 	plat_dat->exit = sg_dwmac_exit;

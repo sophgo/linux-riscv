@@ -22,7 +22,6 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
-		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL1_CLK,
 		.name = "mpll1_clock",
@@ -30,7 +29,6 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
-		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL2_CLK,
 		.name = "mpll2_clock",
@@ -38,7 +36,6 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
-		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL3_CLK,
 		.name = "mpll3_clock",
@@ -46,7 +43,6 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
-		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL4_CLK,
 		.name = "mpll4_clock",
@@ -54,7 +50,6 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
-		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = MPLL5_CLK,
 		.name = "mpll5_clock",
@@ -62,7 +57,6 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 		.flags = CLK_GET_RATE_NOCACHE | CLK_GET_ACCURACY_NOCACHE,
 		.status_offset = 0x98,
 		.enable_offset = 0x9c,
-		.ini_flags = SG2044_CLK_RO,
 	}, {
 		.id = FPLL0_CLK,
 		.name = "fpll0_clock",
@@ -351,7 +345,7 @@ static const struct sg2044_gate_clock gate_clks[] = {
 	{ GATE_CLK_C2C0_TEST_PHY, "clk_gate_c2c0_test_phy", "clk_div_c2c0_test_phy",
 		CLK_SET_RATE_PARENT, 0x2000, 4, 0 },
 	{ GATE_CLK_TOP_50M, "clk_gate_top_50m", "clk_div_top_50m",
-		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2000, 1, 0 },
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 1, 0 },
 	{ GATE_CLK_SC_RX, "clk_gate_sc_rx", "clk_gate_top_50m",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2000, 12, 0 },
 	{ GATE_CLK_SC_RX_X0Y1, "clk_gate_sc_rx_x0y1", "clk_gate_top_50m",
@@ -391,7 +385,7 @@ static const struct sg2044_gate_clock gate_clks[] = {
 	{ GATE_CLK_SD, "clk_gate_sd", "clk_div_sd",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 3, 0 },
 	{ GATE_CLK_TOP_AXI0, "clk_gate_top_axi0", "clk_div_top_axi0",
-		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 5, 0 },
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2008, 5, 0 },
 	{ GATE_CLK_100K_SD, "clk_gate_100k_sd", "clk_div_100k_sd",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 4, 0 },
 	{ GATE_CLK_100K_EMMC, "clk_gate_100k_emmc", "clk_div_100k_emmc",
@@ -437,7 +431,7 @@ static const struct sg2044_gate_clock gate_clks[] = {
 	{ GATE_CLK_INTC3, "clk_gate_intc3", "clk_gate_top_axi0",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x20, 23, 0 },
 	{ GATE_CLK_TOP_AXI_HSPERI, "clk_gate_top_axi_hsperi", "clk_div_top_axi_hsperi",
-		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 6, 0 },
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2008, 6, 0 },
 	{ GATE_CLK_AXI_SD, "clk_gate_axi_sd", "clk_gate_top_axi_hsperi",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 2, 0 },
 	{ GATE_CLK_AXI_EMMC, "clk_gate_axi_emmc", "clk_gate_top_axi_hsperi",

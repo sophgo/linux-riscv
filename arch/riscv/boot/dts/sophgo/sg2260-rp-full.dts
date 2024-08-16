@@ -16,15 +16,16 @@
 #include "sg2260-video-sys.dtsi"
 
 / {
+	/delete-node/ bm-emmc@703000A000;
 	aliases {
 		serial0 = &uart1;
 	};
 
 	chosen {
-		bootargs = "console=ttyS1,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=4 no5lvl";
+		bootargs = "console=ttyS1,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=64 no5lvl";
 		stdout-path = "serial0";
 	};
 };
 
 #include "sg2260-pcie-intc-rp.dtsi"
-#include "sg2260-pcie-5rc-rp.dtsi"
+// #include "sg2260-pcie-5rc-rp.dtsi"

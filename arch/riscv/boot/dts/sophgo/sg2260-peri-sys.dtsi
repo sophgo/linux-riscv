@@ -402,7 +402,7 @@
 			#size-cells = <0x0>;
 			compatible = "snps,dwmac-mdio";
 			phy0: phy@0 {
-				compatible = "ethernet-phy-ieee802.3-c22"; //yt8531
+				compatible = "ethernet-phy-ieee802.3-c22";
 				device_type = "ethernet-phy";
 				rx-internal-delay-ps = <2050>;
 				led0_config = <0x7>;

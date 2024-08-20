@@ -18,6 +18,7 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/of.h>
+#include <linux/acpi.h>
 
 #include "clk.h"
 
@@ -104,6 +105,10 @@ struct clk *clk_get(struct device *dev, const char *con_id)
 
 	if (dev && dev->of_node) {
 		hw = of_clk_get_hw(dev->of_node, 0, con_id);
+		if (!IS_ERR(hw) || PTR_ERR(hw) == -EPROBE_DEFER)
+			return clk_hw_create_clk(dev, hw, dev_id, con_id);
+	} else if (ACPI_COMPANION(dev)) {
+		hw = acpi_clk_get_hw(dev_fwnode(dev), 0, con_id);
 		if (!IS_ERR(hw) || PTR_ERR(hw) == -EPROBE_DEFER)
 			return clk_hw_create_clk(dev, hw, dev_id, con_id);
 	}

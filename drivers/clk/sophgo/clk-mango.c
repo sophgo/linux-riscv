@@ -7,6 +7,9 @@
  * (at your option) any later version.
  */
 
+#include <linux/acpi.h>
+#include <linux/platform_device.h>
+#include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/mfd/syscon.h>
 #include <dt-bindings/clock/sophgo-mango-clock.h>
@@ -837,6 +840,7 @@ static const struct of_device_id mango_clk_match_ids_tables[] = {
 
 static void __init mango_clk_init(struct device_node *node)
 {
+	struct device *dev;
 	struct device_node *np_top;
 	struct mango_clk_data *clk_data = NULL;
 	const struct mango_clk_table *dev_data;
@@ -846,6 +850,13 @@ static void __init mango_clk_init(struct device_node *node)
 	unsigned int id;
 	const char *clk_name;
 	const struct of_device_id *match = NULL;
+
+	dev = kzalloc(sizeof(struct device), GFP_KERNEL);
+	if (!dev) {
+		ret = -ENOMEM;
+		goto out;
+	}
+	dev->of_node = node;
 
 	clk_data = kzalloc(sizeof(*clk_data), GFP_KERNEL);
 	if (!clk_data) {
@@ -896,9 +907,9 @@ static void __init mango_clk_init(struct device_node *node)
 			goto no_match_data;
 		}
 		if (of_device_is_compatible(node, "mango, pll-clock"))
-			ret = mango_register_pll_clks(node, clk_data, clk_name);
+			ret = mango_register_pll_clks(dev, clk_data, clk_name);
 		else
-			ret = dm_mango_register_pll_clks(node, clk_data, clk_name);
+			ret = dm_mango_register_pll_clks(dev, clk_data, clk_name);
 	}
 
 	if (of_device_is_compatible(node, "mango, pll-child-clock") ||
@@ -921,9 +932,9 @@ static void __init mango_clk_init(struct device_node *node)
 		clk_data->base = base;
 		clk_data->syscon_top = syscon;
 		if (of_device_is_compatible(node, "mango, pll-child-clock"))
-			ret = mango_register_div_clks(node, clk_data);
+			ret = mango_register_div_clks(dev, clk_data);
 		else
-			ret = dm_mango_register_div_clks(node, clk_data);
+			ret = dm_mango_register_div_clks(dev, clk_data);
 	}
 
 	if (of_device_is_compatible(node, "mango, pll-mux-clock") ||
@@ -946,16 +957,16 @@ static void __init mango_clk_init(struct device_node *node)
 		clk_data->base = base;
 		clk_data->syscon_top = syscon;
 		if (of_device_is_compatible(node, "mango, pll-mux-clock"))
-			ret = mango_register_mux_clks(node, clk_data);
+			ret = mango_register_mux_clks(dev, clk_data);
 		else
-			ret = dm_mango_register_mux_clks(node, clk_data);
+			ret = dm_mango_register_mux_clks(dev, clk_data);
 	}
 
 	if (of_device_is_compatible(node, "mango, clk-default-rates"))
-		ret = set_default_clk_rates(node);
+		ret = set_default_clk_rates(dev);
 
 	if (of_device_is_compatible(node, "mango, dm-clk-default-rates"))
-		ret = dm_set_default_clk_rates(node);
+		ret = dm_set_default_clk_rates(dev);
 
 	if (!ret)
 		return;
@@ -975,3 +986,220 @@ CLK_OF_DECLARE(dm_mango_clk_pll, "mango, dm-pll-clock", mango_clk_init);
 CLK_OF_DECLARE(dm_mango_clk_pll_child, "mango, dm-pll-child-clock", mango_clk_init);
 CLK_OF_DECLARE(dm_mango_clk_pll_mux, "mango, dm-pll-mux-clock", mango_clk_init);
 CLK_OF_DECLARE(dm_mango_clk_default_rate, "mango, dm-clk-default-rates", mango_clk_init);
+
+#ifdef CONFIG_ACPI
+static struct clk_hw *acpi_fixed_clk_setup(struct device *dev)
+{
+	struct clk_hw *hw;
+	const char *clk_name = dev_name(dev);
+	u32 rate;
+	u32 accuracy = 0;
+	int ret;
+
+	if (device_property_read_u32(dev, "clock-frequency", &rate))
+		return ERR_PTR(-EIO);
+
+	device_property_read_u32(dev, "clock-accuracy", &accuracy);
+
+	device_property_read_string(dev, "clock-output-names", &clk_name);
+
+	hw = clk_hw_register_fixed_rate_with_accuracy(NULL, clk_name, NULL,
+						    0, rate, accuracy);
+	if (IS_ERR(hw))
+		return hw;
+
+	ret = acpi_clk_add_provider(dev_fwnode(dev), acpi_clk_src_simple_get, hw);
+	if (ret) {
+		clk_hw_unregister_fixed_rate(hw);
+		return ERR_PTR(ret);
+	}
+
+	return hw;
+}
+
+static const struct acpi_device_id mango_clk_acpi_ids[] = {
+	{ "SGPH0022", },
+	{ "SGPH0023", (kernel_ulong_t)&pll_clk_tables },
+	{ "SGPH0024", (kernel_ulong_t)&div_clk_tables },
+	{ "SGPH0025", (kernel_ulong_t)&mux_clk_tables },
+	{ "SGPH0026", },
+	{ }
+};
+
+static int mango_clk_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev, *sysdev;
+	struct fwnode_handle *fwnode;
+	struct mango_clk_data *clk_data = NULL;
+	const struct mango_clk_table *dev_data;
+	struct regmap *syscon;
+	void __iomem *base;
+	int i, ret = 0;
+	unsigned int id;
+	const char *clk_name;
+    struct resource *res;
+	const struct acpi_device_id *match;
+
+	clk_data = kzalloc(sizeof(*clk_data), GFP_KERNEL);
+	if (!clk_data) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	match = acpi_match_device(mango_clk_acpi_ids, dev);
+	if (match) {
+	    dev_data = (struct mango_clk_table *)match->driver_data;
+	} else {
+		dev_err(dev, "Error: No device match data found\n");
+		ret = -ENODEV;
+		goto no_match_data;
+	}
+
+	if (!device_is_compatible(dev, "fixed-clock")) {
+        fwnode = fwnode_find_reference(dev_fwnode(dev), "subctrl-syscon", 0);
+	    if (IS_ERR(fwnode)) {
+		    pr_err("%s can't get subctrl-syscon fwnode\n",
+			    __func__);
+		    ret = -EINVAL;
+		    goto no_match_data;
+	    }
+
+	    syscon = syscon_fwnode_to_regmap(fwnode);
+	    if (IS_ERR_OR_NULL(syscon)) {
+		    pr_err("%s cannot get regmap %ld\n", __func__, PTR_ERR(syscon));
+		    ret = -ENODEV;
+		    goto no_match_data;
+	    }
+
+	    sysdev = bus_find_device_by_fwnode(&platform_bus_type, fwnode);
+	    if (!sysdev)
+	        return -ENODEV;
+
+	    res = platform_get_resource(to_platform_device(sysdev), IORESOURCE_MEM, 0);
+	    if (!res)
+		    return -ENOENT;
+
+	    base = devm_ioremap(dev, res->start, resource_size(res));
+	    if (!base)
+		    return -ENOMEM;
+	}
+
+	spin_lock_init(&clk_data->lock);
+	if (device_is_compatible(dev, "fixed-clock")) {
+		struct clk_hw *hw;
+	    
+		/*
+	     * This function is not executed when of_fixed_clk_setup
+	     * succeeded.
+	     */
+	    hw = acpi_fixed_clk_setup(dev);
+	    if (IS_ERR(hw))
+		    return PTR_ERR(hw);
+
+	    platform_set_drvdata(pdev, hw);
+	}
+
+	if (device_is_compatible(dev, "mango, pll-clock") ||
+	    device_is_compatible(dev, "mango, dm-pll-clock")) {
+		if (!dev_data->pll_clks_num) {
+			ret = -EINVAL;
+			goto no_match_data;
+		}
+
+		clk_data->table = dev_data;
+		clk_data->base = base;
+		clk_data->syscon_top = syscon;
+
+		if (device_property_read_string(dev, "clock-output-names", &clk_name)) {
+			pr_err("%s cannot get pll name for %s\n",
+				__func__, dev_name(dev));
+			ret = -ENODEV;
+			goto no_match_data;
+		}
+		if (device_is_compatible(dev, "mango, pll-clock"))
+			ret = mango_register_pll_clks(dev, clk_data, clk_name);
+		else
+			ret = dm_mango_register_pll_clks(dev, clk_data, clk_name);
+	}
+
+	if (device_is_compatible(dev, "mango, pll-child-clock") ||
+	    device_is_compatible(dev, "mango, dm-pll-child-clock")) {
+		ret = device_property_read_u32(dev, "id", &id);
+		if (ret) {
+			pr_err("not assigned id for %s\n", dev_name(dev));
+			ret = -ENODEV;
+			goto no_match_data;
+		}
+
+		/* Below brute-force to check dts property "id"
+		 * whether match id of array
+		 */
+		for (i = 0; i < ARRAY_SIZE(div_clk_tables); i++) {
+			if (id == dev_data[i].id)
+				break; /* found */
+		}
+		clk_data->table = &dev_data[i];
+		clk_data->base = base;
+		clk_data->syscon_top = syscon;
+		if (device_is_compatible(dev, "mango, pll-child-clock"))
+			ret = mango_register_div_clks(dev, clk_data);
+		else
+			ret = dm_mango_register_div_clks(dev, clk_data);
+	}
+
+	if (device_is_compatible(dev, "mango, pll-mux-clock") ||
+	    device_is_compatible(dev, "mango, dm-pll-mux-clock")) {
+		ret = device_property_read_u32(dev, "id", &id);
+		if (ret) {
+			pr_err("not assigned id for %s\n", dev_name(dev));
+			ret = -ENODEV;
+			goto no_match_data;
+		}
+
+		/* Below brute-force to check dts property "id"
+		 * whether match id of array
+		 */
+		for (i = 0; i < ARRAY_SIZE(mux_clk_tables); i++) {
+			if (id == dev_data[i].id)
+				break; /* found */
+		}
+		clk_data->table = &dev_data[i];
+		clk_data->base = base;
+		clk_data->syscon_top = syscon;
+		if (device_is_compatible(dev, "mango, pll-mux-clock"))
+			ret = mango_register_mux_clks(dev, clk_data);
+		else
+			ret = dm_mango_register_mux_clks(dev, clk_data);
+	}
+
+	if (device_is_compatible(dev, "mango, clk-default-rates"))
+		ret = set_default_clk_rates(dev);
+
+	if (device_is_compatible(dev, "mango, dm-clk-default-rates"))
+		ret = dm_set_default_clk_rates(dev);
+
+	if (!ret)
+		return 0;
+
+no_match_data:
+	kfree(clk_data);
+
+out:
+	pr_err("%s failed error number %d\n", __func__, ret);
+	return ret;
+}
+
+static struct platform_driver mango_clk_driver = {
+	.driver = {
+		.name = "mango-clk",
+		.acpi_match_table = ACPI_PTR(mango_clk_acpi_ids),
+	},
+	.probe = mango_clk_probe,
+};
+
+static int __init mango_clk_pdev_init(void)
+{
+	return platform_driver_register(&mango_clk_driver);
+}
+postcore_initcall(mango_clk_pdev_init);
+#endif

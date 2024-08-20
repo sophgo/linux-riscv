@@ -225,43 +225,65 @@ out:
 	return notifier_from_errno(ret);
 }
 
-int dm_set_default_clk_rates(struct device_node *node)
+int dm_set_default_clk_rates(struct device *dev)
 {
-	struct of_phandle_args clkspec;
-	struct property *prop;
-	const __be32 *cur;
-	int rc, index = 0;
-	struct clk *clk;
-	u32 rate;
+    int rc;
 
-	of_property_for_each_u32 (node, "clock-rates", prop, cur, rate) {
-		if (rate) {
-			rc = of_parse_phandle_with_args(node, "clocks",
-							"#clock-cells", index, &clkspec);
-			if (rc < 0) {
-				/* skip empty (null) phandles */
-				if (rc == -ENOENT)
-					continue;
-				else
-					return rc;
-			}
+    if (dev && dev->of_node) {
+        struct of_phandle_args clkspec;
+        struct property *prop;
+        const __be32 *cur;
+        int index = 0;
+        struct clk *clk;
+        u32 rate;
 
-			clk = of_clk_get_from_provider(&clkspec);
-			if (IS_ERR(clk)) {
-				pr_warn("clk: couldn't get clock %d for %s\n",
-					index, node->full_name);
-				return PTR_ERR(clk);
-			}
+        of_property_for_each_u32 (dev->of_node, "clock-rates", prop, cur, rate) {
+            if (rate) {
+                rc = of_parse_phandle_with_args(dev->of_node, "clocks",
+                                                "#clock-cells", index, &clkspec);
+                if (rc < 0) {
+                    /* skip empty (null) phandles */
+                    if (rc == -ENOENT)
+                        continue;
+                    else
+                        return rc;
+                }
 
-			rc = clk_set_rate(clk, rate);
-			if (rc < 0)
-				pr_err("clk: couldn't set %s clk rate to %d (%d), current rate: %ld\n",
-				       __clk_get_name(clk), rate, rc,
-				       clk_get_rate(clk));
-			clk_put(clk);
-		}
-		index++;
-	}
+                clk = of_clk_get_from_provider(&clkspec);
+                if (IS_ERR(clk)) {
+                    pr_warn("clk: couldn't get clock %d for %s\n",
+                            index, dev->of_node->full_name);
+                    return PTR_ERR(clk);
+                }
+
+                rc = clk_set_rate(clk, rate);
+                if (rc < 0)
+                    pr_err("clk: couldn't set %s clk rate to %d (%d), current rate: %ld\n",
+                           __clk_get_name(clk), rate, rc,
+                           clk_get_rate(clk));
+                clk_put(clk);
+            }
+            index++;
+        }
+    }
+
+#ifdef CONFIG_ACPI
+	if (ACPI_COMPANION(dev)) {
+        struct list_head list;
+
+        INIT_LIST_HEAD(&list);
+
+        rc = acpi_dev_get_resources(ACPI_COMPANION(dev), &list, acpi_populate_clk_set_rate, NULL);
+        if (rc)
+            return rc;
+
+		rc = acpi_set_default_clk_rates();
+        if (rc)
+            return rc;
+
+        acpi_dev_free_resource_list(&list);
+    }
+#endif
 
 	return 0;
 }
@@ -324,10 +346,16 @@ static struct clk *__register_divider_clks(struct device *dev, const char *name,
 }
 
 static inline int register_provider_clks
-(struct device_node *node, struct mango_clk_data *clk_data, int clk_num)
+(struct device *dev, struct mango_clk_data *clk_data, int clk_num)
 {
-	return of_clk_add_provider(node, of_clk_src_onecell_get,
-				   &clk_data->clk_data);
+	if (dev && dev->of_node)
+	    return of_clk_add_provider(dev->of_node, of_clk_src_onecell_get,
+				        &clk_data->clk_data);
+	else if (ACPI_COMPANION(dev))
+	    return acpi_clk_add_provider(dev_fwnode(dev), acpi_clk_src_onecell_get,
+				        &clk_data->clk_data);
+
+    return -EINVAL;
 }
 
 static int register_gate_clks(struct device *dev, struct mango_clk_data *clk_data)
@@ -486,7 +514,7 @@ err:
 }
 
 /* pll clock init */
-int dm_mango_register_pll_clks(struct device_node *node,
+int dm_mango_register_pll_clks(struct device *dev,
 			 struct mango_clk_data *clk_data, const char *clk_name)
 {
 	struct clk *clk = NULL;
@@ -518,7 +546,11 @@ int dm_mango_register_pll_clks(struct device_node *node,
 				ret = -EINVAL;
 				goto out;
 			}
-			ret = of_clk_add_provider(node, of_clk_src_simple_get, clk);
+
+			if (dev && dev->of_node)
+			    ret = of_clk_add_provider(dev->of_node, of_clk_src_simple_get, clk);
+			else if (ACPI_COMPANION(dev))
+			    ret = acpi_clk_add_provider(dev_fwnode(dev), acpi_clk_src_simple_get, clk);
 			if (ret)
 				clk_unregister(clk);
 		} else {
@@ -531,7 +563,7 @@ out:
 }
 
 /* mux clk init */
-int dm_mango_register_mux_clks(struct device_node *node, struct mango_clk_data *clk_data)
+int dm_mango_register_mux_clks(struct device *dev, struct mango_clk_data *clk_data)
 {
 	int ret;
 	int count;
@@ -553,7 +585,7 @@ int dm_mango_register_mux_clks(struct device_node *node, struct mango_clk_data *
 	if (ret)
 		goto err;
 
-	ret = register_provider_clks(node, clk_data, count);
+	ret = register_provider_clks(dev, clk_data, count);
 	if (ret)
 		goto err;
 
@@ -564,7 +596,7 @@ err:
 }
 
 /* pll divider init */
-int dm_mango_register_div_clks(struct device_node *node, struct mango_clk_data *clk_data)
+int dm_mango_register_div_clks(struct device *dev, struct mango_clk_data *clk_data)
 {
 	int ret;
 	int count;
@@ -587,7 +619,7 @@ int dm_mango_register_div_clks(struct device_node *node, struct mango_clk_data *
 	if (ret)
 		goto err;
 
-	ret = register_provider_clks(node, clk_data, count);
+	ret = register_provider_clks(dev, clk_data, count);
 	if (ret)
 		goto err;
 

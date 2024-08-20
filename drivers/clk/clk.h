@@ -19,6 +19,17 @@ static inline struct clk_hw *of_clk_get_hw(struct device_node *np,
 }
 #endif
 
+#if defined(CONFIG_ACPI)
+struct clk_hw *acpi_clk_get_hw(struct fwnode_handle *fwnode,
+				    int index, const char *con_id);
+#else /* !CONFIG_ACPI */
+static inline struct clk_hw *acpi_clk_get_hw(struct fwnode_handle *fwnode,
+				    int index, const char *con_id)
+{
+	return ERR_PTR(-ENOENT);
+}
+#endif
+
 struct clk_hw *clk_find_hw(const char *dev_id, const char *con_id);
 
 #ifdef CONFIG_COMMON_CLK

@@ -1,6 +1,7 @@
 #ifndef __SOPHGO_CLOCK__
 #define __SOPHGO_CLOCK__
 
+#include <linux/acpi.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
@@ -9,6 +10,8 @@
 #include <linux/clkdev.h>
 
 #include <dt-bindings/clock/sophgo.h>
+
+#include "../clk.h"
 
 #define KHZ 1000L
 #define MHZ (KHZ * KHZ)
@@ -135,18 +138,82 @@ struct mango_clk_data {
 };
 
 int mango_register_mux_clks
-(struct device_node *node, struct mango_clk_data *clk_data);
+(struct device* dev, struct mango_clk_data *clk_data);
 int mango_register_div_clks
-(struct device_node *node, struct mango_clk_data *clk_data);
+(struct device* dev, struct mango_clk_data *clk_data);
 int mango_register_pll_clks
-(struct device_node *node, struct mango_clk_data *clk_data, const char *clk_name);
-int set_default_clk_rates(struct device_node *node);
+(struct device* dev, struct mango_clk_data *clk_data, const char *clk_name);
+int set_default_clk_rates(struct device *dev);
 
 int dm_mango_register_mux_clks
-(struct device_node *node, struct mango_clk_data *clk_data);
+(struct device* dev, struct mango_clk_data *clk_data);
 int dm_mango_register_div_clks
-(struct device_node *node, struct mango_clk_data *clk_data);
+(struct device* dev, struct mango_clk_data *clk_data);
 int dm_mango_register_pll_clks
-(struct device_node *node, struct mango_clk_data *clk_data, const char *name);
-int dm_set_default_clk_rates(struct device_node *node);
+(struct device* dev, struct mango_clk_data *clk_data, const char *name);
+int dm_set_default_clk_rates(struct device *dev);
+
+struct clk_resource_source {
+	struct fwnode_handle *fwnode; // pointer to clk provider
+	int rs_index;
+};
+
+struct acpi_clk_lookup {
+	u16 freq_div;
+	u32 freq_num;
+	u8 scale;
+	u8 mode;
+	struct clk_resource_source clk_rs;
+	int index;
+	bool found;
+	int n;
+};
+
+#ifdef CONFIG_ACPI
+
+int acpi_clk_add_provider(struct fwnode_handle *fwnode,
+                            struct clk *(*clk_src_get)(struct acpi_clk_lookup *clkspec, void *data),
+                            void *data);
+
+void acpi_clk_del_provider(struct fwnode_handle *fwnode);
+
+struct clk *acpi_clk_src_simple_get(struct acpi_clk_lookup *clkspec, void *data);
+
+struct clk *acpi_clk_src_onecell_get(struct acpi_clk_lookup *clkspec, void *data);
+
+int acpi_populate_clk_set_rate(struct acpi_resource *ares, void *data);
+
+int acpi_set_default_clk_rates(void);
+
+#else /* !CONFIG_ACPI */
+
+static inline int acpi_clk_add_provider(struct fwnode_handle *fwnode,
+                            struct clk *(*clk_src_get)(struct acpi_clk_lookup *clkspec, void *data),
+                            void *data)
+{
+	return 0;
+}
+
+static inline void acpi_clk_del_provider(struct fwnode_handle *fwnode) {}
+
+static inline struct clk *acpi_clk_src_simple_get(struct acpi_clk_lookup *clkspec, void *data)
+{
+	return ERR_PTR(-ENOENT);
+}
+static inline struct clk *acpi_clk_src_onecell_get(struct acpi_clk_lookup *clkspec, void *data)
+{
+	return ERR_PTR(-ENOENT);
+}
+
+static inline int acpi_populate_clk_set_rate(struct acpi_resource *ares, void *data)
+{
+	return 0;
+}
+
+static inline int acpi_set_default_clk_rates(void)
+{
+	return 0;
+}
+#endif /* CONFIG_ACPI */
+
 #endif

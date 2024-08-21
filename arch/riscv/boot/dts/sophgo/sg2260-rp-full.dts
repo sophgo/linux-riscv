@@ -14,6 +14,8 @@
 #include "sg2260-peri-sys.dtsi"
 #include "sg2260-tpu-sys.dtsi"
 #include "sg2260-video-sys.dtsi"
+#include "sg2044-pcie-intc-rp.dtsi"
+//#include "sg2044-pcie-5rc-rp.dtsi"
 
 / {
 	/delete-node/ bm-emmc@703000A000;
@@ -26,6 +28,3 @@
 		stdout-path = "serial0";
 	};
 };
-
-#include "sg2260-pcie-intc-rp.dtsi"
-// #include "sg2260-pcie-5rc-rp.dtsi"

@@ -443,9 +443,14 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 {
 	unsigned long flags;
 	unsigned int value;
-	int ret = 0;
+	int vcosel, ret = 0;
 	struct sg2044_pll_ctrl pctrl_table;
 	struct sg2044_pll_clock *sg2044_pll = to_sg2044_pll_clk(hw);
+
+	if (rate < (2400 * MHZ))
+		vcosel = 0x2;
+	else
+		vcosel = 0x3;
 
 	memset(&pctrl_table, 0, sizeof(struct sg2044_pll_ctrl));
 	spin_lock_irqsave(sg2044_pll->lock, flags);
@@ -457,6 +462,8 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	sg2044_pll_read_l(sg2044_pll->syscon_top, sg2044_pll->id, &value);
+	value &= ~(0x3 << 16);
+	value |= (vcosel << 16);
 	sg2044_pll_write_l(sg2044_pll->syscon_top, sg2044_pll->id, value);
 	sg2044_pll_read(sg2044_pll->syscon_top, sg2044_pll->id, &value);
 	__get_pll_ctl_setting(&pctrl_table, rate, parent_rate);

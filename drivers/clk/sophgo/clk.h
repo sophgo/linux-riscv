@@ -31,7 +31,7 @@
 #define FBDIV_MIN 8
 #define FBDIV_MAX 1066
 
-#define PLL_FREQ_MIN (16 * MHZ)
+#define PLL_FREQ_MIN (1600 * MHZ)
 #define PLL_FREQ_MAX (3200 * MHZ)
 
 #define div_mask(width) ((1 << (width)) - 1)

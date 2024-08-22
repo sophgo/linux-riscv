@@ -8,7 +8,7 @@
 		compatible = "sophgo,sg2260_host_driver";
 		chip_type = <0x1690>;
 		interrupt-parent = <&intc>;
-		interrupts = <352 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <863 IRQ_TYPE_LEVEL_HIGH>;
 	};
 };
 

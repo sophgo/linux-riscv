@@ -126,10 +126,10 @@ config DWMAC_SOPHGO
 	default ARCH_SOPHGO
 	depends on OF && COMMON_CLK
 	help
-	  Support for Ethernet controller on Sophgo sg2260 SoCs.
+	  Support for Ethernet controller on Sophgo SG2044 SoCs.
 
 	  This selects the Sophgo SoC glue layer support for the
-	  stmmac device driver. This driver is used for sg2260 SoCs.
+	  stmmac device driver. This driver is used for SG2044 SoCs.
 
 config DWMAC_OXNAS
 	tristate "Oxford Semiconductor OXNAS dwmac support"

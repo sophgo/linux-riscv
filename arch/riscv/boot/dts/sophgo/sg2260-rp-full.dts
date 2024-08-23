@@ -28,3 +28,11 @@
 		stdout-path = "serial0";
 	};
 };
+
+&i2c1 {
+	sg2044_srst: sg2044-reset@17 {
+		compatible = "sg2044,reset";
+		reg = <0x17>;
+	};
+};
+

@@ -40,3 +40,10 @@
 	sdhci-caps-mask = <0x0 0x10580000>;
 };
 
+&i2c1 {
+	sg2044_srst: sg2044-reset@17 {
+		compatible = "sg2044,reset";
+		reg = <0x17>;
+	};
+};
+

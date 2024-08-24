@@ -42,7 +42,7 @@
 
 &i2c1 {
 	sg2044_srst: sg2044-reset@17 {
-		compatible = "sg2044,reset";
+		compatible = "sophgo,sg2042-hwmon-mcu";
 		reg = <0x17>;
 	};
 };

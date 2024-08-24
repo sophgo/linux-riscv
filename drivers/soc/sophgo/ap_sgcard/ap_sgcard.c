@@ -1165,8 +1165,9 @@ static int sg_close(struct inode *inode, struct file *file)
 	}
 
 	atomic_set(&port->cnt_opened, -1);
-	INIT_DELAYED_WORK(&port->destroy_stream_work, destroy_stream_work_func);
-	schedule_delayed_work(&port->destroy_stream_work, 10);
+	destroy_stream_cdev_by_fd(port);
+	// INIT_DELAYED_WORK(&port->destroy_stream_work, destroy_stream_work_func);
+	// schedule_delayed_work(&port->destroy_stream_work, 10);
 
 	return 0;
 }
@@ -1298,10 +1299,11 @@ static int destroy_stream_cdev_by_fd(struct v_port *port)
 	cdev_del(&port->cdev);
 	device_destroy(card->cdev_info.sg_class, port->devno);
 	clr_card_devno_map(card, (port->devno - card->cdev_info.devno));
-	pr_debug("clr_card_devno_map %d\n", (port->devno - card->cdev_info.devno));
+	DBG_MSG("clr_card_devno_map %d\n", (port->devno - card->cdev_info.devno));
 	channel->channel_info.port_cnt--;
 
 	kfree(port->port_rx_buf.buf);
+	kfree(port->write_buf);
 	kfree(port);
 
 	return 0;

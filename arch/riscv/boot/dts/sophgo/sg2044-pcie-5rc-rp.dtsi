@@ -7,7 +7,7 @@
 
 / {
 	pcie@6c00400000 {
-		compatible = "sophgo,sg2260-pcie-host";
+		compatible = "sophgo,sg2044-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -37,7 +37,7 @@
 	};
 
 	pcie@6c00000000 {
-		compatible = "sophgo,sg2260-pcie-host";
+		compatible = "sophgo,sg2044-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -67,7 +67,7 @@
 	};
 
 	pcie@6c04400000 {
-		compatible = "sophgo,sg2260-pcie-host";
+		compatible = "sophgo,sg2044-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -97,7 +97,7 @@
 	};
 
 	pcie@6c04000000 {
-		compatible = "sophgo,sg2260-pcie-host";
+		compatible = "sophgo,sg2044-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -127,7 +127,7 @@
 	};
 
 	pcie@6c08000000 {
-		compatible = "sophgo,sg2260-pcie-host";
+		compatible = "sophgo,sg2044-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;
 		#size-cells = <2>;

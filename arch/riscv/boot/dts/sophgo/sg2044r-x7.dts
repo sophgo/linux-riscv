@@ -14,17 +14,8 @@
 / {
 	/delete-node/ memory@80200000;
 	/delete-node/ bm-emmc@703000A000;
-	/delete-node/ gpio@7040009000;
-	/delete-node/ gpio@704000a000;
-	/delete-node/ gpio@704000b000;
-	/delete-node/ i2c@7040005000;
-	/delete-node/ i2c@7040008000;
-	/delete-node/ i2c@7040006000;
-	/delete-node/ i2c@7040007000;
 	/delete-node/ pwm@704000c000;
 	/delete-node/ dma@7020000000;
-	/delete-node/ flash-controller@7001000000;
-	/delete-node/ flash-controller@7005000000;
 	/delete-node/ bm-wd@7040004000;
 	/delete-node/ p2p;
 	/delete-node/ base;

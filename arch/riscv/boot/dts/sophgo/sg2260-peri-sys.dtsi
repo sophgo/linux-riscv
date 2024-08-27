@@ -74,7 +74,7 @@
 	};
 
 	emmc: bm-emmc@703000A000 {
-		compatible = "bitmain,bm-emmc";
+		compatible = "sophgo,sg-emmc";
 		reg = <0x70 0x3000A000 0x0 0x1000>;
 		reg-names = "core_mem";
 		interrupt-parent = <&intc>;
@@ -96,7 +96,7 @@
 	};
 
 	sd: bm-sd@703000B000 {
-		compatible = "bitmain,bm-sd";
+		compatible = "sophgo,sg-sd";
 		reg = <0x70 0x3000B000 0x0 0x1000>;
 		reg-names = "core_mem";
 		interrupt-parent = <&intc>;
@@ -246,14 +246,14 @@
 	};
 
 	pwm0: pwm@704000c000 {
-		compatible = "cvitek,cvi-pwm";
+		compatible = "sophgo,sg-pwm";
 		reg = <0x70 0x4000c000 0x0 0x1000>;
 		clocks = <&div_clk GATE_CLK_APB_PWM>;
 		#pwm-cells = <2>;
 	};
 
 	dmac0: dma@7020000000 {
-		compatible = "snps,dmac-bm";
+		compatible = "snps,sg-dmac";
 		reg = <0x70 0x20000000 0x0 0x10000>;
 		clock-names = "clk_sdma_axi";
 		clocks = <&div_clk GATE_CLK_SYSDMA_AXI>;

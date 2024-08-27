@@ -496,10 +496,10 @@ static const struct sdhci_pltfm_data sdhci_bm_sd_pdata = {
 
 
 static const struct of_device_id sdhci_bm_dt_match[] = {
-	{.compatible = "bitmain,bm-pldm-sdcard", .data = &sdhci_bm_pldm_sd_pdata},
-	{.compatible = "bitmain,bm-pldm-emmc", .data = &sdhci_bm_pldm_emmc_pdata},
-	{.compatible = "bitmain,bm-emmc", .data = &sdhci_bm_emmc_pdata},
-	{.compatible = "bitmain,bm-sd", .data = &sdhci_bm_sd_pdata},
+	{.compatible = "sophgo,sg-pldm-sdcard", .data = &sdhci_bm_pldm_sd_pdata},
+	{.compatible = "sophgo,sg-pldm-emmc", .data = &sdhci_bm_pldm_emmc_pdata},
+	{.compatible = "sophgo,sg-emmc", .data = &sdhci_bm_emmc_pdata},
+	{.compatible = "sophgo,sg-sd", .data = &sdhci_bm_sd_pdata},
 	{ /* sentinel */ }
 };
 
@@ -612,5 +612,5 @@ static struct platform_driver sdhci_bm_driver = {
 };
 
 module_platform_driver(sdhci_bm_driver);
-MODULE_DESCRIPTION("BitMain Secure Digital Host Controller Interface driver");
+MODULE_DESCRIPTION("Sophgo Secure Digital Host Controller Interface driver");
 MODULE_LICENSE("GPL");

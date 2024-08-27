@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-#ifndef __CV_DMA_H__
-#define __CV_DMA_H__
+#ifndef __SOPHGO_DMA_H__
+#define __SOPHGO_DMA_H__
 
 #if defined(CONFIG_ARM)
 /* Bitfields in CTL */

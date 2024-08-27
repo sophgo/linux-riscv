@@ -20,11 +20,9 @@
 #include <linux/uaccess.h>
 
 #include "../dmaengine.h"
-#include "cvitek-dma.h"
+#include "sophgo-dma.h"
 
 #define DRV_NAME "dw_dmac"
-
-/* #define CONFIG_SYSDMA_JIRA_BUG_BM1880_17 */
 
 /*
  *	The dmaengine doc says that, defer most work to a tasklet is inefficient,
@@ -138,7 +136,7 @@ static void dwc_prepare_clk(struct dw_dma *dw)
 	if (dw->clk_count == 1)	{
 		err = clk_enable(dw->clk);
 		if (err)
-			dev_err(dw->dev, "CVITEK DMA enable clk_sdma_axi failed\n");
+			dev_err(dw->dev, "SOPHGO DMA enable clk_sdma_axi failed\n");
 	}
 }
 
@@ -151,7 +149,7 @@ static void dwc_unprepare_clk(struct dw_dma *dw)
 		clk_disable(dw->clk);
 
 	if (dw->clk_count < 0)
-		dev_err(dw->dev, "CVITEK sysDMA clk count is invalid\n");
+		dev_err(dw->dev, "SOPHGO sysDMA clk count is invalid\n");
 }
 
 static void dwc_initialize(struct dw_dma_chan *dwc)
@@ -318,130 +316,6 @@ static void dwc_desc_put(struct dw_dma_chan *dwc, struct dw_desc *desc)
 	dwc->descs_allocated--;
 }
 
-#ifdef CONFIG_SYSDMA_JIRA_BUG_BM1880_17
-static dma_addr_t fix_dma_bug_copy_get(struct dw_dma_chan *dwc,
-				       struct dma_chan *chan, struct scatterlist *sgl,
-				       int sg_index, int sg_len, int size)
-{
-	int i;
-	dma_addr_t bug_addr;
-	unsigned int *bug_buf = NULL;
-	unsigned char *tmp_buf, *record;
-	unsigned int fix_size;
-	char dma_pool_name[32];
-	struct dbg_fix_sg *db_sg = dwc->bug_info;
-
-	if (!db_sg) {
-		db_sg = kzalloc(sizeof(*db_sg), GFP_ATOMIC);
-		if (!db_sg) {
-			return 0;
-		}
-		dwc->bug_info = db_sg;
-	}
-	db_sg->count = sg_len;
-	if (!db_sg->fix_buf) {
-		db_sg->fix_buf = kcalloc(sg_len, sizeof(struct dbg_fix_buf), GFP_ATOMIC);
-		if (!db_sg->fix_buf) {
-			dev_err(chan->device->dev,
-				"BUG: Alloc fix_buf failed,No memory !\n");
-			return 0;
-		}
-	}
-	if (!dwc->bug_fix_dma_pool) {
-		snprintf(dma_pool_name, sizeof(dma_pool_name), "%s_%x",
-			 "dma_chan_buf", dwc->mask);
-		dwc->bug_fix_dma_pool = dma_pool_create(dma_pool_name, chan->device->dev,
-							PAGE_SIZE, BIT(2), 0);
-		if (!dwc->bug_fix_dma_pool) {
-			dev_err(chan->device->dev, "unable to allocate dma pool\n");
-			return 0;
-		}
-	}
-
-	record = tmp_buf = kzalloc(size, GFP_ATOMIC);
-	if (!tmp_buf) {
-		dev_err(chan->device->dev,
-			"BUG: Alloc tmp_buf failed,No memory !\n");
-		return 0;
-	}
-
-	fix_size = (size << 2);
-	if (unlikely(fix_size > PAGE_SIZE)) {
-		bug_buf = dma_alloc_coherent(chan->device->dev, fix_size,
-					     &bug_addr, GFP_ATOMIC);
-		if (!bug_buf) {
-			dev_err(chan->device->dev,
-				"BUG: Alloc bug_buf failed,No DMA memory !\n");
-			return 0;
-		}
-	} else {
-		bug_buf = dma_pool_zalloc(dwc->bug_fix_dma_pool, GFP_ATOMIC, &bug_addr);
-		if (!bug_buf) {
-			dev_err(chan->device->dev,
-				"BUG: Alloc bug_buf failed,No DMA Pool memory !\n");
-			return 0;
-		}
-	}
-
-	db_sg->fix_buf[sg_index].id = sg_index;
-	db_sg->fix_buf[sg_index].cpu_addr = bug_buf;
-	db_sg->fix_buf[sg_index].dma_hanle = bug_addr;
-	db_sg->fix_buf[sg_index].size = fix_size;
-	db_sg->fix_buf[sg_index].state = 1;
-
-	//sg_copy_to_buffer(sgl, nents, tmp_buf, size);
-	memcpy((void *)tmp_buf, sg_virt(sgl), size);
-
-	for (i = 0; i < size; i++) {
-		memcpy((void *)bug_buf, (void *)tmp_buf, 1);
-		bug_buf++;
-		tmp_buf++;
-	}
-
-	kfree(record);
-
-	return bug_addr;
-}
-
-static void fix_dma_bug_copy_put(struct dw_dma_chan *dwc, struct dma_chan *chan)
-{
-	int i;
-	struct dbg_fix_sg *db_sg;
-	struct dbg_fix_buf *db_buf;
-
-	if (!dwc->bug_info)
-		return;
-	if (!dwc->bug_info->fix_buf)
-		return;
-
-	db_sg = dwc->bug_info;
-	db_buf = db_sg->fix_buf;
-
-	for (i = 0; i < db_sg->count; i++) {
-		if (db_buf->size > PAGE_SIZE) {
-			dma_free_coherent(chan->device->dev, db_buf->size,
-					  db_buf->cpu_addr, db_buf->dma_hanle);
-		} else {
-			dma_pool_free(dwc->bug_fix_dma_pool, db_buf->cpu_addr, db_buf->dma_hanle);
-		}
-		db_buf->state = 0;
-		db_buf++;
-	}
-
-	/* dump info */
-	db_buf = db_sg->fix_buf;
-	for (i = 0; i < db_sg->count; i++) {
-		if (db_buf->state == 1)
-			dev_warn(chan->device->dev,
-				 "db_buf id: %d,cpu_addr %p, dma_hanle %pad, size 0x%x state %d\n",
-				 db_buf->id, db_buf->cpu_addr, &(db_buf->dma_hanle), db_buf->size, db_buf->state);
-	}
-
-	kfree(db_sg->fix_buf);
-	db_sg->fix_buf = NULL;
-}
-#endif
-
 static void dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *desc,
 				    bool callback_required)
 {
@@ -464,10 +338,6 @@ static void dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *des
 		async_tx_ack(&child->txd);
 	async_tx_ack(&desc->txd);
 	dwc_desc_put(dwc, desc);
-
-#ifdef CONFIG_SYSDMA_JIRA_BUG_BM1880_17
-	fix_dma_bug_copy_put(dwc, &dwc->chan);
-#endif
 
 	dmaengine_desc_callback_invoke(&cb, NULL);
 	dwc_unprepare_clk(dw);
@@ -1206,7 +1076,7 @@ static struct dma_async_tx_descriptor *dwc_prep_dma_cyclic(struct dma_chan *chan
 		reg_width = __ffs(sconfig->src_addr_width);
 
 	/* Change period to 128 bytes due to the maximum LLI data length*/
-	/*of Bitmain sysDMA (32 bytes * 4 bytes bus width)*/
+	/*of Sophgo sysDMA (32 bytes * 4 bytes bus width)*/
 	tmp_len = (1 << (__ffs(buf_len) - 1));
 	target_period_len = period_len;
 	if (period_len > BM_DMA_PERIOD_LEN)
@@ -1938,14 +1808,14 @@ static int dw_dma_probe(struct platform_device *pdev)
 	err = dw_dma_resource_init(pdev, dw);
 	if (err) {
 		dev_err(dev,
-			"CVITEK DMA resource init error %d\n", err);
+			"SOPHGO DMA resource init error %d\n", err);
 		goto err_resource;
 	}
 
 	err = dw_dma_parse_dt(pdev, dw);
 	if (err) {
 		dev_err(dev,
-			"CVITEK DMA parse devicetree error %d\n", err);
+			"SOPHGO DMA parse devicetree error %d\n", err);
 		goto err_dt;
 	}
 
@@ -1957,7 +1827,7 @@ static int dw_dma_probe(struct platform_device *pdev)
 	err = dw_dma_channel_init(pdev, dw);
 	if (err) {
 		dev_err(dev,
-			"CVITEK DMA channel init error %d\n", err);
+			"SOPHGO DMA channel init error %d\n", err);
 		goto err_chan;
 	}
 
@@ -1970,7 +1840,7 @@ static int dw_dma_probe(struct platform_device *pdev)
 
 	dw->clk = devm_clk_get(dw->dev, "clk_sdma_axi");
 	if (IS_ERR(dw->clk)) {
-		dev_err(dev, "CVITEK DMA get clk_dma_axi failed\n");
+		dev_err(dev, "SOPHGO DMA get clk_dma_axi failed\n");
 		return PTR_ERR(dw->clk);
 	}
 
@@ -1997,7 +1867,7 @@ static int dw_dma_probe(struct platform_device *pdev)
 
 	name = pdev->dev.of_node->full_name;
 
-	dev_info(dev, "CVITEK DMA Controller, %d channels, name:%s probe done!\n",
+	dev_info(dev, "SOPHGO DMA Controller, %d channels, name:%s probe done!\n",
 		 dw->nr_channels, name);
 
 	proc_dma_folder = proc_mkdir(name, NULL);
@@ -2084,7 +1954,7 @@ static void dw_dma_shutdown(struct platform_device *pdev)
 }
 
 static const struct of_device_id dw_dma_of_id_table[] = {
-	{ .compatible = "snps,dmac-bm" },
+	{ .compatible = "snps,sg-dmac" },
 	{}
 };
 MODULE_DEVICE_TABLE(of, dw_dma_of_id_table);
@@ -2144,5 +2014,5 @@ static void __exit dw_dma_exit(void)
 module_exit(dw_dma_exit);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("CVITEK DMA Controller platform driver");
+MODULE_DESCRIPTION("SOPHGO DMA Controller platform driver");
 MODULE_ALIAS("platform:" DRV_NAME);

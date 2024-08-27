@@ -1,5 +1,5 @@
 /*
- * drivers/mmc/host/sdhci-bm.c - BitMain SDHCI Platform driver
+ * drivers/mmc/host/sdhci-bm.c - Sophgo SDHCI Platform driver
  *
  * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *

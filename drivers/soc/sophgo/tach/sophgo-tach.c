@@ -1,3 +1,4 @@
+#include <linux/acpi.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/device.h>
@@ -285,12 +286,21 @@ static const struct of_device_id sophgo_fan_speed_of_match[] = {
 	{}
 };
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sophgo_fan_speed_acpi_ids[] = {
+	{.id = "SGPH0004",},
+	{}
+};
+MODULE_DEVICE_TABLE(acpi, sophgo_fan_speed_acpi_ids);
+#endif
+
 static struct platform_driver sophgo_fan_speed_driver = {
 	.probe = sophgo_fan_speed_probe,
 	.remove =  sophgo_fan_speed_remove,
 	.driver = {
 		.name = "sophgo,sophgo-tach",
 		.of_match_table = sophgo_fan_speed_of_match,
+		.acpi_match_table = ACPI_PTR(sophgo_fan_speed_acpi_ids),
 	},
 };
 

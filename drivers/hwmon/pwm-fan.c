@@ -11,6 +11,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/acpi.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pwm.h>
@@ -421,16 +422,15 @@ static const struct thermal_cooling_device_ops pwm_fan_cooling_ops = {
 	.set_cur_state = pwm_fan_set_cur_state,
 };
 
-static int pwm_fan_of_get_cooling_data(struct device *dev,
+static int pwm_fan_get_cooling_data(struct device *dev,
 				       struct pwm_fan_ctx *ctx)
 {
-	struct device_node *np = dev->of_node;
 	int num, i, ret;
 
-	if (!of_property_present(np, "cooling-levels"))
+	if (!device_property_present(dev, "cooling-levels"))
 		return 0;
 
-	ret = of_property_count_u32_elems(np, "cooling-levels");
+	ret = device_property_count_u32(dev, "cooling-levels");
 	if (ret <= 0) {
 		dev_err(dev, "Wrong data!\n");
 		return ret ? : -EINVAL;
@@ -442,7 +442,7 @@ static int pwm_fan_of_get_cooling_data(struct device *dev,
 	if (!ctx->pwm_fan_cooling_levels)
 		return -ENOMEM;
 
-	ret = of_property_read_u32_array(np, "cooling-levels",
+	ret = device_property_read_u32_array(dev, "cooling-levels",
 					 ctx->pwm_fan_cooling_levels, num);
 	if (ret) {
 		dev_err(dev, "Property 'cooling-levels' cannot be read!\n");
@@ -589,7 +589,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			}
 		}
 
-		of_property_read_u32_index(dev->of_node,
+        if (dev->of_node)
+		    of_property_read_u32_index(dev->of_node,
 					   "pulses-per-revolution",
 					   i,
 					   &ppr);
@@ -622,14 +623,18 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		return PTR_ERR(hwmon);
 	}
 
-	ret = pwm_fan_of_get_cooling_data(dev, ctx);
+	ret = pwm_fan_get_cooling_data(dev, ctx);
 	if (ret)
 		return ret;
 
 	ctx->pwm_fan_state = ctx->pwm_fan_max_state;
 	if (IS_ENABLED(CONFIG_THERMAL)) {
-		cdev = devm_thermal_of_cooling_device_register(dev,
-			dev->of_node, "pwm-fan", ctx, &pwm_fan_cooling_ops);
+		if (dev->of_node)
+		    cdev = devm_thermal_of_cooling_device_register(dev,
+			    dev->of_node, "pwm-fan", ctx, &pwm_fan_cooling_ops);
+		else if (ACPI_COMPANION(dev))
+		    cdev = thermal_cooling_device_register("pwm-fan", 
+			    ctx, &pwm_fan_cooling_ops);
 		if (IS_ERR(cdev)) {
 			ret = PTR_ERR(cdev);
 			dev_err(dev,
@@ -672,6 +677,12 @@ static const struct of_device_id of_pwm_fan_match[] = {
 };
 MODULE_DEVICE_TABLE(of, of_pwm_fan_match);
 
+static const struct acpi_device_id acpi_pwm_fan_match[] = {
+	{ "SGPH0030", },
+	{},
+};
+MODULE_DEVICE_TABLE(acpi, acpi_pwm_fan_match);
+
 static struct platform_driver pwm_fan_driver = {
 	.probe		= pwm_fan_probe,
 	.shutdown	= pwm_fan_shutdown,
@@ -679,6 +690,7 @@ static struct platform_driver pwm_fan_driver = {
 		.name		= "pwm-fan",
 		.pm		= pm_sleep_ptr(&pwm_fan_pm),
 		.of_match_table	= of_pwm_fan_match,
+		.acpi_match_table = ACPI_PTR(acpi_pwm_fan_match),
 	},
 };
 

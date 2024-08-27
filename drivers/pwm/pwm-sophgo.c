@@ -11,6 +11,7 @@
  * the Free Software Foundation; either version 2 of the License.
  */
 
+#include <linux/acpi.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/export.h>
@@ -174,6 +175,14 @@ static const struct of_device_id sophgo_pwm_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sophgo_pwm_match);
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sophgo_pwm_acpi_ids[] = {
+	{ "SGPH0005", 0 },
+	{ },
+};
+MODULE_DEVICE_TABLE(acpi, sophgo_pwm_acpi_ids);
+#endif
+
 static int pwm_sophgo_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -197,26 +206,28 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 	if (IS_ERR(chip->base))
 		return PTR_ERR(chip->base);
 
-	chip->base_clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(chip->base_clk)) {
-		dev_err(dev, "failed to get pwm source clk\n");
-		return PTR_ERR(chip->base_clk);
-	}
+    if (dev->of_node) {
+	  chip->base_clk = devm_clk_get(&pdev->dev, NULL);
+	  if (IS_ERR(chip->base_clk)) {
+		  dev_err(dev, "failed to get pwm source clk\n");
+		  return PTR_ERR(chip->base_clk);
+	  }
 
-	ret = clk_prepare_enable(chip->base_clk);
-	if (ret < 0) {
-		dev_err(dev, "failed to enable base clock\n");
-		return ret;
+	  ret = clk_prepare_enable(chip->base_clk);
+	  if (ret < 0) {
+		  dev_err(dev, "failed to enable base clock\n");
+		  return ret;
+	  }
 	}
 
 	//pwm-num default is 4, compatible with sg2042
-	if (of_property_read_bool(pdev->dev.of_node, "pwm-num"))
+	if (device_property_read_bool(&pdev->dev, "pwm-num"))
 		device_property_read_u32(&pdev->dev, "pwm-num", &chip->chip.npwm);
 	else
 		chip->chip.npwm = 4;
 
 	//no_polarity default is false(have polarity) , compatible with sg2042
-	if (of_property_read_bool(pdev->dev.of_node, "no-polarity"))
+	if (device_property_read_bool(&pdev->dev, "no-polarity"))
 		chip->no_polarity = true;
 	else
 		chip->no_polarity = false;
@@ -265,6 +276,7 @@ static struct platform_driver pwm_sophgo_driver = {
 		.name	= "sophgo-pwm",
 		.pm	= &pwm_sophgo_pm_ops,
 		.of_match_table = of_match_ptr(sophgo_pwm_match),
+		.acpi_match_table = ACPI_PTR(sophgo_pwm_acpi_ids),
 	},
 	.probe		= pwm_sophgo_probe,
 	.remove		= pwm_sophgo_remove,

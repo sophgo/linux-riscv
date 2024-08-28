@@ -6,8 +6,8 @@
 /dts-v1/;
 
 / {
-	model = "sophgo sg2260";
-	compatible = "sophgo, sg2260_pld";
+	model = "SOPHGO BM1690 TPU SCALAR";
+	compatible = "sophgo,sg2044";
 	#address-cells = <2>;
 	#size-cells = <2>;
 	dma-noncoherent;

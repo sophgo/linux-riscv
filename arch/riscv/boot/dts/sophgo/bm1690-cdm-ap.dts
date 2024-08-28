@@ -5,8 +5,8 @@
 
 /dts-v1/;
 #include <dt-bindings/interrupt-controller/irq.h>
-#include "sg2260-cpu-ap.dtsi"
-#include "sg2260-soc-tpu-card.dtsi"
+#include "bm1690-cpu-ap.dtsi"
+#include "bm1690-soc-tpu-card.dtsi"
 
 / {
 	/delete-node/ memory@80200000;

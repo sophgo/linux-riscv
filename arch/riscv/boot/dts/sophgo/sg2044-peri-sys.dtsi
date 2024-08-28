@@ -488,5 +488,4 @@
 		ethernet0 = &ethernet0;
 		// dwcxlg0 = &dwcxlg0;
 	};
-
 };

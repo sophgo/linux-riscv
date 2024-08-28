@@ -11,4 +11,3 @@
 		interrupts = <863 IRQ_TYPE_LEVEL_HIGH>;
 	};
 };
-

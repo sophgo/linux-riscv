@@ -4,8 +4,8 @@
  */
 
 / {
-	model = "sophgo sg2260";
-	compatible = "sophgo, sg2260_pld";
+	model = "SOPHGO SG2044 RISC-V";
+	compatible = "sophgo,sg2044";
 	#address-cells = <2>;
 	#size-cells = <2>;
 	dma-noncoherent;
@@ -1290,4 +1290,3 @@
 		};
 	};
 };
-

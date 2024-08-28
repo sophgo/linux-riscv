@@ -7,7 +7,7 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/reset/sophgo,sg2044-reset.h>
 #include <dt-bindings/clock/sophgo,sg2044-clock.h>
-#include "sg2044-cpu-rp.dtsi"
+#include "sg2044-cpu.dtsi"
 #include "sg2044-clock.dtsi"
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"

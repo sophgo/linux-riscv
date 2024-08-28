@@ -5,4 +5,4 @@
 
 /dts-v1/;
 #include <dt-bindings/interrupt-controller/irq.h>
-#include "sg2044-cpu-rp.dtsi"
+#include "sg2044-cpu.dtsi"

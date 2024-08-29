@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/of_gpio.h>
 
 #include "pcie-dw-sophgo.h"
 
@@ -357,9 +358,13 @@ static struct pci_ops sophgo_dw_pcie_ops = {
 static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 {
 	struct platform_device *pdev = to_platform_device(pcie->dev);
+	struct device *dev = pcie->dev;
 	struct device_node *np = dev_of_node(pcie->dev);
 	struct resource *res;
-	//int ret;
+	int ret;
+
+	if (device_property_present(dev, "pcie-card"))
+		pcie->pcie_card = 1;
 
 	if (!pcie->dbi_base) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
@@ -396,13 +401,63 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 			return ret;
 	}
 #endif
-	if (pcie->link_gen < 1)
+
+	if (pcie->link_gen < 1) {
 		pcie->link_gen = of_pci_get_max_link_speed(np);
+		pcie->link_gen += 1;
+	}
 
 	of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
 
 	if (of_property_read_bool(np, "snps,enable-cdm-check"))
 		dw_pcie_cap_set(pcie, CDM_CHECK);
+
+	if (pcie->pcie_card) {
+		if (!pcie->sii_reg_base) {
+			res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl");
+			pcie->sii_reg_base = devm_pci_remap_cfg_resource(pcie->dev, res);
+			if (IS_ERR(pcie->sii_reg_base))
+				return PTR_ERR(pcie->sii_reg_base);
+			pcie->sii_reg_base += 0x400;
+			pcie->ctrl_reg_base = pcie->sii_reg_base + 0x800;
+		}
+
+		if (!pcie->c2c_top) {
+			res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "c2c_top");
+			pcie->c2c_top = devm_pci_remap_cfg_resource(pcie->dev, res);
+			if (IS_ERR(pcie->c2c_top))
+				return PTR_ERR(pcie->c2c_top);
+		}
+
+		ret = of_property_read_u64_index(np, "cfg_range", 0, &pcie->cfg_start_addr);
+		ret = of_property_read_u64_index(np, "cfg_range", 1, &pcie->cfg_end_addr);
+		if (ret == 0)
+			dev_err(dev, "cfg[0x%llx-0x%llx]\n", pcie->cfg_start_addr, pcie->cfg_end_addr);
+
+		ret = of_property_read_u64_index(np, "slv_range", 0, &pcie->slv_start_addr);
+		ret = of_property_read_u64_index(np, "slv_range", 1, &pcie->slv_end_addr);
+		if (ret == 0)
+			dev_err(dev, "slv[0x%llx-0x%llx]\n", pcie->slv_start_addr, pcie->slv_end_addr);
+
+		ret = of_property_read_u64_index(np, "dw_range", 0, &pcie->dw_start);
+		ret = of_property_read_u64_index(np, "dw_range", 1, &pcie->dw_end);
+		if (ret == 0)
+			dev_err(dev, "dw[0x%llx-0x%llx]\n", pcie->dw_start, pcie->dw_end);
+
+		ret = of_property_read_u64_index(np, "up_start_addr", 0, &pcie->up_start_addr);
+		if (ret == 0)
+			dev_err(dev, "up start addr:[0x%llx]\n", pcie->up_start_addr);
+
+		pcie->phy = devm_of_phy_get(dev, dev->of_node, "pcie-phy");
+
+		pcie->pe_rst = of_get_named_gpio(dev->of_node, "prst", 0); //TODO:default high? or low?
+		dev_err(dev, "perst:[gpio%d]\n", pcie->pe_rst);
+
+		pcie->c2c_prst = of_get_named_gpio(dev->of_node, "c2c_prst", 0);
+		dev_err(dev, "c2c prst:%d\n", pcie->c2c_prst);
+		gpio_direction_output(pcie->c2c_prst, 0);
+		gpio_set_value(pcie->c2c_prst, 0);
+	}
 
 	return 0;
 }
@@ -670,7 +725,405 @@ int sophgo_dw_pcie_parse_irq_and_map_pci(const struct pci_dev *dev, u8 slot, u8 
 	return 0; /* Proper return code 0 == NO_IRQ */
 }
 
-static int sophgo_dw_pcie_probe(struct platform_device *pdev)
+
+
+static int pcie_config_eq(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	uint32_t speed = 0;
+	uint32_t pset_id = 0;
+	void __iomem *pcie_dbi_base = pcie->dbi_base;
+	struct PCIE_EQ_COEF eq_coef_tbl[11] = { //p0 ~ p10
+		{36, 0, 12}, {40, 0, 8}, {38, 0, 10}, {42, 0, 6}, {48, 0, 0}, {44, 4, 0},
+		{42, 6,  0}, {34, 5, 9}, {36, 6,  6}, {40, 8, 0}, {32, 0, 16}
+	};
+
+	for (speed = 0; speed < 3; speed++) {
+		val = readl(pcie_dbi_base + 0x890); //set speed
+		val &= 0xfcffffff;
+		val |= (speed << 24);
+		writel(val, (pcie_dbi_base + 0x890));
+
+		val = readl(pcie_dbi_base + 0x894);
+		val &= 0xfffff000; //bit[11, 0]
+		val |= 16;
+		val |= (48 << 6);
+		writel(val, (pcie_dbi_base + 0x894));
+
+		for (pset_id = 0; pset_id < 11; pset_id++) {
+			val = readl(pcie_dbi_base + 0x89c);
+			val &= 0xfffffff0; //bit[3, 0]
+			val |= pset_id;
+			writel(val, (pcie_dbi_base + 0x89c));
+
+			val = readl(pcie_dbi_base + 0x898);
+			val &= 0xfffc0000; //bit[17, 0]
+			val |= eq_coef_tbl[pset_id].pre_cursor;
+			val |= (eq_coef_tbl[pset_id].cursor << 6);
+			val |= (eq_coef_tbl[pset_id].post_cursor << 12);
+			writel(val, (pcie_dbi_base + 0x898));
+
+			val = readl(pcie_dbi_base + 0x8a4);
+			if (val & 0x1) //bit0
+				pr_info("illegal coef pragrammed, speed[%d], pset[%d].\n", speed, pset_id);
+		}
+	}
+
+	return 0;
+}
+
+static int pcie_config_link(struct sophgo_dw_pcie *pcie)
+{
+	void __iomem *dbi_base = pcie->dbi_base;
+	uint32_t val;
+
+	//config lane_count
+	val = readl(dbi_base + 0x8c0);
+	val = (val & 0xffffffc0) | pcie->num_lanes;
+	writel(val, (dbi_base + 0x8c0));
+
+	//config eq bypass highest rate disable
+	val = readl(dbi_base + 0x1c0);
+	val |= 0x1;
+	writel(val, (dbi_base + 0x1c0));
+
+	return 0;
+}
+
+static int pcie_enable_ltssm(struct sophgo_dw_pcie *pcie)
+{
+	void __iomem *sii_reg_base = pcie->sii_reg_base;
+	uint32_t val;
+
+	val = readl(sii_reg_base + PCIE_SII_GENERAL_CTRL3_REG);
+	val |= 0x1;
+	writel(val, sii_reg_base + PCIE_SII_GENERAL_CTRL3_REG);
+
+	return 0;
+}
+
+static int pcie_wait_link(struct sophgo_dw_pcie *pcie)
+{
+	void __iomem *sii_reg_base = pcie->sii_reg_base;
+	uint32_t status;
+	int err;
+	int timeout = 500;
+
+	err = readl_poll_timeout(sii_reg_base + 0xb4, status, ((status >> 7) & 1), 20, timeout * USEC_PER_MSEC);
+	if (err) {
+		pr_err("[sg2260] failed to poll link ready\n");
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+static int pcie_config_ctrl(struct sophgo_dw_pcie *pcie)
+{
+	void __iomem *dbi_reg_base = pcie->dbi_base;
+	void __iomem *sii_reg_base = pcie->sii_reg_base;
+	uint32_t val;
+
+	//config device_type
+	val = readl(sii_reg_base + PCIE_SII_GENERAL_CTRL1_REG);
+	val &= (~PCIE_SII_GENERAL_CTRL1_DEVICE_TYPE_MASK);
+	val |= (4 << 9);//RC MODE
+	writel(val, (sii_reg_base + PCIE_SII_GENERAL_CTRL1_REG));
+
+	//config Directed Speed Change	Writing '1' to this field instructs the LTSSM to initiate
+	//a speed change to Gen2 or Gen3 after the link is initialized at Gen1 speed
+	val = readl(dbi_reg_base + 0x80c);
+	val = val | 0x20000;
+	writel(val, (dbi_reg_base + 0x80c));
+
+	//config generation_select-pcie_cap_target_link_speed
+	val = readl(dbi_reg_base + 0xa0);
+	val = (val & 0xfffffff0) | pcie->link_gen;
+	writel(val, (dbi_reg_base + 0xa0));
+
+	// config ecrc generation enable
+	val = readl(dbi_reg_base + 0x118);
+	val = 0x3e0;
+	writel(val, (dbi_reg_base + 0x118));
+
+	return 0;
+}
+
+static int pcie_check_link_status(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	uint32_t speed = 0;
+	uint32_t width = 0;
+	uint32_t ltssm_state = 0;
+	void __iomem *pcie_sii_base = pcie->sii_reg_base;
+	void __iomem *pcie_dbi_base = pcie->dbi_base;
+
+	val = readl(pcie_sii_base + 0xb4); //LNK_DBG_2
+	ltssm_state = val & 0x3f; //bit[5,0]
+	if (ltssm_state != 0x11)
+		pr_err("PCIe link fail, ltssm_state = 0x%x\n", ltssm_state);
+
+	speed = (val >> 8) & 0x7; //bit[10,8]
+	if ((speed + 1) != pcie->link_gen)
+		pr_err("link speed, expect gen%d, current gen%d\n", pcie->link_gen, (speed + 1));
+
+	val = readl(pcie_dbi_base + 0x80);
+	width = (val >> 20) & 0x3f; //bit[25:20]
+	if (width != pcie->num_lanes)
+		pr_err("link width, expect x%d, current x%d\n", pcie->num_lanes, width);
+
+	pr_info("PCIe Link status, ltssm[0x%x], gen%d, x%d.\n", ltssm_state, (speed + 1), width);
+
+	return 0;
+}
+
+static int pcie_config_soft_phy_reset(struct sophgo_dw_pcie *pcie, uint32_t rst_status)
+{
+	uint32_t val = 0;
+	void __iomem *reg_base;
+
+	//deassert = 1; assert = 0;
+	if ((rst_status != 0) && (rst_status != 1))
+		return -1;
+
+	reg_base = pcie->ctrl_reg_base;
+
+	//cfg soft_phy_rst_n , first cfg 1
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	if (rst_status == 1)
+		val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
+	else
+		val &= (~PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
+
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	udelay(1);
+
+	return 0;
+}
+
+static int pcie_config_soft_cold_reset(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	void __iomem  *reg_base;
+
+
+	reg_base = pcie->ctrl_reg_base;
+
+	//cfg soft_cold_rst_n , first cfg 0
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	val &= (~PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	//cfg soft_cold_rst_n , second cfg 1
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	return 0;
+}
+
+void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	void __iomem *base_addr = pcie->ctrl_reg_base;
+
+	do {
+		udelay(10);
+		if (pcie->num_lanes == 8) {
+			val = readl(base_addr + 0xfc);
+			val = (val >> 29) & 0x1; //bit29, radm_idle
+		} else {
+			val = readl(base_addr + 0xe8);
+			val = (val >> 21) & 0x1; //bit21, radm_idle
+		}
+	} while (val != 1);
+}
+
+void pcie_clear_slv_mapping(struct sophgo_dw_pcie *pcie)
+{
+	void __iomem  *ctrl_reg_base = pcie->ctrl_reg_base;
+
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG));
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_UP_START_ADDR_REG));
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_UP_END_ADDR_REG));
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_DW_ADDR_REG));
+}
+
+void pcie_config_slv_mapping(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	void __iomem  *ctrl_reg_base = pcie->ctrl_reg_base;
+	uint64_t up_start_addr = 0;
+	uint64_t up_end_addr = 0;
+	uint32_t dw_start_addr = 0;
+	uint32_t dw_end_addr = 0;
+	uint32_t full_addr = 0;
+
+	up_start_addr = pcie->slv_start_addr;
+	up_end_addr = pcie->slv_end_addr;
+
+	dw_start_addr = pcie->dw_start;
+	dw_end_addr = pcie->dw_end;
+
+	full_addr = (((dw_end_addr >> 16) & 0xffff) << 16) | ((dw_start_addr >> 16) & 0xffff);
+
+	val = readl(ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG);
+	val |= 0x3 << PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT;
+	writel(val, (ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG));
+	up_start_addr = up_start_addr >> 16;
+	writel((up_start_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_START_ADDR_REG));
+	up_end_addr = up_end_addr >> 16;
+	writel((up_end_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_END_ADDR_REG));
+	// cfg sn_to_pcie_dw4g_start_addr and end addr
+	writel(full_addr, (ctrl_reg_base + PCIE_CTRL_SN_DW_ADDR_REG));
+}
+
+void pcie_config_mps(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	int mps = 1;
+	void __iomem *base_addr = pcie->dbi_base;
+
+	val = readl(base_addr + 0x78);
+	val &= 0xffffff1f;
+	val |= ((mps & 0x7) << 5);
+	writel(val, (base_addr + 0x78));
+}
+
+void pcie_config_mrrs(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	void __iomem  *base_addr = pcie->dbi_base;
+	int mrrs = 1;
+
+	val = readl(base_addr + 0x78);
+	val &= 0xffff8fff;
+	val |= ((mrrs & 0x7) << 12);
+	writel(val, (base_addr + 0x78));
+}
+
+
+void pcie_config_port_code(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	int c2c_id = 1;
+
+	//config port code
+	if (c2c_id == 0)
+		val = (0xf) | (0x0 << 4) | (0xf << 8) | (0xf << 12) | (0xf << 16);
+	else if (c2c_id == 1)
+		val = (0x0) | (0x5 << 4) | (0xf << 8) | (0xf << 12) | (0x7 << 16);
+
+	writel(val, pcie->c2c_top);
+}
+
+void pcie_config_cascade_rc_atu(struct sophgo_dw_pcie *pcie)
+{
+	uint64_t up_start_addr = 0;
+	void __iomem *atu_base = pcie->atu_base;
+
+	up_start_addr = pcie->up_start_addr;
+	writel(0x0, (atu_base+ 0x1008));  //src
+	writel((up_start_addr >> 32), (atu_base+ 0x100c));
+	writel(0x3fffff, (atu_base+ 0x1010)); //size 4M
+	writel((up_start_addr >> 32), (atu_base+ 0x1020));  //size 4M
+	writel(0x24800000, (atu_base+ 0x1014)); //target
+	writel(0x0, (atu_base+ 0x1018));
+	writel(0x2000, (atu_base+ 0x1000));
+	writel(0x80000000, (atu_base+ 0x1004));
+
+	writel(0x400000, (atu_base+ 0x1208));  //src
+	writel((up_start_addr >> 32), (atu_base+ 0x120c));
+	writel(0x7fffff, (atu_base+ 0x1210)); //size 4M
+	writel((up_start_addr >> 32), (atu_base+ 0x1220));  //size 4M
+	writel(0x24c00000, (atu_base+ 0x1214)); //target
+	writel(0x0, (atu_base+ 0x1218));
+	writel(0x2000, (atu_base+ 0x1200));
+	writel(0x80000000, (atu_base+ 0x1204));
+
+	writel(0xa0000000, (atu_base+ 0x1408));  //src
+	writel((up_start_addr >> 32), (atu_base+ 0x140c));
+	writel(0xa0ffffff, (atu_base+ 0x1410)); //size 16M
+	writel((up_start_addr >> 32), (atu_base+ 0x1420));  //size 16M
+	writel(0x00000000, (atu_base+ 0x1414)); //target
+	writel(0x52, (atu_base+ 0x1418));
+	writel(0x2000, (atu_base+ 0x1400));
+	writel(0x80000000, (atu_base+ 0x1404));
+}
+
+void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)
+{
+	pcie_clear_slv_mapping(pcie);
+	pcie_config_slv_mapping(pcie);
+	pcie_config_mps(pcie);
+	pcie_config_mrrs(pcie);
+
+	pcie_config_port_code(pcie);
+	pcie_config_cascade_rc_atu(pcie);
+}
+
+static void pcie_config_axi_route(struct sophgo_dw_pcie *pcie)
+{
+	uint64_t cfg_start_addr;
+	uint64_t cfg_end_addr;
+
+	cfg_start_addr = pcie->cfg_start_addr;
+	cfg_end_addr = pcie->cfg_end_addr;
+
+
+	writel((cfg_start_addr & 0xffffffff), (pcie->c2c_top + 0x24));
+	writel(((cfg_start_addr >> 32) & 0xffffffff), (pcie->c2c_top + 0x28));
+	writel((cfg_end_addr & 0xffffffff), (pcie->c2c_top + 0x2c));
+	writel(((cfg_end_addr >> 32) & 0xffffffff), (pcie->c2c_top + 0x30));
+	//writel((C2C_PCIE_TOP_REG(c2c_id) + 0xcc), 0xf0000);
+}
+
+static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
+{
+	int err;
+	uint32_t val;
+	void __iomem *sii_reg_base = pcie->sii_reg_base;;
+
+	phy_init(pcie->phy);
+	pcie_config_soft_phy_reset(pcie, PCIE_RST_ASSERT);
+	pcie_config_soft_phy_reset(pcie, PCIE_RST_DE_ASSERT);
+	pcie_config_soft_cold_reset(pcie);
+
+	gpio_direction_output(pcie->pe_rst, 0);
+	gpio_set_value(pcie->pe_rst, 0);
+	msleep(1000);
+	gpio_set_value(pcie->pe_rst, 1);
+	phy_configure(pcie->phy, NULL);
+
+	/*pcie wait core clk*/
+	do {
+		udelay(10);
+		val = readl(sii_reg_base + 0x5c); //GEN_CTRL_4
+		val = (val >> 8) & 1;
+	} while (val != 1);
+
+	pcie_check_radm_status(pcie);
+
+	pcie_config_ctrl(pcie);
+	pcie_config_eq(pcie);
+	pcie_config_link(pcie);
+	pcie_enable_ltssm(pcie);
+
+	err = pcie_wait_link(pcie);
+	if (err) {
+		pr_err("pcie wait link failed\n");
+		return err;
+	}
+
+	pcie_check_link_status(pcie);
+	pcie_config_axi_route(pcie);
+	bm1690_pcie_init_route(pcie);
+
+	return 0;
+}
+
+int sophgo_dw_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sophgo_dw_pcie *pcie;
@@ -709,6 +1162,11 @@ static int sophgo_dw_pcie_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	if (pcie->pcie_card) {
+		dev_err(dev, "pcie card mode, begin init pcie bus\n");
+		sophgo_pcie_host_init_port(pcie);
+	}
+
 	bridge = devm_pci_alloc_host_bridge(dev, 0);
 	if (!bridge)
 		return -ENOMEM;
@@ -744,9 +1202,11 @@ static int sophgo_dw_pcie_probe(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(sophgo_dw_pcie_probe);
 
 static const struct of_device_id sophgo_dw_pcie_of_match[] = {
 	{ .compatible = "sophgo,sg2044-pcie-host", },
+	{ .compatible = "sophgo,bm1690-pcie-host", },
 	{},
 };
 

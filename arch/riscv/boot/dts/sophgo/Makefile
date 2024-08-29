@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2044r-x7.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690-sc11-ap.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += bm1690-sc11-ap-chip2.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690-evb-ap.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690-cdm-ap.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690-cdm-rp.dtb

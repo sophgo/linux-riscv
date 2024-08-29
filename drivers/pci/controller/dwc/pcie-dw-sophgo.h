@@ -27,29 +27,87 @@
 
 #include "pcie-designware.h"
 
+//PCIE CTRL REG
+#define PCIE_CTRL_SFT_RST_SIG_REG                           0x050
+#define PCIE_CTRL_REMAPPING_EN_REG                          0x060
+#define PCIE_CTRL_HNI_UP_START_ADDR_REG                     0x064
+#define PCIE_CTRL_HNI_UP_END_ADDR_REG                       0x068
+#define PCIE_CTRL_HNI_DW_ADDR_REG                           0x06c
+#define PCIE_CTRL_SN_UP_START_ADDR_REG                      0x070
+#define PCIE_CTRL_SN_UP_END_ADDR_REG                        0x074
+#define PCIE_CTRL_SN_DW_ADDR_REG                            0x078
+#define PCIE_CTRL_AXI_MSI_GEN_CTRL_REG                      0x07c
+#define PCIE_CTRL_AXI_MSI_GEN_LOWER_ADDR_REG                0x088
+#define PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG                0x08c
+#define PCIE_CTRL_AXI_MSI_GEN_USER_DATA_REG                 0x090
+#define PCIE_CTRL_AXI_MSI_GEN_MASK_IRQ_REG                  0x094
+
+#define PCIE_SII_GENERAL_CTRL1_REG                          0x050
+#define PCIE_SII_GENERAL_CTRL3_REG                          0x058
+
+#define PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT                 0
+#define PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT                  1
+#define PCIE_CTRL_SFT_RST_SIG_WARM_RSTN_BIT                 2
+#define PCIE_CTRL_REMAP_EN_HNI_TO_PCIE_UP4G_EN_BIT          0
+#define PCIE_CTRL_REMAP_EN_HNI_TO_PCIE_DW4G_EN_BIT          1
+#define PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT           2
+#define PCIE_CTRL_REMAP_EN_SN_TO_PCIE_DW4G_EN_BIT           3
+#define PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_EN_BIT           0
+
+#define GENMASK_32(h, l) \
+	(((0xFFFFFFFF) << (l)) & (0xFFFFFFFF >> (32UL - 1 - (h))))
+
+#define PCIE_SII_GENERAL_CTRL1_DEVICE_TYPE_MASK             GENMASK_32(12, 9)
+#define PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_MULTI_MSI_MASK   GENMASK_32(3, 1)
+
+enum pcie_rst_status {
+	PCIE_RST_ASSERT = 0,
+	PCIE_RST_DE_ASSERT,
+	PCIE_RST_STATUS_BUTT
+};
+
+struct PCIE_EQ_COEF {
+	uint32_t cursor;
+	uint32_t pre_cursor;
+	uint32_t post_cursor;
+};
+
 struct sophgo_dw_pcie {
 	struct device		*dev;
 	void __iomem		*dbi_base;
 	void __iomem		*atu_base;
-	size_t			atu_size;
-	u32			num_ib_windows;
-	u32			num_ob_windows;
-	u32			region_align;
-	u64			region_limit;
+	void __iomem		*sii_reg_base;
+	void __iomem		*ctrl_reg_base;
+	void __iomem		*c2c_top;
+	uint64_t		cfg_start_addr;
+	uint64_t		cfg_end_addr;
+	uint64_t		slv_start_addr;
+	uint64_t		slv_end_addr;
+	uint64_t		dw_start;
+	uint64_t		dw_end;
+	uint64_t		up_start_addr;
+	size_t				atu_size;
+	uint32_t			pcie_card;
+	u32					num_ib_windows;
+	u32					num_ob_windows;
+	u32					region_align;
+	u64					region_limit;
 	struct dw_pcie_rp	pp;
 	const struct dw_pcie_ops *ops;
-	u32			version;
-	u32			type;
+	u32					version;
+	u32					type;
 	unsigned long		caps;
-	int			num_lanes;
-	int			link_gen;
-	u8			n_fts[2];
+	int					num_lanes;
+	int					link_gen;
+	u8					n_fts[2];
 	struct dw_edma_chip	edma;
 	struct clk_bulk_data	app_clks[DW_PCIE_NUM_APP_CLKS];
 	struct clk_bulk_data	core_clks[DW_PCIE_NUM_CORE_CLKS];
 	struct reset_control_bulk_data	app_rsts[DW_PCIE_NUM_APP_RSTS];
 	struct reset_control_bulk_data	core_rsts[DW_PCIE_NUM_CORE_RSTS];
-	struct gpio_desc	*pe_rst;
+	int pe_rst;
+	int c2c_prst;
+	struct phy *phy;
 };
 
 #define to_sophgo_dw_pcie_from_pp(port) container_of((port), struct sophgo_dw_pcie, pp)

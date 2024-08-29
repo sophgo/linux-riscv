@@ -282,7 +282,7 @@ void pcie_check_link_status(struct sophgo_pcie_ep *sg_ep)
 	pr_info("PCIe Link status, ltssm[0x%x], gen%d, x%d.\n", ltssm_state, (speed + 1), width);
 }
 
-void pcie_config_axi_route(struct sophgo_pcie_ep *sg_ep)
+static void pcie_config_axi_route(struct sophgo_pcie_ep *sg_ep)
 {
 	uint64_t cfg_start_addr = sg_ep->c2c_config_base;
 	uint64_t cfg_end_addr = cfg_start_addr + sg_ep->c2c_config_size;
@@ -399,7 +399,16 @@ static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 		writel(msi_addr, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG));
 		pr_err("msi_addr:0x%x\n", msi_addr);
 	} else {
-		writel(chip_id, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG));
+		msi_addr = readl(pcie_dbi_base + 0x54);
+		pr_info("msi low addr = 0x%x\n", msi_addr);
+		writel(msi_addr, pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_LOWER_ADDR_REG);
+
+		msi_addr = 0x0;
+		msi_addr |= (0x2 << 22); //chip_id
+		msi_addr |= (0x7 << 25); //target
+		writel(msi_addr, pcie_dbi_base + 0x58);
+		pr_info("msi high addr = 0x%x\n", msi_addr);
+		writel(msi_addr, pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG);
 	}
 
 

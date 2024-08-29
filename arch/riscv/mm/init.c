@@ -821,6 +821,7 @@ static __init void set_satp_mode(uintptr_t dtb_pa)
 
 	if (satp_mode_cmdline == SATP_MODE_57) {
 		disable_pgtable_l5();
+		return;
 	} else if (satp_mode_cmdline == SATP_MODE_48) {
 		disable_pgtable_l5();
 		disable_pgtable_l4();

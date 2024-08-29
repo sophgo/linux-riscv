@@ -1118,7 +1118,7 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
 	} else {
 
 	}
-	
+
 send_irq:
 	channel_tx_send_irq(channel);
 	port->port_info.send_bytes += count;

@@ -1071,3 +1071,14 @@ config MMC_LITEX
 	  module will be called litex_mmc.
 
 	  If unsure, say N.
+
+config MMC_SDHCI_SOPHGO
+	tristate "Sophgo/BitMain SDIO host Controller"
+	depends on MMC_SDHCI_PLTFM
+	help
+	  This selects the SDIO Host Controller in Sophgo/BitMain SoCs.
+
+	  If you have a controller with this interface, say Y or M here.
+	  If unsure, say N.
+	  To compile this driver as a module, choose M here: the
+	  module will be called sdhci-sophgo.

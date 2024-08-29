@@ -1,0 +1,6 @@
+config DW_DMAC_SOPHGO
+        bool "sophgo dma engine based DW DMAC"
+        select DMA_ENGINE
+        help
+          Support the DMA engine for sophgo platform devices.
+

@@ -122,6 +122,7 @@ obj-y					+= sprd/
 obj-$(CONFIG_ARCH_STI)			+= st/
 obj-$(CONFIG_ARCH_STM32)		+= stm32/
 obj-y					+= starfive/
+obj-$(CONFIG_ARCH_SOPHGO)		+= sophgo/ 
 obj-$(CONFIG_ARCH_SUNXI)		+= sunxi/
 obj-y					+= sunxi-ng/
 obj-$(CONFIG_ARCH_TEGRA)		+= tegra/

@@ -68,6 +68,7 @@ obj-$(CONFIG_PINCTRL_PXA)	+= pxa/
 obj-y				+= qcom/
 obj-$(CONFIG_PINCTRL_RENESAS)	+= renesas/
 obj-$(CONFIG_PINCTRL_SAMSUNG)	+= samsung/
+obj-$(CONFIG_ARCH_SOPHGO)	+= sophgo/
 obj-$(CONFIG_PINCTRL_SPEAR)	+= spear/
 obj-y				+= sprd/
 obj-$(CONFIG_SOC_STARFIVE)	+= starfive/

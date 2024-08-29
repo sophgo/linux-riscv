@@ -337,6 +337,28 @@ static int __pll_get_postdiv_1_2(unsigned long rate, unsigned long prate,
 
 	return ret;
 }
+/**
+ * __set_pll_vcosel() - select vco configuration for pll
+ * bit[17:16] 2'd2 --> 1.6GHz - 2.4GHz
+ * 			  2'd3 --> 2.4GHz - 3.2GHz
+ * @sg2044_pll: sg2044 pll control struct
+ * @foutvco: target foutvco value
+ */
+static void __set_pll_vcosel(struct sg2044_pll_clock *sg2044_pll, unsigned long foutvco)
+{
+	int vcosel;
+	unsigned int value;
+
+	if (foutvco < (2400 * MHZ))
+		vcosel = 0x2;
+	else
+		vcosel = 0x3;
+
+	sg2044_pll_read_l(sg2044_pll->syscon_top, sg2044_pll->id, &value);
+	value &= ~(0x3 << 16);
+	value |= (vcosel << 16);
+	sg2044_pll_write_l(sg2044_pll->syscon_top, sg2044_pll->id, value);
+}
 
 static int __get_pll_ctl_setting(struct sg2044_pll_ctrl *best,
 			unsigned long req_rate, unsigned long parent_rate)
@@ -436,16 +458,12 @@ static int sg2044_clk_pll_determine_rate(struct clk_hw *hw,
 static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			       unsigned long parent_rate)
 {
+	int ret = 0;
 	unsigned long flags;
 	unsigned int value;
-	int vcosel, ret = 0;
+	unsigned long foutvco;
 	struct sg2044_pll_ctrl pctrl_table;
 	struct sg2044_pll_clock *sg2044_pll = to_sg2044_pll_clk(hw);
-
-	if (rate < (2400 * MHZ))
-		vcosel = 0x2;
-	else
-		vcosel = 0x3;
 
 	memset(&pctrl_table, 0, sizeof(struct sg2044_pll_ctrl));
 	spin_lock_irqsave(sg2044_pll->lock, flags);
@@ -453,23 +471,23 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	sg2044_pll_switch_mux(sg2044_pll->syscon_top, sg2044_pll, 1);
 	if (sg2044_pll_enable(sg2044_pll->syscon_top, sg2044_pll, 0)) {
 		pr_warn("Can't disable pll(%s), status error\n", sg2044_pll->name);
+		ret = -EINVAL;
 		goto out;
 	}
 
-	sg2044_pll_read_l(sg2044_pll->syscon_top, sg2044_pll->id, &value);
-	value &= ~(0x3 << 16);
-	value |= (vcosel << 16);
-	sg2044_pll_write_l(sg2044_pll->syscon_top, sg2044_pll->id, value);
 	sg2044_pll_read(sg2044_pll->syscon_top, sg2044_pll->id, &value);
 	__get_pll_ctl_setting(&pctrl_table, rate, parent_rate);
 	if (!pctrl_table.freq) {
 		pr_warn("%s: Can't find a proper pll setting\n", sg2044_pll->name);
+		ret = -EINVAL;
 		goto out;
 	}
 
 	value = TOP_PLL_CTRL(pctrl_table.fbdiv, pctrl_table.postdiv1,
 			     pctrl_table.postdiv2, pctrl_table.refdiv);
 
+	foutvco = parent_rate * pctrl_table.fbdiv / pctrl_table.refdiv;
+	__set_pll_vcosel(sg2044_pll, foutvco);
 	/* write the value to top register */
 	sg2044_pll_write(sg2044_pll->syscon_top, sg2044_pll->id, value);
 	sg2044_pll_enable(sg2044_pll->syscon_top, sg2044_pll, 1);

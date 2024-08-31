@@ -12,4 +12,10 @@ source "drivers/soc/xuantie/nna/Kconfig"
 source "drivers/soc/xuantie/vpu-vc8000d-kernel/Kconfig"
 source "drivers/soc/xuantie/vpu-vc8000e-kernel/Kconfig"
 source "drivers/soc/xuantie/video_memory/Kconfig"
+
+config TH1520_SYSTEM_MONITOR
+	bool "Xuantie th1520 system monitor"
+	default y
+	help
+	 This driver supports system monitor feature in Th1520 FM platform
 endmenu

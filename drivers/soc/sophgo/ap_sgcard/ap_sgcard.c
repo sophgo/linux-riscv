@@ -708,7 +708,7 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 	card->channel_count = card->host_channel_count + card->tpu_channel_count + card->media_channel_count;
 	DBG_MSG("port-num = %u, poll-size=%u\n", card->channel_count, card->pool_size);
 
-	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "share-memory");
 	if (!regs)
 		return pr_err("no registers defined\n");
 
@@ -728,7 +728,7 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 		}
 	}
 
-	regs = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "top-reg");
 	if (regs) {
 		card->top_base = devm_ioremap(dev, regs->start, resource_size(regs));
 		if (!card->top_base) {
@@ -737,7 +737,7 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 		}
 	}
 
-	regs = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config_file");
 	if (regs) {
 		card->config_file = devm_ioremap(dev, regs->start, resource_size(regs));
 		if (!card->config_file) {

@@ -55,9 +55,9 @@ static int bm1684x_set_vector(struct sophgo_pcie_ep *sg_ep)
 	u32 pcie_msi_low;
 	int i;
 
-	pcie_base = (uint64_t)sg_ep->config_base;
+	pcie_base = (uint64_t)sg_ep->ctrl_reg_base;
 	pr_err("pcie base:0x%llx, config base:%px, config:0x%llx\n",
-		pcie_base, sg_ep->config_base, (uint64_t)sg_ep->config_base);
+		pcie_base, sg_ep->ctrl_reg_base, (uint64_t)sg_ep->ctrl_reg_base);
 
 	chip_id = cpu_read32(0x5fb80000);
 	chip_id = (chip_id >> 28);
@@ -147,8 +147,8 @@ int bm1684x_ep_int(struct platform_device *pdev)
 	if (!regs)
 		return pr_err("no config reg find\n");
 
-	sg_ep->config_base = devm_ioremap(dev, regs->start, resource_size(regs));
-	if (!sg_ep->config_base) {
+	sg_ep->ctrl_reg_base = devm_ioremap(dev, regs->start, resource_size(regs));
+	if (!sg_ep->ctrl_reg_base) {
 		pr_err("config base ioremap failed\n");
 		goto failed;
 	}

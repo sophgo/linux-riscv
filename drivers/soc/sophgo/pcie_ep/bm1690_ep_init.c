@@ -22,6 +22,8 @@
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/delay.h>
+#include <linux/phy/phy.h>
+#include <linux/of_gpio.h>
 #include "ap_pcie_ep.h"
 #include "bm1690_ep_init.h"
 
@@ -311,18 +313,87 @@ static void pcie_config_axi_route(struct sophgo_pcie_ep *sg_ep)
 	writel(((cfg_end_addr >> 32) & 0xffffffff), (c2c_top_reg + 0x30));
 }
 
+static int pcie_config_soft_phy_reset(struct sophgo_pcie_ep *pcie, uint32_t rst_status)
+{
+	uint32_t val = 0;
+	void __iomem *reg_base;
+
+	//deassert = 1; assert = 0;
+	if ((rst_status != 0) && (rst_status != 1))
+		return -1;
+
+	reg_base = pcie->ctrl_reg_base;
+
+	//cfg soft_phy_rst_n , first cfg 1
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	if (rst_status == 1)
+		val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
+	else
+		val &= (~PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
+
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	udelay(1);
+
+	return 0;
+}
+
+static void pcie_check_radm_status(struct sophgo_pcie_ep *pcie)
+{
+	uint32_t val = 0;
+	void __iomem *base_addr = pcie->ctrl_reg_base;
+
+	do {
+		udelay(10);
+		if (pcie->lane_num == 8) {
+			val = readl(base_addr + 0xfc);
+			val = (val >> 29) & 0x1; //bit29, radm_idle
+		} else {
+			val = readl(base_addr + 0xe8);
+			val = (val >> 21) & 0x1; //bit21, radm_idle
+		}
+	} while (val != 1);
+}
+
+static int pcie_config_soft_cold_reset(struct sophgo_pcie_ep *pcie)
+{
+	uint32_t val = 0;
+	void __iomem  *reg_base;
+
+
+	reg_base = pcie->ctrl_reg_base;
+
+	//cfg soft_cold_rst_n , first cfg 0
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	val &= (~PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	//cfg soft_cold_rst_n , second cfg 1
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	return 0;
+}
+
 void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 {
 	pr_info("begin c2c ep init\n");
 
-	// pcie_init_phy(sg_ep);
+	phy_init(sg_ep->phy);
+	pcie_config_soft_phy_reset(sg_ep, PCIE_RST_ASSERT);
+	pcie_config_soft_phy_reset(sg_ep, PCIE_RST_DE_ASSERT);
+	pcie_config_soft_cold_reset(sg_ep);
+	phy_configure(sg_ep->phy, NULL);
 
 	pcie_wait_core_clk(sg_ep);
+	pcie_check_radm_status(sg_ep);
 	pcie_config_ctrl(sg_ep);
 	pcie_config_eq(sg_ep);
 	pcie_config_link(sg_ep);
 
 	pcie_config_ep_function(sg_ep);
+	pcie_config_axi_route(sg_ep);
 	pcie_config_ep_bar(sg_ep);
 #ifdef PCIE_EP_HUGE_BAR
 	if (link_mode == PCIE_CHIPS_C2C_LINK)
@@ -334,8 +405,6 @@ void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 	pcie_wait_link(sg_ep);
 	udelay(200);
 	pcie_check_link_status(sg_ep);
-	pcie_config_axi_route(sg_ep);
-
 }
 EXPORT_SYMBOL_GPL(bm1690_pcie_init_link);
 
@@ -343,7 +412,7 @@ static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 {
 	uint64_t socket_id = sg_ep->ep_info.socket_id;
 	uint64_t chip_id = socket_id + 1;
-	void __iomem *pcie_ctrl_base = (void __iomem *)sg_ep->config_base;
+	void __iomem *pcie_ctrl_base = (void __iomem *)sg_ep->ctrl_reg_base;
 	void __iomem *pcie_dbi_base = (void __iomem *)sg_ep->dbi_base;
 	void __iomem *c2c_top = (void __iomem *)sg_ep->c2c_top_base;
 	uint32_t val;
@@ -493,6 +562,8 @@ int bm1690_ep_int(struct platform_device *pdev)
 	struct device_node *dev_node = dev_of_node(dev);
 	struct resource *regs;
 	int ret;
+	uint64_t start;
+	uint64_t size;
 
 	ret = of_property_read_u64(dev_node, "pcie_id", &sg_ep->ep_info.pcie_id);
 	if (ret)
@@ -515,30 +586,33 @@ int bm1690_ep_int(struct platform_device *pdev)
 	if (ret)
 		return pr_err("failed get func_num\n");
 
-	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
+	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl");
 	if (!regs)
 		return pr_err("no config reg find\n");
 
-	sg_ep->config_base = devm_ioremap(dev, regs->start, resource_size(regs));
-	if (!sg_ep->config_base) {
+	sg_ep->sii_base = devm_ioremap(dev, regs->start, resource_size(regs));
+	if (!sg_ep->sii_base) {
 		pr_err("config base ioremap failed\n");
 		goto failed;
+	} else {
+		sg_ep->sii_base += 0x400;
+		sg_ep->ctrl_reg_base = sg_ep->sii_base + 0x800;
 	}
 
 	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
 	if (!regs) {
-		pr_err("no dbi reg find\n");
+		dev_err(dev, "no dbi reg find\n");
 		goto unmap_config;
 	}
 	sg_ep->dbi_base = devm_ioremap(dev, regs->start, resource_size(regs));
 	if (!sg_ep->dbi_base) {
-		pr_err("dbi base ioremap failed\n");
+		dev_err(dev, "dbi base ioremap failed\n");
 		goto unmap_config;
 	}
 
 	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "atu");
 	if (!regs) {
-		pr_err("no dbi reg find\n");
+		dev_err(dev, "no atu reg find\n");
 		goto unmap_dbi;
 	}
 
@@ -548,32 +622,31 @@ int bm1690_ep_int(struct platform_device *pdev)
 		goto unmap_dbi;
 	}
 
-	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "c2c_top");
-	if (!regs) {
-		pr_err("no dbi reg find\n");
-		goto unmap_atu;
+	ret = of_property_read_u64_index(dev_node, "c2c_top", 0, &start);
+	ret = of_property_read_u64_index(dev_node, "c2c_top", 1, &size);
+	if (ret) {
+		dev_err(dev, "no c2c top find\n");
+	} else {
+		sg_ep->c2c_top_base = devm_ioremap(dev, start, size);
+		if (!sg_ep->c2c_top_base) {
+			pr_err("c2c top base ioremap failed\n");
+			goto unmap_atu;
+		}
 	}
 
-	sg_ep->c2c_top_base = devm_ioremap(dev, regs->start, resource_size(regs));
-	if (!sg_ep->c2c_top_base) {
-		pr_err("c2c top base ioremap failed\n");
-		goto unmap_atu;
-	}
+	ret = of_property_read_u64_index(dev_node, "c2c_config_range", 0, &sg_ep->c2c_config_base);
+	ret = of_property_read_u64_index(dev_node, "c2c_config_range", 1, &sg_ep->c2c_config_size);
 
-	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "c2c_config_base");
-	if (!regs) {
-		pr_err("no dbi reg find\n");
-		goto unmap_atu;
-	}
-	sg_ep->c2c_config_base = regs->start;
-	sg_ep->c2c_config_size = resource_size(regs);
 
 	if (sg_ep->ep_info.link_role == PCIE_DATA_LINK_C2C) {
-		sg_ep->perst_gpio = devm_gpiod_get_index(dev, "perst", 0, GPIOD_IN);
-		if (IS_ERR(sg_ep->perst_gpio)) {
+		sg_ep->perst_gpio = of_get_named_gpio(dev->of_node, "perst", 0);
+		if (sg_ep->perst_gpio < 0) {
 			pr_err("failed get perst gpio\n");
 			goto unmap_c2c_top;
 		}
+		gpio_direction_input(sg_ep->perst_gpio);
+
+		sg_ep->phy = devm_of_phy_get(dev, dev->of_node, "pcie-phy");
 	}
 
 	sg_ep->set_vector = bm1690_set_vector;
@@ -587,7 +660,7 @@ unmap_atu:
 unmap_dbi:
 	devm_iounmap(dev, sg_ep->dbi_base);
 unmap_config:
-	devm_iounmap(dev, sg_ep->config_base);
+	devm_iounmap(dev, sg_ep->ctrl_reg_base);
 
 failed:
 	return -1;

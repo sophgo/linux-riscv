@@ -21,6 +21,8 @@
 #include <linux/gpio/consumer.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
+#include <linux/phy/phy.h>
+#include <linux/of_gpio.h>
 #include "ap_pcie_ep.h"
 #include "../ap_sgcard/ap_sgcard.h"
 
@@ -145,7 +147,7 @@ static irqreturn_t perst_interrupt(int irq, void *dev_id)
 {
 	struct sophgo_pcie_ep *sg_ep = (struct sophgo_pcie_ep *)dev_id;
 
-	pr_debug("%s get perst interrupt\n", sg_ep->name);
+	pr_err("%s get perst interrupt\n", sg_ep->name);
 
 	schedule_delayed_work(&sg_ep->link_work, 0);
 
@@ -207,7 +209,7 @@ void c2c_init_ep(struct work_struct *p_work)
 {
 	struct sophgo_pcie_ep *sg_ep = container_of(p_work, struct sophgo_pcie_ep, link_work.work);
 
-	pr_info("sophgo pcie c2c ep dealy work queue\n");
+	pr_err("sophgo pcie c2c ep dealy work queue\n");
 
 	bm1690_pcie_init_link(sg_ep);
 }
@@ -218,7 +220,7 @@ static int sophgo_c2c_link_probe(struct platform_device *pdev)
 	struct sophgo_pcie_ep *sg_ep = dev_get_drvdata(dev);
 	int ret;
 
-	sg_ep->perst_irqnr = gpiod_to_irq(sg_ep->perst_gpio);
+	sg_ep->perst_irqnr = gpio_to_irq(sg_ep->perst_gpio);
 	if (sg_ep->perst_irqnr < 0) {
 		pr_err("failed get pcie%d perst irq nr\n", (int)sg_ep->ep_info.pcie_id);
 		return -1;

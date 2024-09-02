@@ -361,6 +361,8 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 	struct device *dev = pcie->dev;
 	struct device_node *np = dev_of_node(pcie->dev);
 	struct resource *res;
+	uint64_t start_addr;
+	uint64_t size;
 	int ret;
 
 	if (device_property_present(dev, "pcie-card"))
@@ -423,10 +425,17 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		}
 
 		if (!pcie->c2c_top) {
-			res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "c2c_top");
-			pcie->c2c_top = devm_pci_remap_cfg_resource(pcie->dev, res);
-			if (IS_ERR(pcie->c2c_top))
-				return PTR_ERR(pcie->c2c_top);
+			ret = of_property_read_u64_index(np, "c2c_top", 0, &start_addr);
+			ret = of_property_read_u64_index(np, "c2c_top", 1, &size);
+			if (ret) {
+				dev_err(dev, "no c2c top find\n");
+			} else {
+				pcie->c2c_top = devm_ioremap(dev, start_addr, size);
+				if (!pcie->c2c_top) {
+					pr_err("c2c top base ioremap failed\n");
+					return PTR_ERR(pcie->c2c_top);
+				}
+			}
 		}
 
 		ret = of_property_read_u64_index(np, "cfg_range", 0, &pcie->cfg_start_addr);
@@ -923,7 +932,7 @@ static int pcie_config_soft_cold_reset(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
-void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
+static void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
 	void __iomem *base_addr = pcie->ctrl_reg_base;
@@ -940,7 +949,7 @@ void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
 	} while (val != 1);
 }
 
-void pcie_clear_slv_mapping(struct sophgo_dw_pcie *pcie)
+static void pcie_clear_slv_mapping(struct sophgo_dw_pcie *pcie)
 {
 	void __iomem  *ctrl_reg_base = pcie->ctrl_reg_base;
 
@@ -950,7 +959,7 @@ void pcie_clear_slv_mapping(struct sophgo_dw_pcie *pcie)
 	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_DW_ADDR_REG));
 }
 
-void pcie_config_slv_mapping(struct sophgo_dw_pcie *pcie)
+static void pcie_config_slv_mapping(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
 	void __iomem  *ctrl_reg_base = pcie->ctrl_reg_base;
@@ -979,7 +988,7 @@ void pcie_config_slv_mapping(struct sophgo_dw_pcie *pcie)
 	writel(full_addr, (ctrl_reg_base + PCIE_CTRL_SN_DW_ADDR_REG));
 }
 
-void pcie_config_mps(struct sophgo_dw_pcie *pcie)
+static void pcie_config_mps(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
 	int mps = 1;
@@ -991,7 +1000,7 @@ void pcie_config_mps(struct sophgo_dw_pcie *pcie)
 	writel(val, (base_addr + 0x78));
 }
 
-void pcie_config_mrrs(struct sophgo_dw_pcie *pcie)
+static void pcie_config_mrrs(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
 	void __iomem  *base_addr = pcie->dbi_base;
@@ -1004,7 +1013,7 @@ void pcie_config_mrrs(struct sophgo_dw_pcie *pcie)
 }
 
 
-void pcie_config_port_code(struct sophgo_dw_pcie *pcie)
+static void pcie_config_port_code(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
 	int c2c_id = 1;
@@ -1018,7 +1027,7 @@ void pcie_config_port_code(struct sophgo_dw_pcie *pcie)
 	writel(val, pcie->c2c_top);
 }
 
-void pcie_config_cascade_rc_atu(struct sophgo_dw_pcie *pcie)
+static void pcie_config_cascade_rc_atu(struct sophgo_dw_pcie *pcie)
 {
 	uint64_t up_start_addr = 0;
 	void __iomem *atu_base = pcie->atu_base;
@@ -1052,7 +1061,7 @@ void pcie_config_cascade_rc_atu(struct sophgo_dw_pcie *pcie)
 	writel(0x80000000, (atu_base+ 0x1404));
 }
 
-void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)
+static void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)
 {
 	pcie_clear_slv_mapping(pcie);
 	pcie_config_slv_mapping(pcie);

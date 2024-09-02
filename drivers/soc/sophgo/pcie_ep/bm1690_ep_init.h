@@ -41,4 +41,10 @@
 
 #define C2C_PCIE_DBI2_OFFSET                    0x100000
 
+enum pcie_rst_status {
+	PCIE_RST_ASSERT = 0,
+	PCIE_RST_DE_ASSERT,
+	PCIE_RST_STATUS_BUTT
+};
+
 #endif

@@ -22,6 +22,7 @@
 #include <linux/reset.h>
 #include "sdhci-pltfm.h"
 #include "sdhci-sophgo.h"
+#include <linux/of_gpio.h>
 
 #define DRIVER_NAME "bm"
 
@@ -106,15 +107,33 @@ static int sdhci_bm_select_drive_strength(struct mmc_card *card,
 	uint32_t reg;
 	int driver_type;
 
-	pr_err("%s max_dtr %d, host_drv %d, card_drv %d, drv_type %d\n",
+	pr_debug("%s max_dtr %d, host_drv %d, card_drv %d, drv_type %d\n",
 		mmc_hostname(mmc),
 		max_dtr, host_drv, card_drv, *drv_type);
 
-	driver_type = MMC_SET_DRIVER_TYPE_C;
-	*drv_type = MMC_SET_DRIVER_TYPE_C;
+	*drv_type = SD_DRIVER_TYPE_B;
+	if (max_dtr == UHS_SDR104_BUS_SPEED || max_dtr == MMC_HS200_MAX_DTR) {
+		driver_type = MMC_SET_DRIVER_TYPE_A;
+		*drv_type = SD_DRIVER_TYPE_A;
 
-	reg = (1 << PHY_CNFG_PHY_PWRGOOD) | (0xe << PHY_CNFG_PAD_SP) |
-		(0xe << PHY_CNFG_PAD_SN) | (1 << PHY_CNFG_PHY_RSTN);
+		reg = (1 << PHY_CNFG_PHY_PWRGOOD) | (0xe << PHY_CNFG_PAD_SP) | (0xe << PHY_CNFG_PAD_SN) | (1 << PHY_CNFG_PHY_RSTN);
+
+	}
+	else if (max_dtr == UHS_DDR50_BUS_SPEED) {
+		driver_type = MMC_SET_DRIVER_TYPE_B;
+		*drv_type = SD_DRIVER_TYPE_B;
+		reg = (1 << PHY_CNFG_PHY_PWRGOOD) | (0x8 << PHY_CNFG_PAD_SP) | (0x8 << PHY_CNFG_PAD_SN) | (1 << PHY_CNFG_PHY_RSTN);
+	}
+	else if (max_dtr == UHS_SDR50_BUS_SPEED) {
+		driver_type = MMC_SET_DRIVER_TYPE_B;
+		*drv_type = SD_DRIVER_TYPE_B;
+		reg = (1 << PHY_CNFG_PHY_PWRGOOD) | (0xc << PHY_CNFG_PAD_SP) | (0xc << PHY_CNFG_PAD_SN) | (1 << PHY_CNFG_PHY_RSTN);
+	}
+	else {
+		return 0;
+	}
+
+	// Set PAD_SN PAD_SP
 	sdhci_writel(host, reg, SDHCI_P_PHY_CNFG);
 
 	return driver_type;
@@ -172,7 +191,11 @@ static unsigned int bm_sdhci_get_min_clock(struct sdhci_host *host)
 
 static unsigned int bm_sdhci_get_max_clock(struct sdhci_host *host)
 {
-	return 10 * 1000 * 1000;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_bm_host *bm_host = sdhci_pltfm_priv(pltfm_host);
+	unsigned long source_clock = clk_get_rate(bm_host->clk);
+
+	return source_clock;
 }
 
 #if 0 // FIXME, SD card not working after this.
@@ -198,61 +221,61 @@ void bm_sdhci_reset(struct sdhci_host *host, u8 mask)
 	bm_sdhci_hw_reset(host);
 #endif
 	sdhci_reset(host, mask);
-
+	mdelay(10);
 	if (mask & SDHCI_RESET_ALL)
 		bm_sdhci_phy_init(host);
 }
 
 int bm_sdhci_phy_init(struct sdhci_host *host)
 {
-	// Asset reset of phy
+	// Wait for the PHY power on ready
+	while (!(sdhci_readl(host, SDHCI_P_PHY_CNFG) & (1 << PHY_CNFG_PHY_PWRGOOD))) {
+		;
+	}
+
+	// Reset phy
 	sdhci_writel(host, sdhci_readl(host, SDHCI_P_PHY_CNFG) & ~(1 << PHY_CNFG_PHY_RSTN), SDHCI_P_PHY_CNFG);
 
 	// Set PAD_SN PAD_SP
-	sdhci_writel(host,
-		     (1 << PHY_CNFG_PHY_PWRGOOD) | (0x9 << PHY_CNFG_PAD_SP) | (0x8 << PHY_CNFG_PAD_SN),
-		     SDHCI_P_PHY_CNFG);
+	sdhci_writel(host, (1 << PHY_CNFG_PHY_PWRGOOD) |
+			(0x4 << PHY_CNFG_PAD_SP) | (0x0 << PHY_CNFG_PAD_SN), SDHCI_P_PHY_CNFG);
 
 	// Set CMDPAD
 	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
 			(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CMDPAD_CNFG);
 
 	// Set DATAPAD
-	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
-			(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_DATPAD_CNFG);
+	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (0x1 << PAD_CNFG_WEAKPULL_EN) |
+			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_DATPAD_CNFG);
 
 	// Set CLKPAD
-	sdhci_writew(host,
-		     (0x2 << PAD_CNFG_RXSEL) | (0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N),
-		     SDHCI_P_CLKPAD_CNFG);
-
-	// Set STB_PAD
-	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (0x2 << PAD_CNFG_WEAKPULL_EN) |
-			(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_STBPAD_CNFG);
+	sdhci_writew(host, (0x1 << PAD_CNFG_RXSEL) | (0x0 << PAD_CNFG_WEAKPULL_EN) |
+			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CLKPAD_CNFG);
 
 	// Set RSTPAD
-	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
-			(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_RSTNPAD_CNFG);
+	sdhci_writew(host, (0x3 << PAD_CNFG_RXSEL) | (0x1 << PAD_CNFG_WEAKPULL_EN) |
+			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_RSTNPAD_CNFG);
 
-	// Set SDCLKDL_CNFG, EXTDLY_EN = 1, fix delay
-	sdhci_writeb(host, (1 << SDCLKDL_CNFG_EXTDLY_EN), SDHCI_P_SDCLKDL_CNFG);
+	// Set STB_PAD
+	sdhci_writew(host, (0x0 << PAD_CNFG_RXSEL) | (0x2 << PAD_CNFG_WEAKPULL_EN) |
+			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_STBPAD_CNFG);
 
-	// Add 10 * 70ps = 0.7ns for output delay
-	sdhci_writeb(host, 10, SDHCI_P_SDCLKDL_DC);
+	// Set COMMDL_CNFG
+	sdhci_writeb(host, 0x0, SDHCI_P_COMMDL_CNFG);
 
-	//if (host->index == 1) {
-	//	 Set SMPLDL_CNFG, Bypass
-	sdhci_writeb(host, (1 << SMPLDL_CNFG_BYPASS_EN), SDHCI_P_SMPLDL_CNFG);
-	//}
-	//else {
-	//	Set SMPLDL_CNFG, INPSEL_CNFG = 0x2
-	//sdhci_writeb(host, (0x2 << SMPLDL_CNFG_INPSEL_CNFG), SDHCI_P_SMPLDL_CNFG);
-	//}
+	// Set SDCLKDL_CNFG
+	sdhci_writeb(host, 0x0, SDHCI_P_SDCLKDL_CNFG);
 
-	// Set ATDL_CNFG, tuning clk not use for init
-	sdhci_writeb(host, (2 << ATDL_CNFG_INPSEL_CNFG), SDHCI_P_ATDL_CNFG);
+	// Add 70 * 127 ps = 8.89ns
+	sdhci_writeb(host, 0x7f, SDHCI_P_SDCLKDL_DC);
 
-	// deasset reset of phy
+	// Set SMPLDL_CNFG
+	sdhci_writeb(host, 0xC, SDHCI_P_SMPLDL_CNFG);
+
+	// Set ATDL_CNFG
+	sdhci_writeb(host, 0xC, SDHCI_P_ATDL_CNFG);
+
+	// De-asset reset of phy
 	sdhci_writel(host, sdhci_readl(host, SDHCI_P_PHY_CNFG) | (1 << PHY_CNFG_PHY_RSTN), SDHCI_P_PHY_CNFG);
 
 	return 0;
@@ -455,6 +478,34 @@ out_unlock:
 	return err;
 }
 
+static void switch_voltage_use_gpio(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_bm_host *bm_host = sdhci_pltfm_priv(pltfm_host);
+	int switch_voltage_gpio;
+
+	struct device_node *np = bm_host->pdev->dev.of_node;
+
+	if (!np)
+		return;
+
+	switch_voltage_gpio = of_get_named_gpio(np, "switch-voltage-gpio", 0);
+
+	if (switch_voltage_gpio < 0)
+		return;
+
+	if (gpio_request(switch_voltage_gpio, "sd-switch-voltage"))
+		return;
+
+	pr_err("SDHCI_SOPHGO: get gpio successfully, index is %d\n", switch_voltage_gpio);
+	gpio_direction_output(switch_voltage_gpio, 0);
+	mdelay(100);
+	gpio_direction_output(switch_voltage_gpio, 1);
+	mdelay(100);
+	return;
+
+}
+
 /* ------------- bm palludium emmc --------------- */
 static const struct sdhci_ops sdhci_bm_pldm_emmc_ops = {
 	.reset = sdhci_reset,
@@ -473,25 +524,43 @@ static const struct sdhci_pltfm_data sdhci_bm_pldm_emmc_pdata = {
 };
 
 /* ------------ bm asic ------------ */
-static const struct sdhci_ops sdhci_bm_ops = {
+static const struct sdhci_ops sdhci_bm_emmc_ops = {
 	.reset = bm_sdhci_reset,
 	.set_clock = sdhci_set_clock,
 	.set_bus_width = sdhci_set_bus_width,
 	.set_uhs_signaling = sdhci_bm_set_uhs_signaling,
 	.platform_execute_tuning = sdhci_bm_execute_software_tuning,
 	.adma_write_desc = dwcmshc_adma_write_desc,
+	.get_max_clock = bm_sdhci_get_max_clock,
+	.get_min_clock = bm_sdhci_get_min_clock,
+};
+
+static const struct sdhci_ops sdhci_bm_sd_ops = {
+	.reset = bm_sdhci_reset,
+	.set_clock = sdhci_set_clock,
+	.set_bus_width = sdhci_set_bus_width,
+	.set_uhs_signaling = sdhci_bm_set_uhs_signaling,
+	.platform_execute_tuning = sdhci_bm_execute_software_tuning,
+	.adma_write_desc = dwcmshc_adma_write_desc,
+	.get_max_clock = bm_sdhci_get_max_clock,
+	.get_min_clock = bm_sdhci_get_min_clock,
+	.voltage_switch = switch_voltage_use_gpio,
 };
 
 static const struct sdhci_pltfm_data sdhci_bm_emmc_pdata = {
-	.ops = &sdhci_bm_ops,
-	.quirks = SDHCI_QUIRK_INVERTED_WRITE_PROTECT,
-	.quirks2 = 0,
+	.ops = &sdhci_bm_emmc_ops,
+	.quirks = SDHCI_QUIRK_INVERTED_WRITE_PROTECT | SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
 };
 
 static const struct sdhci_pltfm_data sdhci_bm_sd_pdata = {
-	.ops = &sdhci_bm_ops,
-	.quirks = SDHCI_QUIRK_INVERTED_WRITE_PROTECT,
-	.quirks2 = SDHCI_QUIRK2_NO_1_8_V,
+	.ops = &sdhci_bm_sd_ops,
+	.quirks = SDHCI_QUIRK_INVERTED_WRITE_PROTECT | SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
+#ifdef CONFIG_MMC_SDHCI_SOPHGO_NO_1_8_V
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN | SDHCI_QUIRK2_NO_1_8_V,
+#else
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
+#endif
 };
 
 
@@ -541,7 +610,6 @@ static int sdhci_bm_probe(struct platform_device *pdev)
 			ret = PTR_ERR(bm_host->reset);
 			goto pltfm_free;
 		}
-
 		bm_host->clkaxi = devm_clk_get(&pdev->dev, "clk_gate_axi_emmc");
 		if (IS_ERR(bm_host->clkaxi))
 			dev_err(&pdev->dev, "get emmc clk axi failed\n");

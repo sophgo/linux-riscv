@@ -11,6 +11,8 @@
 #include "sg2044-clock.dtsi"
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"
+#include "sg2044-pcie-intc.dtsi"
+//#include "sg2044-pcie-1rc.dtsi"
 
 / {
 	/delete-node/ bm-emmc@703000A000;

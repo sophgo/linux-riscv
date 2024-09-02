@@ -104,6 +104,8 @@
 		bus-width = <4>;
 		no-sdio;
 		no-mmc;
+		no-1-8-v;
+		switch-voltage-gpio = <&port0a 27 0>;
 		resets = <&rst SG2044_RST_SD>;
 		reset-names = "sdio";
 		clocks =

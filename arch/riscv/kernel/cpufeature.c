@@ -255,6 +255,22 @@ void __init riscv_fill_hwcap(void)
 			print_str[j++] = (char)('a' + i);
 	pr_info("riscv: base ISA extensions %s\n", print_str);
 
+	#ifdef CONFIG_VECTOR
+	if (elf_hwcap & COMPAT_HWCAP_ISA_V)
+		static_branch_enable(&cpu_hwcap_vector);
+	if (hide_v0p7) {
+		bitmap_clear(riscv_isa, RISCV_ISA_EXT_v, RISCV_ISA_EXT_MAX);
+		elf_hwcap &= ~COMPAT_HWCAP_ISA_V;
+	}
+	#else
+	/* ISA string from the device tree might have a 'v' in it,
+	 * but CONFIG_VECTOR is disabled, so let's hide it. We should
+	 * do this _before_ the ELF capabilities are printed.
+	 */
+	if (elf_hwcap & COMPAT_HWCAP_ISA_V)
+		elf_hwcap &= ~COMPAT_HWCAP_ISA_V;
+	#endif
+
 	memset(print_str, 0, sizeof(print_str));
 	for (i = 0, j = 0; i < NUM_ALPHA_EXTS; i++)
 		if (elf_hwcap & BIT_MASK(i))
@@ -266,15 +282,6 @@ void __init riscv_fill_hwcap(void)
 		if (j >= 0)
 			static_branch_enable(&riscv_isa_ext_keys[j]);
 	}
-
-	#ifdef CONFIG_VECTOR
-	if (elf_hwcap & COMPAT_HWCAP_ISA_V)
-		static_branch_enable(&cpu_hwcap_vector);
-	if (hide_v0p7) {
-		bitmap_clear(riscv_isa, RISCV_ISA_EXT_v, RISCV_ISA_EXT_MAX);
-		elf_hwcap &= ~COMPAT_HWCAP_ISA_V;
-	}
-	#endif
 }
 
 #ifdef CONFIG_RISCV_ALTERNATIVE

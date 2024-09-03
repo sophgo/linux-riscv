@@ -26,7 +26,6 @@
 #define NUM_ALPHA_EXTS ('z' - 'a' + 1)
 
 unsigned long elf_hwcap __read_mostly;
-static bool hide_v0p7 = 0;
 
 /* Host ISA bitmap */
 static DECLARE_BITMAP(riscv_isa, RISCV_ISA_EXT_MAX) __read_mostly;
@@ -37,6 +36,7 @@ EXPORT_SYMBOL(riscv_isa_ext_keys);
 #ifdef CONFIG_VECTOR
 __ro_after_init DEFINE_STATIC_KEY_FALSE(cpu_hwcap_vector);
 
+static bool hide_v0p7 = 0;
 static int __init do_hide_v0p7_ext(char *str)
 {
 	hide_v0p7 = 1;

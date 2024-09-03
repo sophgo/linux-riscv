@@ -226,56 +226,142 @@ void bm_sdhci_reset(struct sdhci_host *host, u8 mask)
 		bm_sdhci_phy_init(host);
 }
 
+// int bm_sdhci_phy_init(struct sdhci_host *host)
+// {
+// 	// Wait for the PHY power on ready
+// 	while (!(sdhci_readl(host, SDHCI_P_PHY_CNFG) & (1 << PHY_CNFG_PHY_PWRGOOD))) {
+// 		;
+// 	}
+
+// 	// Reset phy
+// 	sdhci_writel(host, sdhci_readl(host, SDHCI_P_PHY_CNFG) & ~(1 << PHY_CNFG_PHY_RSTN), SDHCI_P_PHY_CNFG);
+
+// 	// Set PAD_SN PAD_SP
+// 	sdhci_writel(host, (1 << PHY_CNFG_PHY_PWRGOOD) |
+// 			(0x4 << PHY_CNFG_PAD_SP) | (0x0 << PHY_CNFG_PAD_SN), SDHCI_P_PHY_CNFG);
+
+// 	// Set CMDPAD
+// 	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
+// 			(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CMDPAD_CNFG);
+
+// 	// Set DATAPAD
+// 	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (0x1 << PAD_CNFG_WEAKPULL_EN) |
+// 			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_DATPAD_CNFG);
+
+// 	// Set CLKPAD
+// 	sdhci_writew(host, (0x1 << PAD_CNFG_RXSEL) | (0x0 << PAD_CNFG_WEAKPULL_EN) |
+// 			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CLKPAD_CNFG);
+
+// 	// Set RSTPAD
+// 	sdhci_writew(host, (0x3 << PAD_CNFG_RXSEL) | (0x1 << PAD_CNFG_WEAKPULL_EN) |
+// 			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_RSTNPAD_CNFG);
+
+// 	// Set STB_PAD
+// 	sdhci_writew(host, (0x0 << PAD_CNFG_RXSEL) | (0x2 << PAD_CNFG_WEAKPULL_EN) |
+// 			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_STBPAD_CNFG);
+
+// 	// Set COMMDL_CNFG
+// 	sdhci_writeb(host, 0x0, SDHCI_P_COMMDL_CNFG);
+
+// 	// Set SDCLKDL_CNFG
+// 	sdhci_writeb(host, 0x0, SDHCI_P_SDCLKDL_CNFG);
+
+// 	// Add 70 * 127 ps = 8.89ns
+// 	sdhci_writeb(host, 0x7f, SDHCI_P_SDCLKDL_DC);
+
+// 	// Set SMPLDL_CNFG
+// 	sdhci_writeb(host, 0xC, SDHCI_P_SMPLDL_CNFG);
+
+// 	// Set ATDL_CNFG
+// 	sdhci_writeb(host, 0xC, SDHCI_P_ATDL_CNFG);
+
+// 	// De-asset reset of phy
+// 	sdhci_writel(host, sdhci_readl(host, SDHCI_P_PHY_CNFG) | (1 << PHY_CNFG_PHY_RSTN), SDHCI_P_PHY_CNFG);
+
+// 	return 0;
+// }
+
 int bm_sdhci_phy_init(struct sdhci_host *host)
 {
-	// Wait for the PHY power on ready
-	while (!(sdhci_readl(host, SDHCI_P_PHY_CNFG) & (1 << PHY_CNFG_PHY_PWRGOOD))) {
-		;
-	}
-
-	// Reset phy
+	// Asset reset of phy
 	sdhci_writel(host, sdhci_readl(host, SDHCI_P_PHY_CNFG) & ~(1 << PHY_CNFG_PHY_RSTN), SDHCI_P_PHY_CNFG);
 
 	// Set PAD_SN PAD_SP
-	sdhci_writel(host, (1 << PHY_CNFG_PHY_PWRGOOD) |
-			(0x4 << PHY_CNFG_PAD_SP) | (0x0 << PHY_CNFG_PAD_SN), SDHCI_P_PHY_CNFG);
+	sdhci_writel(host,
+	(1 << PHY_CNFG_PHY_PWRGOOD) | (0x9 << PHY_CNFG_PAD_SP) | (0x8 << PHY_CNFG_PAD_SN),
+	SDHCI_P_PHY_CNFG);
 
 	// Set CMDPAD
 	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
-			(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CMDPAD_CNFG);
+	(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CMDPAD_CNFG);
 
 	// Set DATAPAD
-	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (0x1 << PAD_CNFG_WEAKPULL_EN) |
-			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_DATPAD_CNFG);
+	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
+	(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_DATPAD_CNFG);
 
 	// Set CLKPAD
-	sdhci_writew(host, (0x1 << PAD_CNFG_RXSEL) | (0x0 << PAD_CNFG_WEAKPULL_EN) |
-			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_CLKPAD_CNFG);
-
-	// Set RSTPAD
-	sdhci_writew(host, (0x3 << PAD_CNFG_RXSEL) | (0x1 << PAD_CNFG_WEAKPULL_EN) |
-			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_RSTNPAD_CNFG);
+	sdhci_writew(host,
+	(0x2 << PAD_CNFG_RXSEL) | (0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N),
+	SDHCI_P_CLKPAD_CNFG);
 
 	// Set STB_PAD
-	sdhci_writew(host, (0x0 << PAD_CNFG_RXSEL) | (0x2 << PAD_CNFG_WEAKPULL_EN) |
-			(0x2 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_STBPAD_CNFG);
+	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (0x2 << PAD_CNFG_WEAKPULL_EN) |
+	(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_STBPAD_CNFG);
 
-	// Set COMMDL_CNFG
-	sdhci_writeb(host, 0x0, SDHCI_P_COMMDL_CNFG);
+	// Set RSTPAD
+	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
+	(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_RSTNPAD_CNFG);
 
-	// Set SDCLKDL_CNFG
-	sdhci_writeb(host, 0x0, SDHCI_P_SDCLKDL_CNFG);
+	// Set SDCLKDL_CNFG, EXTDLY_EN = 1, fix delay
+	sdhci_writeb(host, (1 << SDCLKDL_CNFG_EXTDLY_EN), SDHCI_P_SDCLKDL_CNFG);
 
-	// Add 70 * 127 ps = 8.89ns
-	sdhci_writeb(host, 0x7f, SDHCI_P_SDCLKDL_DC);
+	// Add 10 * 70ps = 0.7ns for output delay
+	sdhci_writeb(host, 10, SDHCI_P_SDCLKDL_DC);
 
-	// Set SMPLDL_CNFG
-	sdhci_writeb(host, 0xC, SDHCI_P_SMPLDL_CNFG);
+	//if (host->index == 1) {
+	// Set SMPLDL_CNFG, Bypass
+	sdhci_writeb(host, (1 << SMPLDL_CNFG_BYPASS_EN), SDHCI_P_SMPLDL_CNFG);
+	//}
+	//else {
+	// Set SMPLDL_CNFG, INPSEL_CNFG = 0x2
+	//sdhci_writeb(host, (0x2 << SMPLDL_CNFG_INPSEL_CNFG), SDHCI_P_SMPLDL_CNFG);
+	//}
 
-	// Set ATDL_CNFG
-	sdhci_writeb(host, 0xC, SDHCI_P_ATDL_CNFG);
+	// Set ATDL_CNFG, tuning clk not use for init
+	sdhci_writeb(host, (2 << ATDL_CNFG_INPSEL_CNFG), SDHCI_P_ATDL_CNFG);
 
-	// De-asset reset of phy
+	// Set CLKPAD
+	sdhci_writew(host,
+	(0x2 << PAD_CNFG_RXSEL) | (0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N),
+	SDHCI_P_CLKPAD_CNFG);
+
+	// Set STB_PAD
+	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (0x2 << PAD_CNFG_WEAKPULL_EN) |
+	(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_STBPAD_CNFG);
+
+	// Set RSTPAD
+	sdhci_writew(host, (0x2 << PAD_CNFG_RXSEL) | (1 << PAD_CNFG_WEAKPULL_EN) |
+	(0x3 << PAD_CNFG_TXSLEW_CTRL_P) | (0x2 << PAD_CNFG_TXSLEW_CTRL_N), SDHCI_P_RSTNPAD_CNFG);
+
+	// Set SDCLKDL_CNFG, EXTDLY_EN = 1, fix delay
+	sdhci_writeb(host, (1 << SDCLKDL_CNFG_EXTDLY_EN), SDHCI_P_SDCLKDL_CNFG);
+
+	// Add 10 * 70ps = 0.7ns for output delay
+	sdhci_writeb(host, 10, SDHCI_P_SDCLKDL_DC);
+
+	//if (host->index == 1) {
+	// Set SMPLDL_CNFG, Bypass
+	sdhci_writeb(host, (1 << SMPLDL_CNFG_BYPASS_EN), SDHCI_P_SMPLDL_CNFG);
+	//}
+	//else {
+	// Set SMPLDL_CNFG, INPSEL_CNFG = 0x2
+	//sdhci_writeb(host, (0x2 << SMPLDL_CNFG_INPSEL_CNFG), SDHCI_P_SMPLDL_CNFG);
+	//}
+
+	// Set ATDL_CNFG, tuning clk not use for init
+	sdhci_writeb(host, (2 << ATDL_CNFG_INPSEL_CNFG), SDHCI_P_ATDL_CNFG);
+
+	// deasset reset of phy
 	sdhci_writel(host, sdhci_readl(host, SDHCI_P_PHY_CNFG) | (1 << PHY_CNFG_PHY_RSTN), SDHCI_P_PHY_CNFG);
 
 	return 0;

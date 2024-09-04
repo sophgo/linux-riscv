@@ -1325,6 +1325,33 @@ int bitmap_find_free_region(unsigned long *bitmap, unsigned int bits, int order)
 EXPORT_SYMBOL(bitmap_find_free_region);
 
 /**
+ * bitmap_find_free_region_offset - find a contiguous aligned mem region from a specified offset
+ *	@bitmap: array of unsigned longs corresponding to the bitmap
+ *	@bits: number of bits in the bitmap
+ *	@order: region size (log base 2 of number of bits) to find
+ *	@offset: starting bit position to begin the search
+ *
+ * Find a region of free (zero) bits in a @bitmap of @bits bits starting from
+ * a specified @offset and allocate them (set them to one). Only consider
+ * regions of length a power (@order) of two, aligned to that power of two.
+ *
+ * Return the bit offset in bitmap of the allocated region,
+ * or -errno on failure.
+ */
+int bitmap_find_free_region_offset(unsigned long *bitmap, unsigned int bits, int order, unsigned int offset)
+{
+    unsigned int pos, end;		/* scans bitmap by regions of size order */
+
+	for (pos = offset ; (end = pos + (1U << order)) <= bits; pos = end) {
+		if (!__reg_op(bitmap, pos, order, REG_OP_ISFREE))
+			continue;
+		__reg_op(bitmap, pos, order, REG_OP_ALLOC);
+		return pos;
+	}
+	return -ENOMEM;
+}
+EXPORT_SYMBOL(bitmap_find_free_region_offset);
+/**
  * bitmap_release_region - release allocated bitmap region
  *	@bitmap: array of unsigned longs corresponding to the bitmap
  *	@pos: beginning of bit region to release

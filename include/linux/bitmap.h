@@ -221,6 +221,7 @@ void bitmap_onto(unsigned long *dst, const unsigned long *orig,
 void bitmap_fold(unsigned long *dst, const unsigned long *orig,
 		unsigned int sz, unsigned int nbits);
 int bitmap_find_free_region(unsigned long *bitmap, unsigned int bits, int order);
+int bitmap_find_free_region_offset(unsigned long *bitmap, unsigned int bits, int order, unsigned int offset);
 void bitmap_release_region(unsigned long *bitmap, unsigned int pos, int order);
 int bitmap_allocate_region(unsigned long *bitmap, unsigned int pos, int order);
 

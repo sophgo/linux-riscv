@@ -889,6 +889,12 @@
 					      <&cpu3_intc 3>, <&cpu3_intc 7>;
 		};
 
+		aclint_sswi: aclint-sswi@ffdc00c000 {
+			compatible = "riscv,aclint-sswi";
+			reg = <0xff 0xdc00c000 0x0 0x00010000>;
+			interrupt-controller;
+		};
+
 		secsys_reg: secsys-reg@ffff200000 {
 			compatible = "syscon";
 			reg = <0xff 0xff200000 0x0 0x10000>;

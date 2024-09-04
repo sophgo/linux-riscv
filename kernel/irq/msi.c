@@ -16,7 +16,7 @@
 #include <linux/slab.h>
 #include <linux/sysfs.h>
 #include <linux/pci.h>
-
+#include <linux/stddef.h>
 #include "internals.h"
 
 static inline int msi_sysfs_create_group(struct device *dev);
@@ -860,10 +860,14 @@ int __msi_domain_alloc_irqs(struct irq_domain *domain, struct device *dev,
 	struct msi_desc *desc;
 	int allocated = 0;
 	int i, ret, virq;
+	struct pci_dev *pdev = container_of(dev, struct pci_dev, dev);;
 
 	ret = msi_domain_prepare_irqs(domain, dev, nvec, &arg);
 	if (ret)
 		return ret;
+
+	if (pdev->msix_enabled)
+		arg.flags |= MSI_ALLOC_FLAGS_MSIX_ENABLED;
 
 	/*
 	 * This flag is set by the PCI layer as we need to activate

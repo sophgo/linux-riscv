@@ -429,7 +429,7 @@ static const struct sg2044_gate_clock gate_clks[] = {
 	{ GATE_CLK_INTC3, "clk_gate_intc3", "clk_gate_top_axi0",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x20, 23, 0 },
 	{ GATE_CLK_CXP_CFG, "clk_gate_cxp_cfg", "clk_gate_top_axi0",
-		CLK_SET_RATE_PARENT, 0x2000, 15, 0 },
+		CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, 0x2000, 15, 0 },
 	{ GATE_CLK_TOP_AXI_HSPERI, "clk_gate_top_axi_hsperi", "clk_div_top_axi_hsperi",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 6, 0 },
 	{ GATE_CLK_AXI_SD, "clk_gate_axi_sd", "clk_div_top_axi_hsperi",
@@ -447,7 +447,7 @@ static const struct sg2044_gate_clock gate_clks[] = {
 	{ GATE_CLK_SYSDMA_AXI, "clk_gate_sysdma_axi", "clk_div_top_axi_hsperi",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2004, 0, 0 },
 	{ GATE_CLK_CXP_MAC, "clk_gate_cxp_mac", "clk_mux_cxp_mac",
-		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2000, 14, 0 },
+		CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, 0x2000, 14, 0 },
 };
 
 /* mux clocks */

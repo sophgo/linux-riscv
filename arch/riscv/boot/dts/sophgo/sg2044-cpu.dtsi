@@ -1148,8 +1148,9 @@
 		};
 
 		clint_smode: clint@6d4400c000 {
-		         compatible = "sophgo,sg2044-clint0";
+		         compatible = "sophgo,sg2044-clint";
 		         reg = <0x0000006d 0x4400c000 0x00000000 0x00004000>;
+			 interrupt-controller;
 		         interrupts-extended = <&cpu0_intc  1>, <&cpu0_intc  5>,
 		                               <&cpu1_intc  1>, <&cpu1_intc  5>,
 		                               <&cpu2_intc  1>, <&cpu2_intc  5>,

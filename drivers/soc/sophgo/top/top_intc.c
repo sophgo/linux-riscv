@@ -13,6 +13,7 @@
 
 #define MAX_IRQ_NUMBER 32
 #define TOP_INTC_NUM 2
+#define MSIX_IRQ_OFFSET 14
 /*
  * here we assume all plic hwirq and tic hwirq should
  * be contiguous.
@@ -86,15 +87,23 @@ static int top_intc_domain_alloc(struct irq_domain *domain,
 				void *args)
 {
 	unsigned long flags;
+	msi_alloc_info_t * msi_arg;
 	irq_hw_number_t hwirq;
 	int i, type, ret = -1;
 	struct top_intc_data *data = domain->host_data;
 
 	if (data->for_msi) {
 		// dynamically alloc hwirq
+		msi_arg = (msi_alloc_info_t *)args;
 		spin_lock_irqsave(&data->lock, flags);
-		ret = bitmap_find_free_region(data->irq_bitmap, data->irq_num,
+		if (msi_arg->flags & MSI_ALLOC_FLAGS_MSIX_ENABLED) {
+			ret = bitmap_find_free_region_offset(data->irq_bitmap, data->irq_num,
+						order_base_2(nr_irqs), MSIX_IRQ_OFFSET);
+		} else {
+			ret = bitmap_find_free_region(data->irq_bitmap, data->irq_num,
 						order_base_2(nr_irqs));
+		}
+
 		spin_unlock_irqrestore(&data->lock, flags);
 
 		if (ret < 0) {

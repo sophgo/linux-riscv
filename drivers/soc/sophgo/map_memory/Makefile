@@ -1,0 +1,2 @@
+
+obj-$(CONFIG_SOPHGO_AP_TPU_CARD)	+= bm1690_map.o

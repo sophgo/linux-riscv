@@ -153,6 +153,7 @@ struct v_port {
 	struct circ_buf port_rx_buf;
 	uint64_t stream_id;
 	atomic_t cnt_available;
+	atomic_t wake_up_task_cnt;
 	wait_queue_head_t read_available;
 	atomic_t cnt_opened;
 	struct delayed_work destroy_stream_work;
@@ -567,6 +568,9 @@ static int tpu_int(struct sg_card *card, struct v_channel *channel)
 	int c;
 	uint64_t head;
 	uint64_t tail;
+	struct timespec64 ts;
+
+	ktime_get_real_ts64(&ts);
 
 	rx_buf = channel->rx_buf;
 	port_list = channel->port_list.next;
@@ -583,7 +587,7 @@ static int tpu_int(struct sg_card *card, struct v_channel *channel)
 
 		copy_from_circbuf_not_change_index((char *)&response_from_tpu, rx_buf,
 						   sizeof(response_from_tpu), card->pool_size);
-		response_from_tpu.kr_time = read_arch_timer();
+		response_from_tpu.kr_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
 		copy_to_circbuf(port_rx_buf, (char *)&response_from_tpu, sizeof(response_from_tpu), card->pool_size);
 
 		all_len += len;
@@ -1247,6 +1251,7 @@ static int create_stream_cdev(struct sg_card *card, struct sg_stream_info *strea
 		return -ENOENT;
 	}
 	atomic_set(&port->cnt_available, 0);
+	atomic_set(&port->wake_up_task_cnt, 0);
 	init_waitqueue_head(&port->read_available);
 	port->devno = card->cdev_info.devno + ret;
 	port->parent = card->cdev_info.dev;
@@ -1364,24 +1369,51 @@ static int sg_wake_stream_close(struct inode *inode, struct file *file)
 
 static long sg_wake_stream_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	struct wake_up_stream_port *port = file->private_data;
-	//struct sg_card *card = port->card;
+	struct wake_up_stream_port *wake_up_port = file->private_data;
+	struct sg_card *card = wake_up_port->card;
+	struct v_channel *channel = &card->channel[CHANNEL_HOST];
+	struct v_port *port;
 	uint64_t stream_id;
+	unsigned long flags;
 
-	DBG_MSG("cmd: 0x%x\n", cmd);
+
+	if (copy_from_user(&stream_id, (void __user *)arg, sizeof(uint64_t)))
+		return -EFAULT;
+
+	DBG_MSG("cmd: 0x%x, stream id:0x%llx\n", cmd, stream_id);
 
 	switch (cmd) {
 	case SG_WAKE_UP_STREAM:
-		if (copy_from_user(&stream_id, (void __user *)arg, sizeof(uint64_t)))
-			return -EFAULT;
-
 		if (stream_id == WAKE_UP_ALL_STREAM) {
-			wake_up(&port->resource_available);
+			spin_lock_irqsave(&channel->port_lock, flags);
+			list_for_each_entry(port, &channel->port_list, list) {
+				if (port->stream_id == 0)
+					continue;
+				atomic_add(1, &port->wake_up_task_cnt);
+				DBG_MSG("[%s] wake up cnt:0x%x\n", port->name, port->wake_up_task_cnt.counter);
+			}
+			spin_unlock_irqrestore(&channel->port_lock, flags);
+
+			wake_up(&wake_up_port->resource_available);
 			DBG_MSG("wake_up_all_stream\n");
 		} else {
 			DBG_MSG("wake up stream:0x%llx\n", stream_id);
 			//TODO: for each stream
 		}
+		break;
+	case SG_STREAM_RUNNING:
+		spin_lock_irqsave(&channel->port_lock, flags);
+		list_for_each_entry(port, &channel->port_list, list) {
+			if (stream_id == port->stream_id) {
+				if (atomic_read(&port->wake_up_task_cnt)) {
+					DBG_MSG("wake up task cnt:0x%x\n", atomic_read(&port->wake_up_task_cnt));
+					atomic_dec(&port->wake_up_task_cnt);
+				}
+
+				break;
+			}
+		}
+		spin_unlock_irqrestore(&channel->port_lock, flags);
 		break;
 	default:
 		pr_err("unknown ioctl command 0x%x\n", cmd);
@@ -1393,11 +1425,22 @@ static long sg_wake_stream_ioctl(struct file *file, unsigned int cmd, unsigned l
 
 static __poll_t sg_wake_stream_poll(struct file *file, poll_table *wait)
 {
-	struct wake_up_stream_port *port = file->private_data;
+	struct wake_up_stream_port *wake_up_port = file->private_data;
+	struct v_channel *channel = &wake_up_port->card->channel[CHANNEL_HOST];
+	struct v_port *port;
 	__poll_t mask = 0;
+	unsigned long flags;
 
-	poll_wait(file, &port->resource_available, wait);
-	mask |= EPOLLIN | EPOLLRDNORM;
+	poll_wait(file, &wake_up_port->resource_available, wait);
+
+	spin_lock_irqsave(&channel->port_lock, flags);
+	list_for_each_entry(port, &channel->port_list, list) {
+		if (atomic_read(&port->wake_up_task_cnt)) {
+			mask |= EPOLLIN | EPOLLRDNORM;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&channel->port_lock, flags);
 
 	return mask;
 }
@@ -1473,6 +1516,7 @@ static int sg_create_cdev(struct device *dev, struct sg_card *card)
 		sprintf(port->name, "sgcard-channel-%d", i);
 		DBG_MSG("CREATE %s\n", port->name);
 		atomic_set(&port->cnt_available, 0);
+		atomic_set(&port->wake_up_task_cnt, 0);
 		init_waitqueue_head(&port->read_available);
 		set_card_devno_map(card, i);
 		port->devno = card->cdev_info.devno + i;

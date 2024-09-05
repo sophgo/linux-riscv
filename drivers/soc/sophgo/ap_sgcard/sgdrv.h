@@ -43,6 +43,7 @@ struct sg_task_info {
 #define SG_IOC_TASK_NEED_RESP		_IOWR('W', 10, struct sg_task_info)
 
 #define SG_WAKE_UP_STREAM		_IOWR('W', 0, uint64_t)
+#define SG_STREAM_RUNNING		_IOWR('W', 1, uint64_t)
 
 enum {
 	ERROR_REQUEST_RESPONSE = 0,

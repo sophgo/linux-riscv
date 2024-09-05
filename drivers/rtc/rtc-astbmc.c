@@ -132,43 +132,6 @@ static const struct file_operations aspeed_pci_bmc_dev_fops = {
 	.mmap		= aspeed_pci_bmc_dev_mmap,
 };
 
-
-static irqreturn_t aspeed_pci_host_bmc_device_interrupt(int irq, void *dev_id)
-{
-	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_id;
-	u32 bmc2host_q_sts = readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS);
-
-	if (bmc2host_q_sts & BMC2HOST_INT_STS_DOORBELL)
-		writel(BMC2HOST_INT_STS_DOORBELL, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS);
-
-	if (bmc2host_q_sts & BMC2HOST_ENABLE_INTB)
-		writel(BMC2HOST_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS);
-
-	if (bmc2host_q_sts & BMC2HOST_Q1_FULL)
-		dev_info(pci_bmc_device->dev, "Q1 Full\n");
-
-	if (bmc2host_q_sts & BMC2HOST_Q2_FULL)
-		dev_info(pci_bmc_device->dev, "Q2 Full\n");
-
-
-	//check q1
-	if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q1_FULL))
-		wake_up_interruptible(&pci_bmc_device->tx_wait0);
-
-	if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS) & BMC2HOST_Q1_EMPTY))
-		wake_up_interruptible(&pci_bmc_device->rx_wait0);
-	//chech q2
-	if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q2_FULL))
-		wake_up_interruptible(&pci_bmc_device->tx_wait1);
-
-	if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS) & BMC2HOST_Q2_EMPTY))
-		wake_up_interruptible(&pci_bmc_device->rx_wait1);
-
-	return IRQ_HANDLED;
-
-}
-
-
 static int clear_r_queue1(struct device *dev, int timeout)
 {
 	u32 value;
@@ -207,80 +170,62 @@ static ssize_t read_8bytes_from_queue1(struct device *dev, time64_t * time_stamp
 	return sizeof(time64_t);
 }
 
-static ssize_t read_queue1(struct device *dev, u32 * data)
+
+static ssize_t write_queue1_4bytes_poll(struct device *dev, u32 data, int timeout)
 {
 	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
-	int ret;
 
-	ret = wait_event_interruptible(pci_bmc_device->rx_wait0,
-		!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS) & BMC2HOST_Q1_EMPTY));
-	if (ret)
-		return -EINTR;
+	unsigned long tick_end = jiffies + timeout * HZ;
+	while(1) {
+		if(!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q1_FULL))
+			break;
 
-	* data = readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_Q1);
-	writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
-	return sizeof(u32);
-}
-static ssize_t write_queue1(struct device *dev, u32 data)
-{
-	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
-	int ret;
-
-	ret = wait_event_interruptible(pci_bmc_device->tx_wait0,
-		!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q1_FULL));
-	if (ret)
-		return -EINTR;
-
+		if (time_after(jiffies, tick_end)) {
+			return 0;
+		}
+	}
 	writel(data, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_Q1);
-	//trigger to host
 	writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
 
 	return sizeof(u32);
 }
 
-static ssize_t read_queue2(struct device *dev, u32 * timestamp)
+
+
+static ssize_t write_queue2_4bytes_poll(struct device *dev, u32 data, int timeout)
 {
 	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
-	int ret;
+	unsigned long tick_end = jiffies + timeout * HZ;
+	while(1) {
+		if(!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q2_FULL))
+			break;
 
-	ret = wait_event_interruptible(pci_bmc_device->rx_wait1,
-		!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_STS) & BMC2HOST_Q2_EMPTY));
-	if (ret)
-		return -EINTR;
-
-	* timestamp = readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_BMC2HOST_Q2);
-	writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
-	return sizeof(u32);
-}
-static ssize_t write_queue2(struct device *dev, u32 data)
-{
-	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
-	int ret;
-
-	ret = wait_event_interruptible(pci_bmc_device->tx_wait1,
-		!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q2_FULL));
-	if (ret)
-		return -EINTR;
-
+		if (time_after(jiffies, tick_end)) {
+			return 0;
+		}
+	}
 	writel(data, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_Q2);
-	//trigger to host
 	writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
 
 
 	return sizeof(u32);
 }
 
-static ssize_t write_8bytes_to_queue2(struct device *dev, time64_t * time_stamp)
+static ssize_t write_8bytes_to_queue2(struct device *dev, time64_t * time_stamp, int timeout)
 {
 	int i = 0;
 	u32 * time_buf = (u32*)time_stamp;
 	struct aspeed_pci_bmc_dev *pci_bmc_device = dev_get_drvdata(dev);
+	unsigned long tick_end = jiffies + timeout * HZ;
 
 	while (i < 2) {
 		if (!(readl(pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS) & HOST2BMC_Q2_FULL)) {
 			writel(time_buf[i++], pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_Q2);
 			writel(HOST2BMC_INT_STS_DOORBELL | HOST2BMC_ENABLE_INTB, pci_bmc_device->msg_bar_reg + ASPEED_PCI_BMC_HOST2BMC_STS);
+		}
 
+		if (time_after(jiffies, tick_end)) {
+			return 0;
 		}
 	}
 	return sizeof(time64_t);
@@ -293,11 +238,20 @@ static int astbmc_read_time(struct device *dev, struct rtc_time *dt)
 	time64_t time_stamp = 0;
 	u32 tx_cmd = 0x55555555;
 
-	clear_r_queue1(dev, 5);
+	if (clear_r_queue1(dev, 5) == 0) {
+		pr_info("01-Clear queue1 error!\n");
+		return 0;
+	}
 
-    write_queue1(dev, tx_cmd);
+	if (write_queue1_4bytes_poll(dev, tx_cmd, 3) == 0) {
+		pr_info("01-Write queue1 bmc cmd error!\n");
+		return 0;
+	}
 
-	read_8bytes_from_queue1(dev, &time_stamp, 5);
+	if(read_8bytes_from_queue1(dev, &time_stamp, 5) == 0) {
+		pr_info("01-Read queue1 bmc rtc error!\n");
+		return 0;
+	}
 
 	rtc_time64_to_tm(time_stamp, dt);
 
@@ -309,11 +263,17 @@ static int astbmc_set_time(struct device *dev, struct rtc_time *dt)
 	time64_t time_stamp = 0;
 	u32 tx_cmd = 0xaaaaaaaa;
 
-	write_queue2(dev, tx_cmd);
+	if (write_queue2_4bytes_poll(dev, tx_cmd, 3) ==0 ) {
+		pr_info("Write queue2 bmc cmd error!\n");
+		return 0;
+	}
 
 	time_stamp = rtc_tm_to_time64(dt);
 
-	write_8bytes_to_queue2(dev, &time_stamp);
+	if (write_8bytes_to_queue2(dev, &time_stamp, 3) == 0) {
+		pr_info("Set queue2 bmc rtc error!\n");
+		return 0;
+	}
 
 	return 0;
 }
@@ -324,18 +284,19 @@ static const struct rtc_class_ops astbmc_rtc_ops = {
 };
 
 
-//0-unenabled 1-enabled
 static int is_bmc_rtc_device_func_enable(struct device *dev)
 {
 	time64_t time_stamp = 0;
 	u32 tx_cmd = 0x55555555;
-
 	clear_r_queue1(dev, 5);
 
-    write_queue1(dev, tx_cmd);
+	if (write_queue1_4bytes_poll(dev, tx_cmd, 3) == 0) {
+		pr_info("Write bmc cmd error!\n");
+		return 0;
+	}
 
 	if (read_8bytes_from_queue1(dev, &time_stamp, 5) == 0) {
-		pr_info("BMC has not enabled rtc device func!\n");
+		pr_info("Read bmc rtc error!\n");
 		return 0;
 	}
 
@@ -369,7 +330,6 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 		goto out_err;
 	}
 
-	/* set PCI host mastering  */
 	pci_set_master(pdev);
 
 	nr_entries = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_MSI);
@@ -394,7 +354,6 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 	init_waitqueue_head(&pci_bmc_dev->rx_wait0);
 	init_waitqueue_head(&pci_bmc_dev->rx_wait1);
 
-	//Get MEM bar
 	pci_bmc_dev->mem_bar_base = pci_resource_start(pdev, 0);
 	pci_bmc_dev->mem_bar_size = pci_resource_len(pdev, 0);
 
@@ -406,7 +365,6 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 		goto out_free0;
 	}
 
-    //Get MSG BAR info
 	pci_bmc_dev->message_bar_base = pci_resource_start(pdev, 1);
 	pci_bmc_dev->message_bar_size = pci_resource_len(pdev, 1);
 
@@ -418,7 +376,6 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 		goto out_free1;
 	}
 
-	/* ERRTA40: dummy read */
 	(void)__raw_readl((void __iomem *)pci_bmc_dev->msg_bar_reg);
 
 
@@ -435,27 +392,24 @@ static int aspeed_pci_host_bmc_device_probe(struct pci_dev *pdev, const struct p
 
 	pci_set_drvdata(pdev, pci_bmc_dev);
 
-	rc = request_irq(pdev->irq, aspeed_pci_host_bmc_device_interrupt, IRQF_SHARED, "ASPEED BMC DEVICE", pci_bmc_dev);
-	if (rc) {
-		pr_err("host bmc device Unable to get IRQ %d\n", rc);
-		goto out_unreg;
+	pr_info("Class code is: %08lx\n", pdev->class);
+
+	if ((pdev->class >> 8) == PCI_CLASS_SYSTEM_RTC) {
+
+		pr_info("BMC rtc device!\n");
+		if (!is_bmc_rtc_device_func_enable(dev))
+			return 0;
+
+		rtc = devm_rtc_allocate_device(dev);
+		if (IS_ERR(rtc))
+			return PTR_ERR(rtc);
+
+		rtc->ops = &astbmc_rtc_ops;
+		rtc->range_min = RTC_TIMESTAMP_BEGIN_0000;
+		rtc->range_max = RTC_TIMESTAMP_END_9999;
+
+		devm_rtc_register_device(rtc);
 	}
-
-	return 0;
-
-	if (!is_bmc_rtc_device_func_enable(dev))
-		return 0;
-
-    //register rtc device
-    rtc = devm_rtc_allocate_device(dev);
-	if (IS_ERR(rtc))
-		return PTR_ERR(rtc);
-
-	rtc->ops = &astbmc_rtc_ops;
-	rtc->range_min = RTC_TIMESTAMP_BEGIN_0000;
-	rtc->range_max = RTC_TIMESTAMP_END_9999;
-
-	devm_rtc_register_device(rtc);
 
 	return 0;
 
@@ -487,10 +441,6 @@ static void aspeed_pci_host_bmc_device_remove(struct pci_dev *pdev)
 	pci_disable_device(pdev);
 }
 
-/**
- * This table holds the list of (VendorID,DeviceID) supported by this driver
- *
- */
 static struct pci_device_id aspeed_host_bmc_dev_pci_ids[] = {
 	{ PCI_DEVICE(0x1A03, 0x2402), },
 	{ 0, }
@@ -522,11 +472,9 @@ static int __init aspeed_host_bmc_device_init(void)
 
 static void aspeed_host_bmc_device_exit(void)
 {
-	/* unregister pci driver */
 	pci_unregister_driver(&aspeed_host_bmc_dev_driver);
 }
 
-// late_initcall(aspeed_host_bmc_device_init);
 module_init(aspeed_host_bmc_device_init);
 module_exit(aspeed_host_bmc_device_exit);
 

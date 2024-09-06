@@ -56,6 +56,8 @@
 #define SPIFMC_TRAN_CSR_FIFO_TRG_LVL_4_BYTE	(0x02 << 12)
 #define SPIFMC_TRAN_CSR_FIFO_TRG_LVL_8_BYTE	(0x03 << 12)
 #define SPIFMC_TRAN_CSR_GO_BUSY	BIT(15)
+#define SPIFMC_TRAN_CSR_ADDR4B_SHIFT	20
+#define SPIFMC_TRAN_CSR_CMD4B_SHIFT	21
 
 #define SPIFMC_TRAN_NUM	0x14
 #define SPIFMC_FIFO_PORT	0x18
@@ -94,6 +96,15 @@ static inline int sophgo_spifmc_wait_int(struct sophgo_spifmc *spifmc,
 
 	return readl_poll_timeout(spifmc->io_base + SPIFMC_INT_STS, stat,
 			(stat & int_type), 0, SPIFMC_WAIT_TIMEOUT);
+}
+
+static inline int sophgo_spifmc_wait_xfer_size(struct sophgo_spifmc *spifmc,
+						int xfer_size)
+{
+	u8 stat;
+
+	return readb_poll_timeout(spifmc->io_base + SPIFMC_FIFO_PT, stat,
+			((stat & 0xf) == xfer_size), 1, SPIFMC_WAIT_TIMEOUT);
 }
 
 static inline u32 sophgo_spifmc_init_reg(struct sophgo_spifmc *spifmc)
@@ -196,6 +207,7 @@ static int sophgo_spifmc_write_reg(struct spi_nor *nor, u8 opcode,
 	return 0;
 }
 
+#ifndef CONFIG_SOPHGO_SPIFMC_DMMR
 /**
  * read data less than 64k
 */
@@ -207,10 +219,9 @@ static ssize_t sophgo_spifmc_read_64k(struct spi_nor *nor, loff_t from,
 	int xfer_size, offset;
 	int i;
 	int ret;
-	int wait;
 
 	if (len > 0x10000) {
-		printk(KERN_ERR "%s: data less than 64K\n", __func__);
+		dev_warn(spifmc->dev, "%s: data less than 64K\n", __func__);
 		return 0;
 	}
 	reg = sophgo_spifmc_init_reg(spifmc);
@@ -230,7 +241,7 @@ static ssize_t sophgo_spifmc_read_64k(struct spi_nor *nor, loff_t from,
 	writel(reg, spifmc->io_base + SPIFMC_TRAN_CSR);
 	ret = sophgo_spifmc_wait_int(spifmc, SPIFMC_INT_RD_FIFO);
 	if (ret) {
-		printk(KERN_ERR "RD_FIFO: Timeout waiting for interrupt: %d\n", ret);
+		dev_warn(spifmc->dev, "RD_FIFO: Timeout waiting for interrupt: %d\n", ret);
 		return ret;
 	}
 
@@ -238,15 +249,9 @@ static ssize_t sophgo_spifmc_read_64k(struct spi_nor *nor, loff_t from,
 	while (offset < len) {
 		xfer_size = min_t(size_t, SPIFMC_MAX_FIFO_DEPTH, len - offset);
 
-		wait = 0;
-		while ((readl(spifmc->io_base + SPIFMC_FIFO_PT) & 0xf) != xfer_size) {
-			wait++;
-			udelay(10);
-			if (wait > 30000) {
-				dev_warn(spifmc->dev, "Wait for reading FIFO timeout.\n");
-				return -1;
-			}
-		}
+		ret = sophgo_spifmc_wait_xfer_size(spifmc, xfer_size);
+		if (ret < 0)
+			dev_warn(spifmc->dev, "Wait to read FIFO timeout.\n");
 
 		for (i = 0; i < xfer_size; i++)
 			buf[i + offset] = readb(spifmc->io_base + SPIFMC_FIFO_PORT);
@@ -256,17 +261,49 @@ static ssize_t sophgo_spifmc_read_64k(struct spi_nor *nor, loff_t from,
 
 	ret = sophgo_spifmc_wait_int(spifmc, SPIFMC_INT_TRAN_DONE);
 	if (ret) {
-		printk(KERN_ERR "TRAN_DONE: Timeout waiting for interrupt: %d\n", ret);
+		dev_warn(spifmc->dev, "TRAN_DONE: Timeout waiting for interrupt: %d\n", ret);
 		return ret;
 	}
 	writel(0, spifmc->io_base + SPIFMC_FIFO_PT);
 
 	return len;
 }
+#else
+static void sophgo_spifmc_dmmr_read(struct sophgo_spifmc *spifmc, loff_t from,
+		loff_t end, u_char *buf, u8 addr_nbytes)
+{
+	u32 reg;
+	size_t len;
+
+	len = end - from;
+
+	reg = sophgo_spifmc_init_reg(spifmc);
+	reg |= addr_nbytes << SPIFMC_TRAN_CSR_ADDR_BYTES_SHIFT;
+	reg |= SPIFMC_TRAN_CSR_FIFO_TRG_LVL_8_BYTE;
+	reg |= SPIFMC_TRAN_CSR_WITH_CMD;
+	reg |= SPIFMC_TRAN_CSR_TRAN_MODE_RX;
+	if (addr_nbytes == 4) {
+		reg |= 1 << SPIFMC_TRAN_CSR_ADDR4B_SHIFT;
+		reg |= 1 << SPIFMC_TRAN_CSR_CMD4B_SHIFT;
+	}
+	writel(reg, spifmc->io_base + SPIFMC_TRAN_CSR);
+	writel(1, spifmc->io_base + SPIFMC_DMMR);
+
+	memcpy(buf, spifmc->io_base + from, len);
+
+	writel(0, spifmc->io_base + SPIFMC_DMMR);
+
+	usleep_range(5, 10);
+
+	return;
+}
+#endif
 
 static ssize_t sophgo_spifmc_read(struct spi_nor *nor, loff_t from,
 		size_t len, u_char *buf)
 {
+	struct sophgo_spifmc *spifmc = nor->priv;
+#ifndef CONFIG_SOPHGO_SPIFMC_DMMR
 	size_t offset;
 	size_t xfer_size;
 	ssize_t ret;
@@ -278,7 +315,7 @@ static ssize_t sophgo_spifmc_read(struct spi_nor *nor, loff_t from,
 
 		ret = sophgo_spifmc_read_64k(nor, from, xfer_size, buf);
 		if (ret < xfer_size) {
-			printk(KERN_ERR "%s read data failed\n", __func__);
+			dev_warn(spifmc->dev, "%s read data failed\n", __func__);
 			return offset;
 		}
 
@@ -286,7 +323,23 @@ static ssize_t sophgo_spifmc_read(struct spi_nor *nor, loff_t from,
 		buf += xfer_size;
 		from += xfer_size;
 	}
+#else
+	uint64_t start, end, buf_offset;
+	const uint32_t data_16m = 16 * 1024 * 1024;
 
+	/*read data before 16M*/
+	if (from < data_16m) {
+		end = min_t(uint64_t, from + len, data_16m);
+		sophgo_spifmc_dmmr_read(spifmc, from, end, buf, 3);
+	}
+
+	/*read data after 16M*/
+	if (from + len > data_16m) {
+		start = max_t(uint64_t, from, data_16m);
+		buf_offset = start - from;
+		sophgo_spifmc_dmmr_read(spifmc, start, from + len, buf + buf_offset, 4);
+	}
+#endif
 	return len;
 }
 
@@ -296,7 +349,8 @@ static ssize_t sophgo_spifmc_write(struct spi_nor *nor, loff_t to,
 	struct sophgo_spifmc *spifmc = nor->priv;
 	u32 reg;
 	int i, offset;
-	int xfer_size, wait;
+	int xfer_size;
+	size_t ret;
 
 	reg = sophgo_spifmc_init_reg(spifmc);
 	reg |= nor->addr_nbytes << SPIFMC_TRAN_CSR_ADDR_BYTES_SHIFT;
@@ -314,15 +368,9 @@ static ssize_t sophgo_spifmc_write(struct spi_nor *nor, loff_t to,
 	reg |= SPIFMC_TRAN_CSR_GO_BUSY;
 	writel(reg, spifmc->io_base + SPIFMC_TRAN_CSR);
 
-	wait = 0;
-	while ((readl(spifmc->io_base + SPIFMC_FIFO_PT) & 0xf) != 0) {
-		wait++;
-		udelay(10);
-		if (wait > 30000) {
-			dev_warn(spifmc->dev, "Wait for reading FIFO timeout.\n");
-			return -1;
-		}
-	}
+	ret = sophgo_spifmc_wait_xfer_size(spifmc, 0);
+	if (ret < 0)
+		dev_warn(spifmc->dev, "Wait to read FIFO timeout.\n");
 
 	writel(0, spifmc->io_base + SPIFMC_FIFO_PT);
 
@@ -330,15 +378,9 @@ static ssize_t sophgo_spifmc_write(struct spi_nor *nor, loff_t to,
 	while (offset < len) {
 		xfer_size = min_t(size_t, SPIFMC_MAX_FIFO_DEPTH, len - offset);
 
-		wait = 0;
-		while ((readl(spifmc->io_base + SPIFMC_FIFO_PT) & 0xf) != 0) {
-			wait++;
-			udelay(10);
-			if (wait > 30000) {
-				dev_warn(spifmc->dev, "Wait to write FIFO timeout.\n");
-				return -1;
-			}
-		}
+		ret = sophgo_spifmc_wait_xfer_size(spifmc, 0);
+		if (ret < 0)
+			dev_warn(spifmc->dev, "Wait to write FIFO timeout.\n");
 
 		for (i = 0; i < xfer_size; i++)
 			writeb(buf[i + offset], spifmc->io_base + SPIFMC_FIFO_PORT);

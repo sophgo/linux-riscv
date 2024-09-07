@@ -7,3 +7,4 @@ obj-$(CONFIG_ARCH_SOPHGO)		+= pcie_phy/
 obj-$(CONFIG_ARCH_SOPHGO)		+= pcie_device/
 obj-$(CONFIG_ARCH_SOPHGO)		+= c2c_rc/
 obj-$(CONFIG_ARCH_SOPHGO)		+= map_memory/
+obj-$(CONFIG_ARCH_SOPHGO)		+= veth/

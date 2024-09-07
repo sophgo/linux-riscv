@@ -165,6 +165,19 @@
 		//status = "disable";
 	};
 
+	veth:  veth {
+		compatible = "sg2260, sgveth";
+		reg = <0x00000000 0x10000000 0x00000000 0x1000>,
+			<0x00000000 0x10010000 0x00000000 0x70000>,
+			<0x00000000 0x10080000 0x00000000 0x70000>,
+			<0x0000006e 0x10000000 0x00000000 0x100>;
+		reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+		interrupt-parent = <&intc>;
+		interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rx";
+		status = "okay";
+	};
+
 	aliases {
 		serial0 = &uart0;
 	};

@@ -4,5 +4,6 @@ menu "Sophgo Soc specific Drivers"
 source "drivers/soc/sophgo/ap_sgcard/Kconfig"
 source "drivers/soc/sophgo/pcie_ep/Kconfig"
 source "drivers/soc/sophgo/tp_driver/Kconfig"
+source "drivers/soc/sophgo/veth/Kconfig"
 
 endmenu

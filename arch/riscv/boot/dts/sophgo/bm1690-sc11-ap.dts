@@ -176,7 +176,7 @@
 		interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "rx";
 		status = "okay";
-    };
+	};
 
 	aliases {
 		serial0 = &uart0;

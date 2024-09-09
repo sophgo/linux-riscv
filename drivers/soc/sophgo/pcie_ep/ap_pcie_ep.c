@@ -147,7 +147,10 @@ static irqreturn_t perst_interrupt(int irq, void *dev_id)
 {
 	struct sophgo_pcie_ep *sg_ep = (struct sophgo_pcie_ep *)dev_id;
 
-	pr_err("%s get perst interrupt\n", sg_ep->name);
+	pr_err("%s get perst interrupt, clr irq va:0x%llx\n", sg_ep->name, (uint64_t)sg_ep->clr_irq);
+
+	if (sg_ep->clr_irq)
+		writel(sg_ep->clr_irq_data, sg_ep->clr_irq);
 
 	schedule_delayed_work(&sg_ep->link_work, 0);
 
@@ -220,15 +223,10 @@ static int sophgo_c2c_link_probe(struct platform_device *pdev)
 	struct sophgo_pcie_ep *sg_ep = dev_get_drvdata(dev);
 	int ret;
 
-	sg_ep->perst_irqnr = gpio_to_irq(sg_ep->perst_gpio);
-	if (sg_ep->perst_irqnr < 0) {
-		pr_err("failed get pcie%d perst irq nr\n", (int)sg_ep->ep_info.pcie_id);
-		return -1;
-	}
 	INIT_DELAYED_WORK(&sg_ep->link_work, c2c_init_ep);
 	sophgo_c2c_ep_enable_probe(pdev);
 
-	ret = request_irq(sg_ep->perst_irqnr, perst_interrupt, IRQF_TRIGGER_HIGH,
+	ret = request_irq(sg_ep->perst_irqnr, perst_interrupt, IRQF_TRIGGER_RISING,
 			  sg_ep->name, sg_ep);
 	if (ret < 0) {
 		pr_err("%s request int failed\n", sg_ep->name);
@@ -257,11 +255,11 @@ static int sophgo_pcie_ep_get_dtbif(struct platform_device *pdev, uint64_t link_
 	if (strcmp(chip_type, "bm1684x") == 0) {
 		sg_ep->chip_type = CHIP_BM1684X;
 		bm1684x_ep_int(pdev);
-		pr_info("found bm1684x pcie ep\n");
+		dev_info(dev, "found bm1684x pcie ep\n");
 	} else if (strcmp(chip_type, "bm1690") == 0) {
 		sg_ep->chip_type = CHIP_BM1690;
 		bm1690_ep_int(pdev);
-		pr_info("found bm1690 pcie ep\n");
+		dev_info(dev, "found bm1690 pcie ep\n");
 	} else {
 		pr_err("unknown chip type %s\n", chip_type);
 		return -EINVAL;

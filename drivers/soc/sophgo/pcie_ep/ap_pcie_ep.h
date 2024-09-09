@@ -69,14 +69,17 @@ struct sophgo_pcie_ep {
 	void __iomem *ctrl_reg_base;
 	void __iomem *atu_base;
 	void __iomem *dbi_base;
+	uint64_t dbi_base_pa;
 	void __iomem *c2c_top_base;
 	void __iomem *sii_base;
 	void __iomem *share_vector_reg;
+	void __iomem *clr_irq;
+	uint64_t clr_irq_data;
 	struct phy *phy;
 	uint64_t c2c_config_base;
 	uint64_t c2c_config_size;
 	char name[32];
-	int perst_gpio;
+	struct gpio_desc *perst_gpio;
 	int perst_irqnr;
 	struct pcie_info ep_info;
 	uint64_t vector_allocated;

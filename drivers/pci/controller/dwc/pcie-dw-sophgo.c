@@ -461,11 +461,6 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 
 		pcie->pe_rst = of_get_named_gpio(dev->of_node, "prst", 0); //TODO:default high? or low?
 		dev_err(dev, "perst:[gpio%d]\n", pcie->pe_rst);
-
-		pcie->c2c_prst = of_get_named_gpio(dev->of_node, "c2c_prst", 0);
-		dev_err(dev, "c2c prst:%d\n", pcie->c2c_prst);
-		gpio_direction_output(pcie->c2c_prst, 0);
-		gpio_set_value(pcie->c2c_prst, 0);
 	}
 
 	return 0;

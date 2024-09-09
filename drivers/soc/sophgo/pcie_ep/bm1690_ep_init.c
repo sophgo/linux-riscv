@@ -156,6 +156,11 @@ void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
 	val = (val & 0xfffffffe) | 0x1;
 	writel(val, (pcie_dbi_base + 0x8bc));
 
+
+	//config subdevice id
+	writel(PCIE_DATA_LINK_C2C << 16, pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG);
+	pr_err("config dbi subdevice id:0x%x\n", readl(pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG));
+
 	val = readl(pcie_dbi_base + 0xc);
 	if (func_num == 0x1)
 		writel((val & (~(1 << 23))), (pcie_dbi_base + 0xc));
@@ -376,6 +381,16 @@ static int pcie_config_soft_cold_reset(struct sophgo_pcie_ep *pcie)
 	return 0;
 }
 
+static void pcie_config_bar0_iatu(struct sophgo_pcie_ep *sg_ep)
+{
+	void __iomem  *atu_base = sg_ep->atu_base;
+
+	writel((sg_ep->dbi_base_pa & 0xffffffff), (atu_base + 0x114));
+	writel(0x6c, (atu_base + 0x118));
+	writel(0x0, (atu_base + 0x100));
+	writel(0xC0080000, (atu_base + 0x104));
+}
+
 void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 {
 	pr_info("begin c2c ep init\n");
@@ -394,7 +409,7 @@ void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 
 	pcie_config_ep_function(sg_ep);
 	pcie_config_axi_route(sg_ep);
-	pcie_config_ep_bar(sg_ep);
+	pcie_config_bar0_iatu(sg_ep);
 #ifdef PCIE_EP_HUGE_BAR
 	if (link_mode == PCIE_CHIPS_C2C_LINK)
 		pcie_config_ep_huge_bar(c2c_id, wrapper_id, phy_id, 0);
@@ -564,6 +579,7 @@ int bm1690_ep_int(struct platform_device *pdev)
 	int ret;
 	uint64_t start;
 	uint64_t size;
+	uint64_t clr_irq_pa;
 
 	ret = of_property_read_u64(dev_node, "pcie_id", &sg_ep->ep_info.pcie_id);
 	if (ret)
@@ -609,6 +625,7 @@ int bm1690_ep_int(struct platform_device *pdev)
 		dev_err(dev, "dbi base ioremap failed\n");
 		goto unmap_config;
 	}
+	sg_ep->dbi_base_pa = regs->start;
 
 	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "atu");
 	if (!regs) {
@@ -637,14 +654,33 @@ int bm1690_ep_int(struct platform_device *pdev)
 	ret = of_property_read_u64_index(dev_node, "c2c_config_range", 0, &sg_ep->c2c_config_base);
 	ret = of_property_read_u64_index(dev_node, "c2c_config_range", 1, &sg_ep->c2c_config_size);
 
-
 	if (sg_ep->ep_info.link_role == PCIE_DATA_LINK_C2C) {
-		sg_ep->perst_gpio = of_get_named_gpio(dev->of_node, "perst", 0);
-		if (sg_ep->perst_gpio < 0) {
-			pr_err("failed get perst gpio\n");
-			goto unmap_c2c_top;
+
+		sg_ep->perst_irqnr = platform_get_irq(pdev, 0);
+		if (sg_ep->perst_irqnr < 0) {
+			dev_err(dev, "not get mtli irq, so we try gpio irq\n");
+			sg_ep->perst_gpio = devm_gpiod_get_index(dev, "perst", 0, GPIOD_IN);
+			if (IS_ERR(sg_ep->perst_gpio)) {
+				pr_err("failed get perst gpio\n");
+				goto unmap_c2c_top;
+			}
+			gpiod_set_debounce(sg_ep->perst_gpio, 1000);
+			sg_ep->perst_irqnr = gpiod_to_irq(sg_ep->perst_gpio);
+			if (sg_ep->perst_irqnr < 0) {
+				pr_err("failed get pcie%d perst irq nr\n", (int)sg_ep->ep_info.pcie_id);
+				goto unmap_c2c_top;
+			} else {
+				dev_err(dev, "get gpio irq:%d\n", sg_ep->perst_irqnr);
+			}
+		} else {
+			ret = of_property_read_u64_index(dev_node, "clr-irq", 0, &clr_irq_pa);
+			ret = of_property_read_u64_index(dev_node, "clr-irq", 1, &sg_ep->clr_irq_data);
+			if (ret == 0) {
+				sg_ep->clr_irq = ioremap(clr_irq_pa, 0x4);
+				dev_err(dev, "get mtli irq:%d, clr irq pa:0x%llx, va:0x%llx\n", sg_ep->perst_irqnr,
+					clr_irq_pa, (uint64_t)sg_ep->clr_irq);
+			}
 		}
-		gpio_direction_input(sg_ep->perst_gpio);
 
 		sg_ep->phy = devm_of_phy_get(dev, dev->of_node, "pcie-phy");
 	}

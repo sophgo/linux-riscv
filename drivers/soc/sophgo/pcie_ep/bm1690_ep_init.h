@@ -40,11 +40,15 @@
 #define C2C_TOP_MSI_GEN_MODE_REG                            0xd8
 
 #define C2C_PCIE_DBI2_OFFSET                    0x100000
+#define SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG	0x2c
 
 enum pcie_rst_status {
 	PCIE_RST_ASSERT = 0,
 	PCIE_RST_DE_ASSERT,
 	PCIE_RST_STATUS_BUTT
 };
+
+#define PCIE_DATA_LINK_PCIE	0
+#define PCIE_DATA_LINK_C2C	1
 
 #endif

@@ -106,7 +106,6 @@ struct sophgo_dw_pcie {
 	struct reset_control_bulk_data	app_rsts[DW_PCIE_NUM_APP_RSTS];
 	struct reset_control_bulk_data	core_rsts[DW_PCIE_NUM_CORE_RSTS];
 	int pe_rst;
-	int c2c_prst;
 	struct phy *phy;
 };
 

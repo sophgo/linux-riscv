@@ -95,7 +95,7 @@ static int pci_platform_init(struct pci_dev *pdev)
 		pci_err(pdev, "cannot reserve memory region\n");
 		goto err1_out;
 	}
-#if 0
+
 	// BAR0
 	hdev->BarPhys[0] = pci_resource_start(pdev, 0);
 	hdev->BarLength[0] = pci_resource_len(pdev, 0);
@@ -120,12 +120,12 @@ static int pci_platform_init(struct pci_dev *pdev)
 	hdev->BarVirt[3] = pci_iomap(pdev, 4, 0);
 
 	for (i = 0; i < 4; i++) {
-		pci_info(pdev, "BAR%d address 0x%p/0x%llx length 0x%llx\n",
+		pci_info(pdev, "BAR%d address 0x%px/0x%llx length 0x%llx\n",
 			i, hdev->BarVirt[i],
 			hdev->BarPhys[i],
 			hdev->BarLength[i]);
 	}
-#endif
+
 	pci_set_master(pdev);
 
 	if (pci_try_set_mwi(pdev))
@@ -193,7 +193,7 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	REG_WRITE32(atu_base_addr, 0x300, 0);
 	REG_WRITE32(atu_base_addr, 0x304, 0x80000100);
 	REG_WRITE32(atu_base_addr, 0x308, (u32)(hdev->BarPhys[1] & 0xffffffff));                //src addr
-	REG_WRITE32(atu_base_addr, 0x30C, hdev->BarPhys[1] >> 32);
+	REG_WRITE32(atu_base_addr, 0x30C, 0);
 	REG_WRITE32(atu_base_addr, 0x310, (u32)(hdev->BarPhys[1] & 0xffffffff) + 0x1fffff);       //size 2M
 	REG_WRITE32(atu_base_addr, 0x314, 0x10000000);          //dst addr
 	REG_WRITE32(atu_base_addr, 0x318, 0x70);
@@ -204,15 +204,17 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	REG_WRITE32(atu_base_addr, 0x504, 0x80000100);
 	REG_WRITE32(atu_base_addr, 0x508, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART2_OFFSET);                //src addr
-	REG_WRITE32(atu_base_addr, 0x50C, hdev->BarPhys[1] >> 32);
+	REG_WRITE32(atu_base_addr, 0x50C, 0);
 	REG_WRITE32(atu_base_addr, 0x510, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART2_OFFSET + 0x7fff);       //size 3M
 	REG_WRITE32(atu_base_addr, 0x514, 0x50000000);          //dst addr
 	REG_WRITE32(atu_base_addr, 0x518, 0x70);
 
 	hdev->top_bar_vaddr = hdev->BarVirt[1] + BAR1_PART2_OFFSET;
+	val = top_reg_read(hdev, 0x0);
+	pr_info("[Top_reg_0] the val = 0x%x\n", val);
 	val = top_reg_read(hdev, 0x4);
-	pr_info("[Top_reg_read] the val = 0x%x\n", val);
+	pr_info("[Top_reg_1] the val = 0x%x\n", val);
 	c2c_id = (val >> 3) & 0x3;
 	if (c2c_id == 2)
 		c2c_id = 4;
@@ -223,7 +225,7 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	REG_WRITE32(atu_base_addr, 0x704, 0x80000100);
 	REG_WRITE32(atu_base_addr, 0x708, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART1_OFFSET);  //src addr
-	REG_WRITE32(atu_base_addr, 0x70C, hdev->BarPhys[1] >> 32);
+	REG_WRITE32(atu_base_addr, 0x70C, 0);
 	REG_WRITE32(atu_base_addr, 0x710, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART1_OFFSET + 0x7ffff);       //size 3M
 	REG_WRITE32(atu_base_addr, 0x714, (c2c_base & 0xffffffff));          //dst addr
@@ -235,7 +237,7 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	REG_WRITE32(atu_base_addr, 0x904, 0x80000100);
 	REG_WRITE32(atu_base_addr, 0x908, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART3_OFFSET); //src addr
-	REG_WRITE32(atu_base_addr, 0x90C, hdev->BarPhys[1] >> 32);
+	REG_WRITE32(atu_base_addr, 0x90C, 0);
 	REG_WRITE32(atu_base_addr, 0x910, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART3_OFFSET + 0x1fff);//size 256K
 	REG_WRITE32(atu_base_addr, 0x914, 0x10000000);          //dst addr
@@ -246,7 +248,7 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	REG_WRITE32(atu_base_addr, 0xb04, 0x80000100);
 	REG_WRITE32(atu_base_addr, 0xb08, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART4_OFFSET);  //src addr
-	REG_WRITE32(atu_base_addr, 0xb0C, hdev->BarPhys[1] >> 32);
+	REG_WRITE32(atu_base_addr, 0xb0C, 0);
 	REG_WRITE32(atu_base_addr, 0xb10, (u32)(hdev->BarPhys[1] & 0xffffffff)
 			+ BAR1_PART4_OFFSET + 0xfffff);       //size 3M
 	REG_WRITE32(atu_base_addr, 0xb14, 0x40000000);          //dst addr
@@ -354,17 +356,17 @@ static int pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	pci_platform_init(pdev);
 	writel(0x5, top_base + 0x1c4);
 
-#if 0
-	bm1690_map_bar(hdev, pdev);
 
+	bm1690_map_bar(hdev, pdev);
+#if 0
 	ret = build_pcie_info(hdev);
 	if (ret)
 		goto failed;
 
 	pr_info("[pcie device]:bus%d probe done\n", hdev->bus_num);
-
-	config_ep_huge_bar(hdev);
 #endif
+	config_ep_huge_bar(hdev);
+
 	return 0;
 failed:
 	return ret;

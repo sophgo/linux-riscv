@@ -37,6 +37,7 @@ static irqreturn_t veth_irq(int irq, void *id)
 {
 	struct veth_dev *vdev = id;
 
+	pr_info("receive irq!!!!!!\n");
 	if (atomic_read(&vdev->link)) {
 		// if (pt_load_rx(vdev->pt)) {
 		// napi_schedule(&vdev->napi);
@@ -47,10 +48,10 @@ static irqreturn_t veth_irq(int irq, void *id)
 	return IRQ_HANDLED;
 }
 
-static void sg_enable_eth_irq(struct veth_dev *vdev)
+static void __maybe_unused sg_enable_eth_irq(struct veth_dev *vdev)
 {
-	u32 intc_enable;
-	u32 intc_mask;
+	// u32 intc_enable;
+	// u32 intc_mask;
 
 	// intc_enable = sg_read32(vdev->intc_cfg_reg, 0x4);
 	// intc_enable |= (1 << 18);
@@ -149,8 +150,8 @@ static netdev_tx_t veth_xmit_cpu(struct sk_buff *skb, struct net_device *ndev)
 	int err;
 	int ret;
 	u32 write, read, write_tmp;
-	struct veth_addr veth_node;
-	u64 paddr;
+	// struct veth_addr veth_node;
+	// u64 paddr;
 	unsigned int total_len = round_up(skb->len + sizeof(u32), PT_ALIGN);
 
 	if (!atomic_read(&vdev->link)) {
@@ -183,7 +184,7 @@ static netdev_tx_t veth_xmit_cpu(struct sk_buff *skb, struct net_device *ndev)
 	return NETDEV_TX_OK;
 }
 
-static netdev_tx_t veth_xmit(struct sk_buff *skb, struct net_device *ndev)
+static netdev_tx_t __maybe_unused veth_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct veth_dev *vdev = netdev_priv(ndev);
 	int err;
@@ -239,7 +240,7 @@ static const struct net_device_ops veth_ops = {
 	// .ndo_change_mtu = eth_change_mtu,
 };
 
-static int veth_rx(struct veth_dev *vdev, int limit)
+static int __maybe_unused veth_rx(struct veth_dev *vdev, int limit)
 {
 	struct sk_buff *skb;
 	struct sk_buff *skb_new;
@@ -424,6 +425,7 @@ static void net_state_work(struct work_struct *worker)
 	struct veth_dev *vdev;
 	struct net_device *ndev;
 	struct device *dev;
+	int val;
 
 	vdev = container_of(worker, struct veth_dev, net_state_worker);
 	ndev = vdev->ndev;
@@ -446,6 +448,16 @@ static void net_state_work(struct work_struct *worker)
 	netif_carrier_on(ndev);
 	enable_irq(vdev->rx_irq);
 	pr_info("connect success!\n");
+
+	while(1) {
+		msleep(1);
+
+		val = sg_read32(vdev->shm_mem, 0x64);
+		if (val == 1) {
+			sg_write32(vdev->shm_mem, 0x64, 0);
+			napi_schedule(&vdev->napi);
+		}
+	}
 }
 
 static int set_ready_flag(struct veth_dev *vdev)

@@ -31,6 +31,19 @@
 		serial0 = &uart1;
 	};
 
+	veth:  veth {
+			compatible = "sg2260, sgveth";
+			reg = <0x00000001 0xa1800000 0x00000000 0x1000>,
+				<0x00000001 0xa1810000 0x00000000 0x70000>,
+				<0x00000001 0xa1880000 0x00000000 0x70000>,
+				<0x0000006d 0x50000000 0x00000000 0x1000>;
+			reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+			interrupt-parent = <&intc>;
+			interrupts = <831 IRQ_TYPE_LEVEL_HIGH>;//IRQ_TYPE_EDGE_RISING
+			interrupt-names = "rx";
+			status = "okay";
+		};
+
 	chosen {
 		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc8b000000,64M maxcpus=64 no5lvl";
 		stdout-path = "serial0";

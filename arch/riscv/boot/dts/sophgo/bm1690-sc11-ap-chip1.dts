@@ -512,6 +512,19 @@
 
 		status = "disable";
 	};
+
+	veth:  veth {
+		compatible = "sg2260, sgveth";
+		reg = <0x00000001 0xa1900000 0x00000000 0x1000>,
+				<0x00000001 0xa1910000 0x00000000 0x70000>,
+				<0x00000001 0xa1980000 0x00000000 0x70000>,
+				<0x0000006d 0x50000000 0x00000000 0x1000>;
+		reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+		interrupt-parent = <&intc>;
+		interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rx";
+		status = "okay";
+	};
 };
 
 / {

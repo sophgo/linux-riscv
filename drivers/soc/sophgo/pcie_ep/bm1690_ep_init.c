@@ -426,13 +426,13 @@ EXPORT_SYMBOL_GPL(bm1690_pcie_init_link);
 static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 {
 	uint64_t socket_id = sg_ep->ep_info.socket_id;
-	uint64_t chip_id = socket_id + 1;
+	//uint64_t chip_id = socket_id + 1;
 	void __iomem *pcie_ctrl_base = (void __iomem *)sg_ep->ctrl_reg_base;
 	void __iomem *pcie_dbi_base = (void __iomem *)sg_ep->dbi_base;
 	void __iomem *c2c_top = (void __iomem *)sg_ep->c2c_top_base;
 	uint32_t val;
 	uint32_t msi_addr;
-	uint32_t msi_gen_multi_en;
+	uint32_t msi_gen_multi_en = 0;
 	uint32_t clr_irq;
 	uint32_t msi_data;
 
@@ -506,6 +506,9 @@ static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 	val &= (~PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_MULTI_MSI_MASK);
 	val |= (msi_gen_multi_en << 1);
 	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_CTRL_REG));
+
+	if (msi_gen_multi_en != 0)
+		writel(0xff, (c2c_top + C2C_TOP_MSI_GEN_MODE_REG));
 
 	return 0;
 }

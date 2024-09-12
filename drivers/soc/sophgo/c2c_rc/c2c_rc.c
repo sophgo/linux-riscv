@@ -19,10 +19,62 @@
 #include <linux/slab.h>
 #include <linux/gpio/consumer.h>
 #include <linux/sbitmap.h>
+#include "c2c_rc.h"
 
 int sophgo_dw_pcie_probe(struct platform_device *pdev);
 
+#define PER_CONFIG_STR_OFFSET	(0x1000)
+#define PCIE_INFO_DEF_VAL	0x5a
+
+#define PCIE_DISABLE	0
+#define PCIE_ENABLE	1
+
+#define PCIE_DATA_LINK_PCIE	0
+#define PCIE_DATA_LINK_C2C	1
+
+#define PCIE_LINK_ROLE_RC	0
+#define PCIE_LINK_ROLE_EP	1
+#define PCIE_LINK_ROLE_RCEP	2
+
+#define RC_GPIO_LEVEL	1
+#define EP_GPIO_LEVEL	0
+
+#define PCIE_PHY_X8	0
+#define PCIE_PHY_X44	1
+
+#define CHIP_ID_MAX	5
+
 static int c2c_enable;
+static uint64_t all_c2c_rc;
+static atomic_t ready_c2c_rc;
+
+struct pcie_info {
+	uint64_t slot_id;
+	uint64_t socket_id;
+	uint64_t pcie_id;
+	uint64_t send_port;
+	uint64_t recv_port;
+	uint64_t enable;
+	uint64_t data_link_type;
+	uint64_t link_role;
+	uint64_t link_role_gpio;
+	uint64_t perst_gpio;
+	uint64_t phy_role;
+	uint64_t peer_slotid;
+	uint64_t peer_socketid;
+	uint64_t peer_pcie_id;
+};
+
+struct c2c_info {
+	uint64_t pcie_info_addr;
+	uint64_t pcie_info_size;
+	void __iomem *pcie_info;
+};
+
+struct c2c_chip_info {
+	uint64_t pcie_info_addr;
+	uint64_t pcie_info_size;
+};
 
 static const struct of_device_id sophgo_dw_c2c_pcie_of_match[] = {
 	{ .compatible = "sophgo,bm1690-c2c-pcie-host", },
@@ -78,11 +130,47 @@ static ssize_t c2c_enable_show(struct device *dev,
 	return strlen(buf);
 }
 
+int check_all_rc(struct c2c_info *info)
+{
+	struct pcie_info *pcie_info;
+
+	for (int i = 0; i < 10; i++) {
+		pcie_info = (struct pcie_info *)info->pcie_info + i * PER_CONFIG_STR_OFFSET;
+		if (pcie_info->data_link_type == PCIE_DATA_LINK_C2C && pcie_info->link_role == PCIE_LINK_ROLE_RC) {
+			pr_err("[pcie%d] as c2c rc\n", i);
+			all_c2c_rc++;
+		}
+	}
+
+	return all_c2c_rc;
+}
+
 static DEVICE_ATTR_RW(c2c_enable);
 static int sophgo_c2c_enable_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	const struct c2c_chip_info *chip_info;
+	struct c2c_info *info;
 	int ret;
+
+	chip_info = of_device_get_match_data(dev);
+	if (!chip_info) {
+		pr_err("failed to get match data\n");
+		return -EINVAL;
+	}
+
+	info = kzalloc(sizeof(struct c2c_info), GFP_KERNEL);
+	if (!info)
+		return -EINVAL;
+
+	info->pcie_info = ioremap(chip_info->pcie_info_addr, chip_info->pcie_info_size);
+	if (!info->pcie_info) {
+		pr_err("failed to map pcie info\n");
+		return -EINVAL;
+	}
+
+	ret = check_all_rc(info);
+	pr_err("%d c2c pcie rc find\n", ret);
 
 	ret = device_create_file(dev, &dev_attr_c2c_enable);
 	pr_info("[c2c_enable]: create c2c_enable success\n");
@@ -100,8 +188,13 @@ static int sophgo_c2c_enable_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static struct c2c_chip_info bm1690_c2c_if = {
+	.pcie_info_addr = 0x70101f4000,
+	.pcie_info_size = 10 * 1024 * 1024,
+};
+
 static const struct of_device_id c2c_enable_of_match[] = {
-	{ .compatible = "sophgo,c2c_enable",},
+	{ .compatible = "sophgo,c2c_enable", .data = &bm1690_c2c_if},
 	{ /* Sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, c2c_enable_of_match);
@@ -116,6 +209,41 @@ static struct platform_driver sophgo_c2c_enable_driver = {
 };
 
 module_platform_driver(sophgo_c2c_enable_driver);
+
+void sophgo_setup_c2c(void)
+{
+	platform_register_drivers(c2c_drivers, 1);
+}
+EXPORT_SYMBOL_GPL(sophgo_setup_c2c);
+
+int sophgo_check_c2c(void)
+{
+	uint64_t all_ready;
+
+	all_ready = atomic_read(&ready_c2c_rc);
+
+	if (all_ready == all_c2c_rc)
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL_GPL(sophgo_check_c2c);
+
+int sophgo_set_c2c_ready(void)
+{
+	atomic_add(1, &ready_c2c_rc);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(sophgo_set_c2c_ready);
+
+int sophgo_set_all_c2c_rc_num(uint64_t all_rc)
+{
+	all_c2c_rc = all_rc;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(sophgo_set_all_c2c_rc_num);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("tingzhu.wang");

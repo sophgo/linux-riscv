@@ -27,6 +27,7 @@
 #include <linux/sched/clock.h>
 #include "sgdrv.h"
 #include "../pcie_ep/ap_pcie_ep.h"
+#include "../c2c_rc/c2c_rc.h"
 
 void arch_wb_cache_pmem(void *addr, size_t size);
 void arch_invalidate_pmem(void *addr, size_t size);
@@ -79,6 +80,8 @@ const char *request_response_type[] = {
 	[TASK_DONE_RESPONSE] = "task done response",
 	[BTM_TASK_DONE_RESPONSE] = "btm task done response",
 	[TASK_ERROR_RESPONSE] = "task errror response",
+	[SETUP_C2C_REQUEST] = "set up c2c request",
+	[SETUP_C2C_RESPONSE] = "set up c2c response",
 };
 
 const char *task_type[] = {
@@ -432,14 +435,14 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		DBG_MSG("host int [ch:0x%llx] request_id:0x%llx, request_type:0x%llx\n",
 			channel->channel_index, request_action.request_id, request_action.type);
 
-		if (request_action.type == ERROR_REQUEST_RESPONSE || request_action.type > TASK_CREATE_REQUEST) {
+		if (request_action.type == ERROR_REQUEST_RESPONSE || request_action.type > SETUP_C2C_REQUEST) {
 			pr_err("error type host request\n");
 			for (i = 0; i < sizeof(request_action) / sizeof(uint64_t); i++)
 				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&request_action))[i]);
 		}
 		request_action.time.kr_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
 
-		if (request_action.type < FREE_DEVICE_MEM_RESPONSE) {
+		if (request_action.type < FREE_DEVICE_MEM_RESPONSE || request_action.type == SETUP_C2C_REQUEST) {
 			port_list = channel->port_list.next;
 			port = container_of(port_list, struct v_port, list);
 			DBG_MSG("channel 0 fd\n");
@@ -1030,7 +1033,7 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
 	port->port_info.rcv_bytes += real_count;
 
 	if (read_request) {
-		if (action.type == ERROR_REQUEST_RESPONSE || action.type > TASK_CREATE_REQUEST) {
+		if (action.type == ERROR_REQUEST_RESPONSE || action.type > SETUP_C2C_REQUEST) {
 			for (i = 0; i < sizeof(action) / sizeof(uint64_t); i++)
 				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&action))[i]);
 		}
@@ -1182,11 +1185,15 @@ static int sg_mmap(struct file *file, struct vm_area_struct *vma)
 	return -EOPNOTSUPP;
 }
 
+void sophgo_setup_c2c(void);
+
 static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct v_port *port = file->private_data;
 	struct sg_card *card = port->card;
 	struct sg_stream_info stream_info;
+	int c2c_loop;
+	int c2c_ok = 0;
 
 	DBG_MSG("[stream:0x%llx] cmd: 0x%x\n", port->stream_id, cmd);
 	switch (cmd) {
@@ -1198,6 +1205,18 @@ static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		stream_info.ret = 0;
 		if (copy_to_user((void __user *)arg, &stream_info, sizeof(stream_info)))
 			return -EFAULT;
+		break;
+	case SG_IOC_SETUP_C2C:
+		sophgo_setup_c2c();
+		for (c2c_loop = 0; c2c_loop < 20; c2c_loop++) {
+			c2c_ok = sophgo_check_c2c();
+			if (c2c_ok)
+				break;
+		}
+
+		if (c2c_ok == 0)
+			return -EFAULT;
+
 		break;
 	default:
 		pr_err("unknown ioctl command 0x%x\n", cmd);

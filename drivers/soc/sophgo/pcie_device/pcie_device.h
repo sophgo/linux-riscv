@@ -76,26 +76,30 @@ enum pcie_id {
 	PCIE_MAX,
 };
 
-
 struct pcie_info {
 	uint64_t slot_id;
 	uint64_t socket_id;
 	uint64_t pcie_id;
+	uint64_t send_port;
+	uint64_t recv_port;
 	uint64_t enable;
 	uint64_t data_link_type;
 	uint64_t link_role;
 	uint64_t link_role_gpio;
 	uint64_t perst_gpio;
 	uint64_t phy_role;
+	uint64_t peer_slotid;
 	uint64_t peer_socketid;
 	uint64_t peer_pcie_id;
 };
 
+#define BM1690_SRAM_BASE	(0X7010000000)
 #define CONFIG_FILE_ADDR	(0x70101ff000)
 #define SYS_IF_BASE	(0x70101fe000)
 #define SYS_IF_SIZE	(0x1000)
 #define PER_CONFIG_STR_OFFSET	(0x1000)
-#define CONFIG_STRUCT_BASE	(0x70101fed000 - PCIE_MAX * PER_CONFIG_STR_OFFSET)
+#define CONFIG_STRUCT_BASE	(0x70101fe000 - PCIE_MAX * PER_CONFIG_STR_OFFSET)
+#define CONFIG_STRUCT_OFFSET	(CONFIG_STRUCT_BASE - BM1690_SRAM_BASE)
 
 #define PCIE_INFO_BASE	CONFIG_STRUCT_BASE
 #define PER_INFO_SIZE	PER_CONFIG_STR_OFFSET

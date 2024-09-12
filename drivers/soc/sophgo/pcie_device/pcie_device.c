@@ -17,7 +17,9 @@
 #include <linux/io.h>
 #include <linux/pagemap.h>
 #include <linux/circ_buf.h>
+#include <linux/device.h>
 #include "pcie_device.h"
+#include "../c2c_rc/c2c_rc.h"
 
 #define DRV_NAME "sgdrv"
 
@@ -160,7 +162,9 @@ static int pci_platform_init(struct pci_dev *pdev)
 
 	pci_info(pdev, "MSI IRQ %d\n", pdev->irq);
 #endif
-	hdev->bus_num = pdev->bus->number;
+	hdev->bus_num = pdev->bus->number >> 4;
+	dev_err(&pdev->dev, "probe pci bus-%d ep device, fix device pcie bus to %d\n",
+		pdev->bus->number, hdev->bus_num);
 
 err2_out:
 	pci_release_regions(pdev);
@@ -266,10 +270,28 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	hdev->copy_data_bar_vaddr = hdev->BarVirt[3];
 }
 
+int show_pcie_info(int pcie_id, char *head, struct pcie_info *info)
+{
+	pr_info("[%s pcie%d]->slot id:0x%llx\n", head, pcie_id, info->slot_id);
+	pr_info("[%s pcie%d]->socket id:0x%llx\n", head, pcie_id, info->socket_id);
+	pr_info("[%s pcie%d]->send port:0x%llx\n", head, pcie_id, info->send_port);
+	pr_info("[%s pcie%d]->recv port:0x%llx\n", head, pcie_id, info->recv_port);
+	pr_info("[%s pcie%d]->data link type:%s\n", head, pcie_id,
+		info->data_link_type == PCIE_DATA_LINK_C2C ? "c2c": "cascade");
+	pr_info("[%s pcie%d]->link role:%s\n", head, pcie_id,
+		info->link_role == PCIE_LINK_ROLE_EP ? "ep" : "rc");
+	pr_info("[%s pcie%d]->peer slot id:0x%llx\n", head, pcie_id, info->peer_slotid);
+	pr_info("[%s pcie%d]->peer socket id:0x%llx\n", head, pcie_id, info->peer_socketid);
+	pr_info("[%s pcie%d]->peer pcie id:0x%llx\n", head, pcie_id, info->peer_pcie_id);
+
+	return 0;
+}
+
 static int build_pcie_info(struct p_dev *hdev)
 {
 	struct pcie_info *myself_pcie_info;
 	struct pcie_info *peer_pcie_info;
+	void *info_addr;
 
 	hdev->pci_info_base = ioremap(PCIE_INFO_BASE, PCIE_INFO_SIZE);
 	if (!hdev->pci_info_base) {
@@ -278,10 +300,14 @@ static int build_pcie_info(struct p_dev *hdev)
 	}
 	myself_pcie_info = hdev->pci_info_base + hdev->bus_num * PER_INFO_SIZE;
 	peer_pcie_info = myself_pcie_info + 1;
-	pr_info("[pcie device]:pcie%d, myself pcie info addr:%p, peer pcie info addr:%p\n", hdev->bus_num,
+	pr_info("[pcie device]:pcie%d, myself pcie info addr:%px, peer pcie info addr:%px\n", hdev->bus_num,
 		myself_pcie_info, peer_pcie_info);
+	show_pcie_info(hdev->bus_num, "myself", myself_pcie_info);
 
-	memcpy_fromio(peer_pcie_info, hdev->BarVirt[PCIE_INFO_BAR], sizeof(struct pcie_info));
+	info_addr = hdev->BarVirt[1] + CONFIG_STRUCT_OFFSET + hdev->bus_num * PER_INFO_SIZE;
+	memcpy_fromio(peer_pcie_info, info_addr, sizeof(struct pcie_info));
+	show_pcie_info(hdev->bus_num, "peer", peer_pcie_info);
+
 	if (peer_pcie_info->peer_pcie_id != hdev->bus_num) {
 		pr_err("[pcie device]:error pcie link, RC and EP are not match\n");
 		pr_err("[pcie device]:my bus num is %d, but peer expect 0x%llx\n", hdev->bus_num,
@@ -290,7 +316,7 @@ static int build_pcie_info(struct p_dev *hdev)
 		goto unmap_pci_info;
 	}
 
-	memcpy_toio(hdev->BarVirt[PCIE_INFO_BAR] + sizeof(struct pcie_info), myself_pcie_info,
+	memcpy_toio(info_addr + sizeof(struct pcie_info), myself_pcie_info,
 		    sizeof(struct pcie_info));
 
 	return 0;
@@ -344,9 +370,6 @@ static int pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (!hdev)
 		return -ENOMEM;
 
-	top_base = ioremap(0x7050000000, 0x1000);
-	pr_err("top ioremap va:0x%llx\n", (uint64_t)top_base);
-
 	hdev->pdev = pdev;
 	hdev->iatu_mask = 0;
 	hdev->parent = &pdev->dev;
@@ -354,18 +377,22 @@ static int pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	pci_set_drvdata(pdev, hdev);
 
 	pci_platform_init(pdev);
-	writel(0x5, top_base + 0x1c4);
-
-
 	bm1690_map_bar(hdev, pdev);
-#if 0
-	ret = build_pcie_info(hdev);
-	if (ret)
-		goto failed;
+
+	if (id->subdevice == PCIE_DATA_LINK_C2C) {
+		ret = build_pcie_info(hdev);
+		if (ret)
+			goto failed;
+
+		config_ep_huge_bar(hdev);
+		sophgo_set_c2c_ready();
+	} else {
+		top_base = ioremap(0x7050000000, 0x1000);
+		pr_err("top ioremap va:0x%llx\n", (uint64_t)top_base);
+		writel(0x5, top_base + 0x1c4);
+	}
 
 	pr_info("[pcie device]:bus%d probe done\n", hdev->bus_num);
-#endif
-	config_ep_huge_bar(hdev);
 
 	return 0;
 failed:

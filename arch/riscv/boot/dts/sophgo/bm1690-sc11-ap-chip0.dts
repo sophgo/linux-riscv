@@ -400,6 +400,8 @@
 		c2c_config_range = <0x6c 0x02000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x027d0000 0x00000000 0x00001000>;
 
+		status = "okay";
+
 		sophgo_card@0 {
 			compatible = "sophgo,sophgo-card";
 			reg = <0x1  0xa0000000 0x00000000 0x01400000>,

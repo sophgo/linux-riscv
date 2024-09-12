@@ -47,6 +47,9 @@ enum {
 	TASK_DONE_RESPONSE,
 	BTM_TASK_DONE_RESPONSE,
 	TASK_ERROR_RESPONSE,
+
+	SETUP_C2C_REQUEST,
+	SETUP_C2C_RESPONSE,
 };
 
 int send_request(struct sg_dev *hdev, msg_t msg, void *msg_body, int msg_len, int sync);

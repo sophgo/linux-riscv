@@ -271,7 +271,7 @@
 		dw_range = <0x0 0x20000000 0x0 0x27ffffff>;
 		up_start_addr = <0x04000050 0x00000000>;
 
-		status = "okay";
+		status = "disable";
 	};
 
 	//cxp

@@ -4,7 +4,6 @@
  */
 
 /dts-v1/;
-/dts-v1/;
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/reset/sophgo,sg2044-reset.h>
 #include <dt-bindings/clock/sophgo,sg2044-clock.h>
@@ -23,7 +22,7 @@
 
 	memory@80000000 {
 		device_type = "memory";
-		reg = <0xb 0xc0000000 0x4 0x40000000>;
+		reg = <0xc 0x00000000 0x4 0x00000000>;
 	};
 
 	aliases {
@@ -31,7 +30,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS1,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xbcb000000,32M maxcpus=4 no5lvl";
+		bootargs = "console=ttyS1,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc0b000000,32M maxcpus=64 no5lvl";
 		stdout-path = "serial0";
 	};
 };

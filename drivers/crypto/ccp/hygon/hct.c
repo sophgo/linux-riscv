@@ -1020,7 +1020,6 @@ static int hct_open(struct vfio_device *vdev)
 	hct_data.mdev_ref++;
 	mutex_unlock(&hct_data.lock);
 
-	mdev_state->used = 1;
 	return 0;
 }
 
@@ -1035,7 +1034,6 @@ static void hct_close(struct vfio_device *vdev)
 	for (i = 0; i < mdev_state->efd_count; i++)
 		eventfd_ctx_put(mdev_state->trigger[i]);
 	mdev_state->efd_count = 0;
-	mdev_state->used = 0;
 
 	mutex_lock(&hct_data.lock);
 	hct_data.mdev_ref--;
@@ -1135,10 +1133,38 @@ exit:
 	return sprintf(buf, "\n");
 }
 
+static ssize_t use_store(struct device *dev, struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct mdev_state *mdev_state = dev_get_drvdata(dev);
+
+	if (!mdev_state) {
+		pr_err("mdev_state is NULL");
+		goto exit;
+	}
+
+	if (count > 2 || buf[0] == '\0' || buf[0] == '\n') {
+		pr_err("count:%ld buf[0]:0x%x, invalid.\n", count, buf[0]);
+		goto exit;
+	}
+
+	if (buf[0] == '0')
+		mdev_state->used = 0;
+	else if (buf[0] == '1')
+		mdev_state->used = 1;
+	else
+		goto exit;
+
+	return count;
+
+exit:
+	return -1;
+}
+
 static DEVICE_ATTR_RO(address);
 static DEVICE_ATTR_RO(id);
 static DEVICE_ATTR_RO(idx);
-static DEVICE_ATTR_RO(use);
+static DEVICE_ATTR_RW(use);
 
 static struct attribute *mdev_dev_attrs[] = {
 	&dev_attr_address.attr,

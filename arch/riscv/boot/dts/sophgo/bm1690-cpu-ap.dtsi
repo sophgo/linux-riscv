@@ -88,7 +88,7 @@
 		ranges;
 
 		clint_mswi: interrupt-controller@6e04000000 {
-			compatible = "thead,c900-clint";
+			compatible = "thead,c900-clint-mswi";
 			reg = <0x0000006e 0x04000000 0x00000000 0x00004000>;
 			interrupts-extended = <
 				&cpu0_intc 3
@@ -98,8 +98,8 @@
 				>;
 		};
 
-		clint_mtimer: timer@6840000000 {
-			compatible = "thead,c900-clint";
+		clint_mtimer0: timer@6840000000 {
+			compatible = "thead,c900-clint-mtimer";
 			reg = <0x00000068 0x40000000 0x00000000 0x00008000>;
 			interrupts-extended = <
 				&cpu0_intc 7

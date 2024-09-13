@@ -60,16 +60,16 @@
 		compatible = "simple-bus";
 		ranges;
 
-		clint_mswi: interrupt-controller@690cc00000 {
-			compatible = "thead,c900-clint";
+		clint_mswi: clint-mswi@690cc00000 {
+			compatible = "thead,c900-clint-mswi";
 			reg = <0x00000069 0x0cc00000 0x00000000 0x00004000>;
 			interrupts-extended = <
 			&cpu0_intc 3
 			>;
 		};
 
-		clint_mtimer: timer@6840000000 {
-			compatible = "thead,c900-clint";
+		clint_mtimer0: clint-mtimer@6840000000 {
+			compatible = "thead,c900-clint-mtimer";
 			reg = <0x00000068 0x40000000 0x00000000 0x00008000>;
 			interrupts-extended = <
 			&cpu0_intc 7

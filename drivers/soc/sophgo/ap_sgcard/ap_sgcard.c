@@ -507,7 +507,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			if (request_action.type == TASK_CREATE_REQUEST) {
 				copy_from_circbuf_not_change_index((char *)&task_head, rx_buf,
 							sizeof(task_head), card->pool_size);
-				if (task_head.kernel_type == C2C_KERNEL)
+				if (task_head.task_type == LAUNCH_KERNEL && task_head.kernel_type == C2C_KERNEL)
 					task_head.task_token = atomic_add_return(1, &card->c2c_kernel_token);
 				DBG_MSG("copy task %s to %s, task body size:0x%llx\n", task_type[task_head.task_type],
 					 port->name, task_head.task_body_size);

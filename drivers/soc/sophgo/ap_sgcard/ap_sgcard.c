@@ -80,6 +80,7 @@ const char *request_response_type[] = {
 	[TASK_DONE_RESPONSE] = "task done response",
 	[BTM_TASK_DONE_RESPONSE] = "btm task done response",
 	[TASK_ERROR_RESPONSE] = "task errror response",
+	[FORCE_QUIT_REQUEST] = "force quit request",
 	[SETUP_C2C_REQUEST] = "set up c2c request",
 	[SETUP_C2C_RESPONSE] = "set up c2c response",
 };
@@ -436,7 +437,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			channel->channel_index, request_action.request_id, request_action.type);
 
 		if (request_action.type == ERROR_REQUEST_RESPONSE || request_action.type > SETUP_C2C_REQUEST) {
-			pr_err("error type host request\n");
+			pr_err("error type host request type is %d\n", request_action.type);
 			for (i = 0; i < sizeof(request_action) / sizeof(uint64_t); i++)
 				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&request_action))[i]);
 		}

@@ -416,3 +416,4 @@ endif # TTY
 
 source "drivers/tty/serdev/Kconfig"
 source "drivers/tty/vtty/Kconfig"
+

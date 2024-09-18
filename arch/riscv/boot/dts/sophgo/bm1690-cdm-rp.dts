@@ -13,7 +13,7 @@
 / {
 	memory@80000000 {
 		device_type = "memory";
-		reg = <0x0000000c 0x80200000 0x00000000 0xffe00000>;
+		reg = <0x0000000c 0x00000000 0x00000004 0x00000000>;
 	};
 
 	uart1: serial@7030000000 {
@@ -45,7 +45,7 @@
 		};
 
 	chosen {
-		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc8b000000,64M maxcpus=64 no5lvl";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc0b000000,128M maxcpus=64 no5lvl";
 		stdout-path = "serial0";
 	};
 };

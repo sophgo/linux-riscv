@@ -74,10 +74,14 @@ struct sophgo_pcie_ep {
 	void __iomem *sii_base;
 	void __iomem *share_vector_reg;
 	void __iomem *clr_irq;
+	void __iomem *cdma_reg_base;
+	uint64_t cdma_pa_start;
+	uint64_t cdma_size;
 	uint64_t clr_irq_data;
 	struct phy *phy;
 	uint64_t c2c_config_base;
 	uint64_t c2c_config_size;
+	uint32_t pcie_route_config;
 	char name[32];
 	struct gpio_desc *perst_gpio;
 	int perst_irqnr;
@@ -112,5 +116,6 @@ struct vector_info *sophgo_ep_alloc_vector(int pcie_id, int vector_id);
 int bm1684x_ep_int(struct platform_device *pdev);
 int bm1690_ep_int(struct platform_device *pdev);
 void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep);
+int sophgo_pcie_ep_config_cdma_route(struct sophgo_pcie_ep *pcie);
 
 #endif

@@ -59,7 +59,7 @@
 		compatible = "sophgo,pcie-phy";
 		#phy-cells = <1>;
 
-		reg =	<0x6c 0x02f81000 0x0 0x00001000>;
+		reg = <0x6c 0x02f81000 0x0 0x00001000>;
 		bus-width = <8>;
 	};
 
@@ -68,7 +68,7 @@
 		compatible = "sophgo,pcie-phy";
 		#phy-cells = <1>;
 
-		reg =	<0x6c 0x02781000 0x0 0x00001000>;
+		reg = <0x6c 0x02781000 0x0 0x00001000>;
 		bus-width = <8>;
 	};
 
@@ -77,7 +77,7 @@
 		compatible = "sophgo,pcie-phy";
 		#phy-cells = <1>;
 
-		reg =	<0x6c 0x08781000 0x0 0x00001000>;
+		reg = <0x6c 0x08781000 0x0 0x00001000>;
 		bus-width = <8>;
 	};
 
@@ -103,6 +103,7 @@
 		c2c_top =  <0x6C 0x007D0000  0x0 0x00001000>;
 		dma-coherent;
 		pcie-card;
+		c2c0_x8_1;
 		// IO, check IO_SPACE_LIMIT
 		// 32bit prefetchable memory
 		// 32bit non-prefetchable memory
@@ -128,6 +129,7 @@
 		slv_range = <0x48 0x00000000 0x4b 0xffffffff>;
 		dw_range = <0x0 0x10000000 0x0 0x17ffffff>;
 		up_start_addr = <0x04000048 0x00000000>;
+		cdma-reg = <0x6c 0x007b0000 0x0 0x10000>;
 
 		status = "okay";
 	};
@@ -149,6 +151,7 @@
 		reg-names = "dbi", "ctrl", "atu", "config";
 		dma-coherent;
 		pcie-card;
+		c2c0_x8_0;
 		// IO, check IO_SPACE_LIMIT
 		// 32bit prefetchable memory
 		// 32bit non-prefetchable memory
@@ -175,6 +178,7 @@
 		slv_range = <0x40 0x00000000 0x43 0xffffffff>;
 		dw_range = <0x0 0x00000000 0x0 0x7ffffff>;
 		up_start_addr = <0x04000040 0x00000000>;
+		cdma-reg = <0x6c 0x00790000 0x0 0x10000>;
 
 		status = "disable";
 	};
@@ -198,6 +202,7 @@
 		c2c_top = <0x6C 0x027D0000  0x0 0x00001000>;
 		dma-coherent;
 		pcie-card;
+		c2c1_x8_1;
 		// IO, check IO_SPACE_LIMIT
 		// 32bit prefetchable memory
 		// 32bit non-prefetchable memory
@@ -223,6 +228,7 @@
 		slv_range = <0x58 0x00000000 0x57 0xffffffff>;
 		dw_range = <0x0 0x30000000 0x0 0x37ffffff>;
 		up_start_addr = <0x04000058 0x00000000>;
+		cdma-reg = <0x6c 0x027b0000 0x0 0x10000>;
 
 		status = "disable";
 	};
@@ -246,6 +252,7 @@
 		c2c_top = <0x6C 0x027D0000  0x0 0x00001000>;
 		dma-coherent;
 		pcie-card;
+		c2c1_x8_0;
 		// IO, check IO_SPACE_LIMIT
 		// 32bit prefetchable memory
 		// 32bit non-prefetchable memory
@@ -271,6 +278,7 @@
 		slv_range = <0x50 0x00000000 0x53 0xffffffff>;
 		dw_range = <0x0 0x20000000 0x0 0x27ffffff>;
 		up_start_addr = <0x04000050 0x00000000>;
+		cdma-reg = <0x6c 0x02790000 0x0 0x10000>;
 
 		status = "okay";
 	};
@@ -293,6 +301,7 @@
 		c2c_top = <0x6C 0x087D0000  0x0 0x00001000>;
 		dma-coherent;
 		pcie-card;
+		cxp_x8;
 		// IO, check IO_SPACE_LIMIT
 		// 32bit prefetchable memory
 		// 32bit non-prefetchable memory
@@ -318,6 +327,7 @@
 		slv_range = <0x60 0x00000000 0x67 0xffffffff>;
 		dw_range = <0x0 0x40000000 0x0 0x47ffffff>;
 		up_start_addr = <0x04000060 0x00000000>;
+		cdma-reg = <0x6c 0x087a0000 0x0 0x10000>;
 
 		status = "disable";
 	};
@@ -334,8 +344,8 @@
 		speed = <0x0 0x5>;
 		lane_num = <0x0 0x8>;
 		func_num = <0x0 0x1>;
+		c2c0_x8_1;
 
-		//pcie1
 		reg =	<0x6c 0x00000000  0x0 0x00300000>,
 			<0x6c 0x00300000  0x0 0x00004000>,
 			<0x6c 0x000c0000  0x0 0x00001000>;
@@ -343,6 +353,7 @@
 
 		c2c_config_range = <0x6c 0x00000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x007d0000  0x0 0x00001000>;
+		cdma-reg = <0x6c 0x007b0000 0x0 0x10000>;
 
 		phys = <&pciephy_0 0>;
 		phy-names = "pcie-phy";
@@ -364,8 +375,8 @@
 		speed = <0x0 0x5>;
 		lane_num = <0x0 0x8>;
 		func_num = <0x0 0x1>;
+		c2c0_x8_0;
 
-		//pcie1
 		reg =   <0x6c 0x00400000 0x00000000 0x00300000>,
 			<0x6c 0x00700000 0x00000000 0x00004000>,
 			<0x6c 0x00780000 0x00000000 0x00001000>;
@@ -373,6 +384,7 @@
 
 		c2c_config_range = <0x6c 0x00000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x007d0000  0x0 0x00001000>;
+		cdma-reg = <0x6c 0x00790000 0x0 0x10000>;
 
 		perst-gpios = <&port0a 6 0>;
 
@@ -391,6 +403,7 @@
 		speed = <0x0 0x5>;
 		lane_num = <0x0 0x8>;
 		func_num = <0x0 0x1>;
+		c2c1_x8_1;
 
 		reg =   <0x6c 0x02000000 0x00000000 0x00300000>,
 			<0x6c 0x02300000 0x00000000 0x00004000>,
@@ -399,6 +412,7 @@
 
 		c2c_config_range = <0x6c 0x02000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x027d0000 0x00000000 0x00001000>;
+		cdma-reg = <0x6c 0x027b0000 0x0 0x10000>;
 
 		status = "okay";
 
@@ -460,8 +474,8 @@
 		speed = <0x0 0x5>;
 		lane_num = <0x0 0x8>;
 		func_num = <0x0 0x1>;
+		c2c1_x8_0;
 
-		//pcie1
 		reg =	<0x6c 0x02400000  0x0 0x00300000>,
 			<0x6c 0x02700000  0x0 0x00004000>,
 			<0x6c 0x02780000  0x0 0x00001000>;
@@ -469,6 +483,7 @@
 
 		c2c_config_range = <0x6c 0x02000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x027d0000  0x0 0x00001000>;
+		cdma-reg = <0x6c 0x02790000 0x0 0x10000>;
 
 		phys = <&pciephy_3 0>;
 		phy-names = "pcie-phy";
@@ -491,6 +506,7 @@
 		speed = <0x0 0x5>;
 		lane_num = <0x0 0x8>;
 		func_num = <0x0 0x1>;
+		cxp_x8;
 
 		//pcie1
 		reg =	<0x6c 0x08400000  0x0 0x00300000>,
@@ -500,6 +516,7 @@
 
 		c2c_config_range = <0x6c 0x08000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x087d0000  0x0 0x00001000>;
+		cdma-reg = <0x6c 0x087a0000 0x0 0x10000>;
 
 		phys = <&pciephy_4 0>;
 		phy-names = "pcie-phy";

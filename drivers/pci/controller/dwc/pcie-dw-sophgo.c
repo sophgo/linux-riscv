@@ -461,6 +461,38 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 
 		pcie->pe_rst = of_get_named_gpio(dev->of_node, "prst", 0); //TODO:default high? or low?
 		dev_err(dev, "perst:[gpio%d]\n", pcie->pe_rst);
+
+		if (device_property_present(dev, "c2c0_x8_1") || device_property_present(dev, "c2c1_x8_1"))
+			pcie->pcie_route_config = C2C_PCIE_X8_1;
+		else if (device_property_present(dev, "c2c0_x8_0") || device_property_present(dev, "c2c1_x8_0"))
+			pcie->pcie_route_config = C2C_PCIE_X8_0;
+		else if (device_property_present(dev, "c2c0_x4_1") || device_property_present(dev, "c2c1_x4_1"))
+			pcie->pcie_route_config = C2C_PCIE_X4_1;
+		else if (device_property_present(dev, "c2c0_x4_0") || device_property_present(dev, "c2c1_x4_0"))
+			pcie->pcie_route_config = C2C_PCIE_X4_0;
+		else if (device_property_present(dev, "cxp_x8"))
+			pcie->pcie_route_config = CXP_PCIE_X8;
+		else if (device_property_present(dev, "cxp_x4"))
+			pcie->pcie_route_config = CXP_PCIE_X4;
+		else
+			dev_err(dev, "error pcie type\n");
+
+		ret = of_property_read_u64_index(np, "cdma-reg", 0, &pcie->cdma_pa_start);
+		ret = of_property_read_u64_index(np, "cdma-reg", 1, &pcie->cdma_size);
+		if (ret) {
+			pr_err("cdma reg not found\n");
+			return -1;
+		}
+		pcie->cdma_reg_base = devm_ioremap(dev, pcie->cdma_pa_start, pcie->cdma_size);
+		if (!pcie->cdma_reg_base) {
+			dev_err(dev, "failed to map cdma reg\n");
+			return -1;
+		}
+
+		if (of_device_is_compatible(np, "sophgo,bm1690-c2c-pcie-host")) {
+			pcie->c2c_pcie_rc = 1;
+			dev_err(dev, "probe c2c pcie host\n");
+		}
 	}
 
 	return 0;
@@ -1127,6 +1159,37 @@ static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
+static int sophgo_pcie_config_cdma_route(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t tmp;
+
+	pr_err("cdma config, pcie route config:0x%x\n", pcie->pcie_route_config);
+
+	tmp = (pcie->pcie_route_config << 28) | (pcie->cdma_pa_start >> 32);
+	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_H32);
+
+	tmp = (pcie->cdma_pa_start & ((1ul << 32) - 1)) >> 16;
+	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_M16);
+
+	// OS: 2
+	tmp = readl(pcie->cdma_reg_base + CDMA_CSR_4) | (1 << CDMA_CSR_RCV_CMD_OS);
+	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_4);
+
+	tmp = (readl(pcie->cdma_reg_base + CDMA_CSR_INTER_DIE_RW) &
+		~(0xff << CDMA_CSR_INTER_DIE_WRITE_ADDR_L4)) |
+		(pcie->pcie_route_config << CDMA_CSR_INTER_DIE_WRITE_ADDR_H4) |
+		(0b0000 << CDMA_CSR_INTER_DIE_WRITE_ADDR_L4);
+	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_INTER_DIE_RW);
+
+	tmp = (readl(pcie->cdma_reg_base + CDMA_CSR_INTRA_DIE_RW) &
+		~(0xff << CDMA_CSR_INTRA_DIE_READ_ADDR_L4)) |
+		(AXI_RN << CDMA_CSR_INTRA_DIE_READ_ADDR_H4) |
+		(0b0000 << CDMA_CSR_INTRA_DIE_READ_ADDR_L4);
+	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_INTRA_DIE_RW);
+
+	return 0;
+}
+
 int sophgo_dw_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1169,6 +1232,8 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	if (pcie->pcie_card) {
 		dev_err(dev, "pcie card mode, begin init pcie bus\n");
 		sophgo_pcie_host_init_port(pcie);
+		if (pcie->c2c_pcie_rc)
+			sophgo_pcie_config_cdma_route(pcie);
 	}
 
 	bridge = devm_pci_alloc_host_bridge(dev, 0);

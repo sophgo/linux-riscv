@@ -215,6 +215,7 @@ void c2c_init_ep(struct work_struct *p_work)
 	pr_err("sophgo pcie c2c ep dealy work queue\n");
 
 	bm1690_pcie_init_link(sg_ep);
+	sophgo_pcie_ep_config_cdma_route(sg_ep);
 }
 
 static int sophgo_c2c_link_probe(struct platform_device *pdev)

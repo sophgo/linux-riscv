@@ -443,7 +443,8 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		}
 		request_action.time.kr_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
 
-		if (request_action.type < FREE_DEVICE_MEM_RESPONSE || request_action.type == SETUP_C2C_REQUEST) {
+		if (request_action.type < FREE_DEVICE_MEM_RESPONSE || request_action.type == SETUP_C2C_REQUEST ||
+		    request_action.type == FORCE_QUIT_REQUEST) {
 			port_list = channel->port_list.next;
 			port = container_of(port_list, struct v_port, list);
 			DBG_MSG("channel 0 fd\n");

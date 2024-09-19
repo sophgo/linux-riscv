@@ -54,6 +54,26 @@
 #define PCIE_CTRL_REMAP_EN_SN_TO_PCIE_DW4G_EN_BIT           3
 #define PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_EN_BIT           0
 
+#define CDMA_CSR_RCV_ADDR_H32				(0x1004)
+#define CDMA_CSR_RCV_ADDR_M16				(0x1008)
+#define CDMA_CSR_INTER_DIE_RW				(0x100c)
+#define CDMA_CSR_4					(0x1010)
+#define CDMA_CSR_INTRA_DIE_RW				(0x123c)
+
+#define CDMA_CSR_RCV_CMD_OS				15
+
+// CDMA_CSR_INTER_DIE_RW
+#define CDMA_CSR_INTER_DIE_READ_ADDR_L4		0
+#define CDMA_CSR_INTER_DIE_READ_ADDR_H4		4
+#define CDMA_CSR_INTER_DIE_WRITE_ADDR_L4	8
+#define CDMA_CSR_INTER_DIE_WRITE_ADDR_H4	12
+
+// CDMA_CSR_INTRA_DIE_RW
+#define CDMA_CSR_INTRA_DIE_READ_ADDR_L4		0
+#define CDMA_CSR_INTRA_DIE_READ_ADDR_H4		4
+#define CDMA_CSR_INTRA_DIE_WRITE_ADDR_L4	8
+#define CDMA_CSR_INTRA_DIE_WRITE_ADDR_H4	12
+
 #define GENMASK_32(h, l) \
 	(((0xFFFFFFFF) << (l)) & (0xFFFFFFFF >> (32UL - 1 - (h))))
 
@@ -64,6 +84,21 @@ enum pcie_rst_status {
 	PCIE_RST_ASSERT = 0,
 	PCIE_RST_DE_ASSERT,
 	PCIE_RST_STATUS_BUTT
+};
+
+enum {
+	C2C_PCIE_X8_0 = 0b0101,
+	C2C_PCIE_X8_1 = 0b0111,
+	C2C_PCIE_X4_0 = 0b0100,
+	C2C_PCIE_X4_1 = 0b0110,
+	CXP_PCIE_X8 = 0b1010,
+	CXP_PCIE_X4 = 0b1011,
+};
+
+enum {
+	// RN: K2K; RNI: CCN
+	AXI_RNI = 0b1001,
+	AXI_RN = 0b1000,
 };
 
 struct PCIE_EQ_COEF {
@@ -79,6 +114,7 @@ struct sophgo_dw_pcie {
 	void __iomem		*sii_reg_base;
 	void __iomem		*ctrl_reg_base;
 	void __iomem		*c2c_top;
+	void __iomem		*cdma_reg_base;
 	uint64_t		cfg_start_addr;
 	uint64_t		cfg_end_addr;
 	uint64_t		slv_start_addr;
@@ -86,8 +122,12 @@ struct sophgo_dw_pcie {
 	uint64_t		dw_start;
 	uint64_t		dw_end;
 	uint64_t		up_start_addr;
+	uint64_t		cdma_pa_start;
+	uint64_t		cdma_size;
+	uint32_t		c2c_pcie_rc;
 	size_t				atu_size;
 	uint32_t			pcie_card;
+	uint32_t			pcie_route_config;
 	u32					num_ib_windows;
 	u32					num_ob_windows;
 	u32					region_align;

@@ -426,7 +426,7 @@ EXPORT_SYMBOL_GPL(bm1690_pcie_init_link);
 int sophgo_pcie_ep_config_cdma_route(struct sophgo_pcie_ep *pcie)
 {
 	uint32_t tmp;
-	
+
 	tmp = (pcie->pcie_route_config << 28) | (pcie->cdma_pa_start >> 32);
 	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_H32);
 
@@ -731,18 +731,19 @@ int bm1690_ep_int(struct platform_device *pdev)
 	else if (device_property_present(dev, "cxp_x4"))
 		sg_ep->pcie_route_config = CXP_PCIE_X4;
 	else
-		dev_err(dev, "error pcie type\n");
+		dev_err(dev, "no pcie type found, this pcie may not support c2c\n");
 
 	ret = of_property_read_u64_index(dev_node, "cdma-reg", 0, &sg_ep->cdma_pa_start);
 	ret = of_property_read_u64_index(dev_node, "cdma-reg", 1, &sg_ep->cdma_size);
-	if (ret) {
-		pr_err("cdma reg not found\n");
-		return -1;
-	}
-	sg_ep->cdma_reg_base = devm_ioremap(dev, sg_ep->cdma_pa_start, sg_ep->cdma_size);
-	if (!sg_ep->cdma_reg_base) {
-		dev_err(dev, "failed to map cdma reg\n");
-		return -1;
+	if (ret)
+		pr_err("cdma reg not found, this pcie is not support c2c\n");
+	else {
+		sg_ep->cdma_reg_base = devm_ioremap(dev, sg_ep->cdma_pa_start, sg_ep->cdma_size);
+		if (!sg_ep->cdma_reg_base) {
+			dev_err(dev, "failed to map cdma reg\n");
+			goto unmap_c2c_top;
+		}
+
 	}
 
 	sg_ep->set_vector = bm1690_set_vector;

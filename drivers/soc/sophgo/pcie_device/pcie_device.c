@@ -145,14 +145,14 @@ static int pci_platform_init(struct pci_dev *pdev)
 	}
 	pcie_capability_clear_word(pdev, PCI_EXP_DEVCTL, PCI_EXP_DEVCTL_NOSNOOP_EN);
 
-#if 0
+
 	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_MSI);
 	if (ret <= 0) {
 		pci_err(pdev, "alloc MSI IRQ failed %d\n", ret);
 		ret = -1;
 		goto err2_out;
 	}
-
+#if 0
 	ret = request_threaded_irq(pdev->irq, NULL, pci_irq_handler, 0, DRV_NAME, hdev);
 	if (ret < 0) {
 		pci_err(pdev, "request IRQ failed %d\n", ret);

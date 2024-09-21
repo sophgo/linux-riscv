@@ -197,6 +197,9 @@ struct sg_card {
 	uint32_t channel_count;
 	uint32_t pool_size;
 	uint32_t share_memory_type;
+	uint64_t host_channel_irq_base;
+	uint64_t tpu_channel_irq_base;
+	uint64_t media_channel_irq_base;
 	struct v_channel *channel;
 	struct sg_card_cdev_info cdev_info;
 	const struct sophgo_pcie_vfun *pcie_vfun;
@@ -680,13 +683,10 @@ static irqreturn_t sgcard_interrupt(int irq, void *dev_id)
 	struct sg_card *card = (struct sg_card *)dev_id;
 	struct v_channel *channel = NULL;
 	int i;
+	int ch_index;
 
-	for (i = 0; i < card->channel_count; i++) {
-		if (irq == card->channel[i].irq) {
-			channel = &card->channel[i];
-			break;
-		}
-	}
+	ch_index = irq - card->host_channel_irq_base;
+	channel = &card->channel[ch_index];
 
 	channel_clr_irq(channel);
 
@@ -705,9 +705,12 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 	struct device_node *dev_node = dev_of_node(dev);
 	struct resource *regs;
 	struct vector_info *vector;
+	uint32_t cpu, cpus;
 	int i;
 	int j;
 	int ret;
+
+	cpus = num_online_cpus();
 
 	ret = of_property_read_u32(dev_node, "share-memory-type", &card->share_memory_type);
 	ret = of_property_read_u32(dev_node, "host-channel-num", &card->host_channel_count);
@@ -789,6 +792,10 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 		if (card->channel[i].irq < 0) {
 			pr_err("vtty%d get irq num failed\n", i);
 			goto free_request;
+		} else {
+			cpu = i % cpus;
+			irq_set_affinity(card->channel[i].irq, get_cpu_mask(cpu));
+			pr_err("ch%d irq:%llu->cpu%u\n", i, card->channel[i].irq, cpu);
 		}
 
 		ret = of_property_read_u64_index(dev_node, "virtual-msi", 2 * i,
@@ -856,6 +863,11 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 			goto free_request;
 		}
 	}
+
+	card->host_channel_irq_base = card->channel[0].irq;
+	card->tpu_channel_irq_base = card->channel[1].irq;
+	if (card->media_channel_count)
+		card->media_channel_irq_base = card->channel[card->tpu_channel_count + 1].irq;
 
 	return 0;
 

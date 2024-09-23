@@ -14,13 +14,18 @@
 #include "sg2044-pcie-intc.dtsi"
 #include "sg2044-pcie-5rc.dtsi"
 
+/delete-node/ &uart0;
+/delete-node/ &uart2;
+/delete-node/ &uart3;
+
+
 / {
 	aliases {
 		serial0 = &uart1;
 	};
 
 	chosen {
-		bootargs = "console=ttyS1,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=64 no5lvl";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=64 no5lvl";
 		stdout-path = "serial0";
 	};
 };

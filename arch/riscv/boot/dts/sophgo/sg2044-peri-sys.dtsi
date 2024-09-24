@@ -454,19 +454,19 @@
 			<&div_clk GATE_CLK_CXP_CFG>;
 		interrupt-parent = <&intc>;
 		#if 0
-		interrupts = <92 IRQ_TYPE_LEVEL_HIGH 93 IRQ_TYPE_LEVEL_HIGH
-				94 IRQ_TYPE_LEVEL_HIGH 95 IRQ_TYPE_LEVEL_HIGH
-				96 IRQ_TYPE_LEVEL_HIGH 97 IRQ_TYPE_LEVEL_HIGH
-				98 IRQ_TYPE_LEVEL_HIGH 99 IRQ_TYPE_LEVEL_HIGH
-				100 IRQ_TYPE_LEVEL_HIGH
+		interrupts = <92 IRQ_TYPE_LEVEL_HIGH
+				93 IRQ_TYPE_LEVEL_HIGH 94 IRQ_TYPE_LEVEL_HIGH
+				95 IRQ_TYPE_LEVEL_HIGH 96 IRQ_TYPE_LEVEL_HIGH
+				97 IRQ_TYPE_LEVEL_HIGH 98 IRQ_TYPE_LEVEL_HIGH
+				99 IRQ_TYPE_LEVEL_HIGH 100 IRQ_TYPE_LEVEL_HIGH
 				109 IRQ_TYPE_LEVEL_HIGH 110 IRQ_TYPE_LEVEL_HIGH
 				111 IRQ_TYPE_LEVEL_HIGH 112 IRQ_TYPE_LEVEL_HIGH
 				113 IRQ_TYPE_LEVEL_HIGH 114 IRQ_TYPE_LEVEL_HIGH
 				115 IRQ_TYPE_LEVEL_HIGH 116 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "macirq", "tx_ch0", "tx_ch1", "tx_ch2", "tx_ch3",
-				  "tx_ch4", "tx_ch5", "tx_ch6", "rx_ch0", "rx_ch1",
-				  "rx_ch2", "rx_ch3", "rx_ch4", "rx_ch5", "rx_ch6",
-				  "rx_ch7";
+					"tx_ch4", "tx_ch5", "tx_ch6", "tx_ch7",
+					"rx_ch0", "rx_ch1", "rx_ch2", "rx_ch3",
+					"rx_ch4", "rx_ch5", "rx_ch6", "rx_ch7";
 		snps,multi_msi_en;
 		#else
 		interrupts = <92 IRQ_TYPE_LEVEL_HIGH>;

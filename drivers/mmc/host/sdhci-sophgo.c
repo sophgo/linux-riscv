@@ -31,6 +31,8 @@
 #define BM_SDHCI_VENDOR_A_CTRL_R (BM_SDHCI_VENDOR_OFFSET + 0x40)
 #define BM_SDHCI_VENDOR_A_STAT_R (BM_SDHCI_VENDOR_OFFSET + 0x44)
 
+static bool switch_1_8_v_voltage_flag = false;
+
 static void bm_sdhci_set_tap(struct sdhci_host *host, unsigned int tap)
 {
 	sdhci_writel(host, 0x0, BM_SDHCI_VENDOR_MSHC_CTRL_R);
@@ -405,24 +407,6 @@ static void dwcmshc_adma_write_desc(struct sdhci_host *host, void **desc,
 	sdhci_adma_write_desc(host, desc, addr, len, cmd);
 }
 
-
-/* ------------- bm palludium sdcard --------------- */
-static const struct sdhci_ops sdhci_bm_pldm_sd_ops = {
-	.reset = bm_sdhci_reset,
-	.set_clock = bm_sdhci_set_clock,
-	.set_bus_width = sdhci_set_bus_width,
-	.set_uhs_signaling = sdhci_bm_set_uhs_signaling,
-	.get_max_clock = bm_sdhci_get_max_clock,
-	.get_min_clock = bm_sdhci_get_min_clock,
-	.adma_write_desc = dwcmshc_adma_write_desc,
-};
-
-static const struct sdhci_pltfm_data sdhci_bm_pldm_sd_pdata = {
-	.ops = &sdhci_bm_pldm_sd_ops,
-	.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN | SDHCI_QUIRK_INVERTED_WRITE_PROTECT,
-	.quirks2 = SDHCI_QUIRK2_NO_1_8_V,
-};
-
 static inline bool sdhci_data_line_cmd(struct mmc_command *cmd)
 {
 	return cmd->data || cmd->flags & MMC_RSP_BUSY;
@@ -584,44 +568,28 @@ static void switch_voltage_use_gpio(struct sdhci_host *host)
 		return;
 
 	pr_err("SDHCI_SOPHGO: get gpio successfully, index is %d\n", switch_voltage_gpio);
-	gpio_direction_output(switch_voltage_gpio, 0);
-	mdelay(100);
-	gpio_direction_output(switch_voltage_gpio, 1);
-	mdelay(100);
-	return;
+	if (switch_1_8_v_voltage_flag) {
+		switch_1_8_v_voltage_flag = false;
+		pr_err("gpio: %d, pull high\n", switch_voltage_gpio);
+		gpio_direction_output(switch_voltage_gpio, 0);
+		mdelay(100);
+		gpio_direction_output(switch_voltage_gpio, 1);
+		mdelay(100);
+	} else {
+		switch_1_8_v_voltage_flag = true;
+		pr_err("gpio: %d, pull down\n", switch_voltage_gpio);
+		gpio_direction_output(switch_voltage_gpio, 1);
+		mdelay(100);
+		gpio_direction_output(switch_voltage_gpio, 0);
+		mdelay(100);
+	}
 
+	gpio_free(switch_voltage_gpio);
+
+	return;
 }
 
-/* ------------- bm palludium emmc --------------- */
-static const struct sdhci_ops sdhci_bm_pldm_emmc_ops = {
-	.reset = sdhci_reset,
-	.set_clock = sdhci_set_clock,
-	.set_bus_width = sdhci_set_bus_width,
-	.set_uhs_signaling = sdhci_bm_set_uhs_signaling,
-	.get_max_clock = bm_sdhci_get_max_clock,
-	.get_min_clock = bm_sdhci_get_min_clock,
-	.platform_execute_tuning = bm_platform_execute_tuning,
-	.adma_write_desc = dwcmshc_adma_write_desc,
-};
-
-static const struct sdhci_pltfm_data sdhci_bm_pldm_emmc_pdata = {
-	.ops = &sdhci_bm_pldm_emmc_ops,
-	.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
-};
-
-/* ------------ bm asic ------------ */
-static const struct sdhci_ops sdhci_bm_emmc_ops = {
-	.reset = bm_sdhci_reset,
-	.set_clock = sdhci_set_clock,
-	.set_bus_width = sdhci_set_bus_width,
-	.set_uhs_signaling = sdhci_bm_set_uhs_signaling,
-	.platform_execute_tuning = sdhci_bm_execute_software_tuning,
-	.adma_write_desc = dwcmshc_adma_write_desc,
-	.get_max_clock = bm_sdhci_get_max_clock,
-	.get_min_clock = bm_sdhci_get_min_clock,
-};
-
-static const struct sdhci_ops sdhci_bm_sd_ops = {
+static const struct sdhci_ops sdhci_dwcmshc_sg2044_ops = {
 	.reset = bm_sdhci_reset,
 	.set_clock = sdhci_set_clock,
 	.set_bus_width = sdhci_set_bus_width,
@@ -633,32 +601,21 @@ static const struct sdhci_ops sdhci_bm_sd_ops = {
 	.voltage_switch = switch_voltage_use_gpio,
 };
 
-static const struct sdhci_pltfm_data sdhci_bm_emmc_pdata = {
-	.ops = &sdhci_bm_emmc_ops,
+static const struct sdhci_pltfm_data sdhci_dwcmshc_sg2044_pdata = {
+	.ops = &sdhci_dwcmshc_sg2044_ops,
 	.quirks = SDHCI_QUIRK_INVERTED_WRITE_PROTECT | SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
 };
 
-static const struct sdhci_pltfm_data sdhci_bm_sd_pdata = {
-	.ops = &sdhci_bm_sd_ops,
-	.quirks = SDHCI_QUIRK_INVERTED_WRITE_PROTECT | SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
-#ifdef CONFIG_MMC_SDHCI_SOPHGO_NO_1_8_V
-	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN | SDHCI_QUIRK2_NO_1_8_V,
-#else
-	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
-#endif
+
+static const struct of_device_id sdhci_dwcmshc_dt_ids[] = {
+	{
+		.compatible = "sophgo,sg2044-dwcmshc",
+		.data = &sdhci_dwcmshc_sg2044_pdata,
+	},
+	{},
 };
-
-
-static const struct of_device_id sdhci_bm_dt_match[] = {
-	{.compatible = "sophgo,sg-pldm-sdcard", .data = &sdhci_bm_pldm_sd_pdata},
-	{.compatible = "sophgo,sg-pldm-emmc", .data = &sdhci_bm_pldm_emmc_pdata},
-	{.compatible = "sophgo,sg-emmc", .data = &sdhci_bm_emmc_pdata},
-	{.compatible = "sophgo,sg-sd", .data = &sdhci_bm_sd_pdata},
-	{ /* sentinel */ }
-};
-
-MODULE_DEVICE_TABLE(of, sdhci_bm_dt_match);
+MODULE_DEVICE_TABLE(of, sdhci_dwcmshc_dt_ids);
 
 static int sdhci_bm_probe(struct platform_device *pdev)
 {
@@ -668,7 +625,8 @@ static int sdhci_bm_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	const struct sdhci_pltfm_data *pdata;
 	int ret;
-	match = of_match_device(sdhci_bm_dt_match, &pdev->dev);
+
+	match = of_match_device(sdhci_dwcmshc_dt_ids, &pdev->dev);
 	if (!match)
 		return -EINVAL;
 	pdata = match->data;
@@ -733,7 +691,7 @@ static int sdhci_bm_probe(struct platform_device *pdev)
 		else
 			clk_prepare_enable(bm_host->clk100k);
 	}
-
+	switch_voltage_use_gpio(host);
 	host->mmc_host_ops.select_drive_strength = sdhci_bm_select_drive_strength;
 	ret = sdhci_add_host(host);
 	if (ret)
@@ -761,7 +719,7 @@ static struct platform_driver sdhci_bm_driver = {
 	.remove = sdhci_bm_remove,
 	.driver = {
 		.name = DRIVER_NAME,
-		.of_match_table = sdhci_bm_dt_match,
+		.of_match_table = sdhci_dwcmshc_dt_ids,
 	},
 };
 

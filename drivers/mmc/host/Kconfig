@@ -1083,13 +1083,3 @@ config MMC_SDHCI_SOPHGO
 	  To compile this driver as a module, choose M here: the
 	  module will be called sdhci-sophgo.
 
-config MMC_SDHCI_SOPHGO_NO_1_8_V
-	tristate "Sophgo/BitMain SDIO host Controller Not Suppuort 1.8V"
-	depends on MMC_SDHCI_SOPHGO
-	help
-	  This will determine whether the SDIO host controller in Sophgo/BitMain
-	  is operating at 1.8V.
-
-	  If you not suppourt 1.8v, say Y.
-
-	  If support 1.8v, say N or not say.

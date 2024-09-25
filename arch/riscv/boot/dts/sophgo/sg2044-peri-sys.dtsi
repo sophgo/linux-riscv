@@ -74,7 +74,7 @@
 	};
 
 	emmc: bm-emmc@703000A000 {
-		compatible = "sophgo,sg-emmc";
+		compatible = "sophgo,sg2044-dwcmshc";
 		reg = <0x70 0x3000A000 0x0 0x1000>;
 		reg-names = "core_mem";
 		interrupt-parent = <&intc>;
@@ -96,7 +96,7 @@
 	};
 
 	sd: bm-sd@703000B000 {
-		compatible = "sophgo,sg-sd";
+		compatible = "sophgo,sg2044-dwcmshc";
 		reg = <0x70 0x3000B000 0x0 0x1000>;
 		reg-names = "core_mem";
 		interrupt-parent = <&intc>;

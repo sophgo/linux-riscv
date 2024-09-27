@@ -436,11 +436,11 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		copy_from_circbuf_not_change_index((char *)&request_action, rx_buf,
 							sizeof(request_action), card->pool_size);
 		ktime_get_real_ts64(&ts);
-		DBG_MSG("host int [ch:0x%llx] request_id:0x%llx, request_type:0x%llx\n",
+		DBG_MSG("host int [ch:0x%llx] request_id:0x%llx, request_type:0x%x\n",
 			channel->channel_index, request_action.request_id, request_action.type);
 
 		if (request_action.type == ERROR_REQUEST_RESPONSE || request_action.type > SETUP_C2C_REQUEST) {
-			pr_err("error type host request type is %llu\n", request_action.type);
+			pr_err("error type host request type is %u\n", request_action.type);
 			for (i = 0; i < sizeof(request_action) / sizeof(uint64_t); i++)
 				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&request_action))[i]);
 		}
@@ -462,7 +462,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			spin_unlock_irqrestore(&channel->port_lock, flags);
 
 			if (list_entry_is_head(port, &channel->port_list, list)) {
-				pr_err("request_id:0x%llx, request_type:0x%llx, no stream id:0x%llx match\n",
+				pr_err("request_id:0x%llx, request_type:0x%x, no stream id:0x%llx match\n",
 					request_action.request_id, request_action.type, request_action.stream_id);
 				pr_err("[error stream id]:current tail:0x%llx\n", tail);
 				tail = (tail + sizeof(request_action) + request_action.task_size)
@@ -490,7 +490,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			c = CIRC_CNT(head, tail, card->pool_size);
 			if (c < length + sizeof(request_action)) {
 				DBG_MSG("warning, task size is not match\n");
-				DBG_MSG("request id:0x%llx, type:0x%llx, bring bufer size:0x%x but want size:0x%lx\n",
+				DBG_MSG("request id:0x%llx, type:0x%x, bring bufer size:0x%x but want size:0x%lx\n",
 					request_action.request_id, request_action.type, c,
 					length + sizeof(request_action));
 				DBG_MSG("host rx buf head:0x%llx, tail:0x%llx\n", head, tail);

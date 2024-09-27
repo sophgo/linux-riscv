@@ -194,7 +194,8 @@ struct time_stamp {
 
 struct host_request_action {
 	uint64_t request_id;
-	uint64_t type;
+	uint32_t type;
+	uint32_t subtype;
 	union {
 		uint64_t stream_id;
 		uint64_t device_malloc_size;
@@ -205,7 +206,10 @@ struct host_request_action {
 		uint64_t event_id;
 		uint64_t callback_id;
 	};
-	uint64_t task_size;
+	union {
+		uint64_t task_size;
+		uint64_t record_stream_id;
+	};
 	struct time_stamp time;
 } __attribute__((packed));
 

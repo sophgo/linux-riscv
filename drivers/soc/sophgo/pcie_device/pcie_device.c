@@ -146,7 +146,7 @@ static int pci_platform_init(struct pci_dev *pdev)
 	pcie_capability_clear_word(pdev, PCI_EXP_DEVCTL, PCI_EXP_DEVCTL_NOSNOOP_EN);
 
 
-	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_MSI);
+	ret = pci_alloc_irq_vectors(pdev, 1, 2, PCI_IRQ_MSI);
 	if (ret <= 0) {
 		pci_err(pdev, "alloc MSI IRQ failed %d\n", ret);
 		ret = -1;

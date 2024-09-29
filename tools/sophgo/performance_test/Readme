@@ -1,0 +1,5 @@
+编译测试程序：
+	在开始编译测试模块前，需要设置环境变量：
+	export RV_KERNEL_BUILD_DIR=/path/to/linux-riscv/build/chip/kernel_variant
+	export CROSS_COMPILE=/path/to/gcc-riscv64-unknown-linux-gnu/bin/riscv64-unknown-linux-gnu-
+	执行make

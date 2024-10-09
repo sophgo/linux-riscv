@@ -431,7 +431,7 @@ int sophgo_pcie_ep_config_cdma_route(struct sophgo_pcie_ep *pcie)
 	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_H32);
 
 	tmp = (pcie->cdma_pa_start & ((1ul << 32) - 1)) >> 16;
-	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_H32);
+	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_M16);
 
 	// OS: 2
 	tmp = readl(pcie->cdma_reg_base + CDMA_CSR_4) | (1 << CDMA_CSR_RCV_CMD_OS);

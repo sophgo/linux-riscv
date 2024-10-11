@@ -130,16 +130,34 @@ static ssize_t c2c_enable_show(struct device *dev,
 	return strlen(buf);
 }
 
+static int dump_pcie_info(struct pcie_info *pcie_info)
+{
+	pr_err("pcie[%llu]  status:%s\n", pcie_info->pcie_id, pcie_info->enable == 1 ? "enable": "disable");
+	pr_err("	slot id:0x%llx\n", pcie_info->slot_id);
+	pr_err("	socket id:0x%llx\n", pcie_info->socket_id);
+	pr_err("	send port:0x%llx, recv port:0x%llx\n", pcie_info->send_port, pcie_info->recv_port);
+	pr_err("	data link type:%s, link role:%s, gpio:%llu\n",
+		pcie_info->data_link_type == PCIE_DATA_LINK_C2C ?
+		"c2c" : (pcie_info->data_link_type == PCIE_LINK_ROLE_RC ? "cascade" : "error"),
+		pcie_info->link_role == PCIE_LINK_ROLE_RC ? "rc" : (pcie_info->link_role == PCIE_LINK_ROLE_EP ?
+		"ep" : "error"),
+		pcie_info->link_role_gpio);
+	pr_err("	perst gpio:%llu\n", pcie_info->perst_gpio);
+	pr_err("	peer slot id:%llu, peer socket id:%llu, peer pcie id:%llu\n\n",
+		pcie_info->peer_slotid, pcie_info->peer_socketid, pcie_info->peer_pcie_id);
+
+	return 0;
+}
+
 int check_all_rc(struct c2c_info *info)
 {
 	struct pcie_info *pcie_info;
 
 	for (int i = 0; i < 10; i++) {
-		pcie_info = (struct pcie_info *)info->pcie_info + i * PER_CONFIG_STR_OFFSET;
-		if (pcie_info->data_link_type == PCIE_DATA_LINK_C2C && pcie_info->link_role == PCIE_LINK_ROLE_RC) {
-			pr_err("[pcie%d] as c2c rc\n", i);
+		pcie_info = (struct pcie_info *)(info->pcie_info + i * PER_CONFIG_STR_OFFSET);
+		dump_pcie_info(pcie_info);
+		if (pcie_info->data_link_type == PCIE_DATA_LINK_C2C && pcie_info->link_role == PCIE_LINK_ROLE_RC)
 			all_c2c_rc++;
-		}
 	}
 
 	return all_c2c_rc;

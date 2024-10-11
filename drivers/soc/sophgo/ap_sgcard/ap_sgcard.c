@@ -25,6 +25,7 @@
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/sched/clock.h>
+#include <linux/delay.h>
 #include "sgdrv.h"
 #include "../pcie_ep/ap_pcie_ep.h"
 #include "../c2c_rc/c2c_rc.h"
@@ -1226,6 +1227,7 @@ static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			c2c_ok = sophgo_check_c2c();
 			if (c2c_ok)
 				break;
+			msleep(1000);
 		}
 
 		if (c2c_ok == 0)

@@ -29,9 +29,9 @@
 			<0x6b 0x06040000 0x0 0x10000>, <0x6b 0x06042000 0x0 0x10000>,
 			<0x7  0xC0000000 0x1 0x00000000>, <0xA 0xC0000000 0x1 0x00000000>;
 
-	    clocks = <&div_clk GATE_CLK_SRC0>,
-		    <&div_clk GATE_CLK_SRC1>;
-	    clock-names = "vc_clk_src0", "vc_intr_src1";
+//	    clocks = <&div_clk GATE_CLK_SRC0>,
+//		    <&div_clk GATE_CLK_SRC1>;
+//	    clock-names = "vc_clk_src0", "vc_intr_src1";
 
 	    interrupt-parent = <&intc>;
 	    interrupts =<161 IRQ_TYPE_LEVEL_HIGH>, <162 IRQ_TYPE_LEVEL_HIGH>,
@@ -72,7 +72,12 @@
 		    <228 IRQ_TYPE_LEVEL_HIGH>, <229 IRQ_TYPE_LEVEL_HIGH>,
 		    <268 IRQ_TYPE_LEVEL_HIGH>, <269 IRQ_TYPE_LEVEL_HIGH>;
 	};
-
+	rp_media{
+	#interrupt-cells = <1>;
+		compatible = "sophgo,rp_media";
+		interrupt-parent = <&intc>;
+		interrupts =<832 IRQ_TYPE_EDGE_RISING>;
+	};
 	vpss {
         #interrupt-cells = <1>;
         compatible = "sophgo,vpss";

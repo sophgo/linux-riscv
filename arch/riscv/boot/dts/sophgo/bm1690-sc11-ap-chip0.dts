@@ -149,6 +149,7 @@
 		      <0x6c 0x00700000  0x0 0x00004000>,
 		      <0x40 0x00000000  0x0 0x00001000>;
 		reg-names = "dbi", "ctrl", "atu", "config";
+		c2c_top =  <0x6C 0x007D0000  0x0 0x00001000>;
 		dma-coherent;
 		pcie-card;
 		c2c0_x8_0;
@@ -385,6 +386,9 @@
 		c2c_config_range = <0x6c 0x00000000 0x00000000 0x01ffffff>;
 		c2c_top = <0x6c 0x007d0000  0x0 0x00001000>;
 		cdma-reg = <0x6c 0x00790000 0x0 0x10000>;
+
+		phys = <&pciephy_1 0>;
+		phy-names = "pcie-phy";
 
 		perst-gpios = <&port0a 6 0>;
 

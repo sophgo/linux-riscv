@@ -1117,6 +1117,7 @@ static void pcie_config_axi_route(struct sophgo_dw_pcie *pcie)
 
 static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 {
+	int ret;
 	int err;
 	uint32_t val;
 	void __iomem *sii_reg_base = pcie->sii_reg_base;;
@@ -1130,7 +1131,11 @@ static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 	gpio_set_value(pcie->pe_rst, 0);
 	msleep(1000);
 	gpio_set_value(pcie->pe_rst, 1);
-	phy_configure(pcie->phy, NULL);
+	ret = phy_configure(pcie->phy, NULL);
+	if (ret) {
+		dev_err(pcie->dev, "phy config failed\n");
+		return ret;
+	}
 
 	/*pcie wait core clk*/
 	do {
@@ -1200,6 +1205,8 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret = 0;
 
+	dev_err(dev, "probe\n");
+
 	pcie = devm_kzalloc(dev, sizeof(*pcie), GFP_KERNEL);
 	if (!pcie)
 		return -ENOMEM;
@@ -1231,7 +1238,10 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 
 	if (pcie->pcie_card) {
 		dev_err(dev, "pcie card mode, begin init pcie bus\n");
-		sophgo_pcie_host_init_port(pcie);
+		ret = sophgo_pcie_host_init_port(pcie);
+		if (ret)
+			return ret;
+
 		if (pcie->c2c_pcie_rc)
 			sophgo_pcie_config_cdma_route(pcie);
 	}

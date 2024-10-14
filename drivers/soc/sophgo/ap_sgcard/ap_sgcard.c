@@ -1232,6 +1232,8 @@ static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		if (c2c_ok == 0)
 			return -EFAULT;
+		else
+			pr_err("all c2c link up success\n");
 
 		break;
 	default:

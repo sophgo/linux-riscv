@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/delay.h>
 #include "./pcie_phy.h"
 
 #define PHY_MAX_LANE_NUM 2
@@ -166,6 +167,7 @@ int sophgo_pcie_config(struct phy *phy, union phy_configure_opts *opts)
 	uint32_t phy_id;
 	uint64_t reg_addr;
 	uint32_t val;
+	int timeout = 0;
 
 	void __iomem *reg_base = sg_phy->reg_base;
 
@@ -175,8 +177,17 @@ int sophgo_pcie_config(struct phy *phy, union phy_configure_opts *opts)
 		do {
 			val = readl(reg_base + (reg_addr + phy_id * 0x10));
 			val = (val >> CXP_TOP_REG_PHYX_SRAM_INIT_DONE_BIT) & 0x1;
-			udelay(1);
-		} while (val != 1);
+			if (val == 1) {
+				dev_err(&sg_phy->phys->phy->dev, "phy config success\n");
+				break;
+			} else {
+				timeout++;
+				msleep(100);
+			}
+
+			if (timeout == 20)
+				return -1;
+		} while (1);
 
 		//cfg  phy0_sram_ext_ld_done
 		reg_addr = CXP_TOP_REG_RX060 + (phy_id * 0x10);

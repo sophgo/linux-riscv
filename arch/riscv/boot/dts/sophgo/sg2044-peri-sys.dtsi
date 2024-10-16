@@ -255,23 +255,22 @@
 	};
 
 	dmac0: dma@7020000000 {
-		compatible = "snps,sg-dmac";
+		compatible = "snps,axi-dma-1.01a";
 		reg = <0x70 0x20000000 0x0 0x10000>;
-		clock-names = "clk_sdma_axi";
-		clocks = <&div_clk GATE_CLK_SYSDMA_AXI>;
+		clock-names = "core-clk", "cfgr-clk";
+		clocks = <&div_clk GATE_CLK_SYSDMA_AXI>,
+			 <&div_clk GATE_CLK_SYSDMA_AXI>;
 		interrupt-parent = <&intc>;
 		interrupts = <36 IRQ_TYPE_LEVEL_HIGH>;
-
-		dma-channels = /bits/ 8 <8>;
-		#dma-cells = <3>;
-		dma-requests = /bits/ 8 <16>;
-		chan_allocation_order = /bits/ 8 <0>;
-		chan_priority = /bits/ 8 <1>;
-		block_size = <1024>;
-		dma-masters = /bits/ 8 <2>;
-		data-width = <4 4>; /* bytes */
-		axi_tr_width = <4>; /* bytes */
-		block-ts = <15>;
+		dma-channels = <8>;
+		#dma-cells = <1>;
+		snps,priority = <0 1 2 3 4 5 6 7>;
+		snps,block-size = <0x1000 0x1000 0x1000 0x1000
+				   0x1000 0x1000 0x1000 0x1000>;
+		snps,dma-masters = <2>;
+		snps,data-width = <2>;
+		snps,axi-max-burst-len = <4>;
+		status = "disable";
 	};
 
 	spifmc0: flash-controller@7001000000 {

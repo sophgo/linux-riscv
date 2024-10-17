@@ -963,15 +963,21 @@ static void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
 	void __iomem *base_addr = pcie->ctrl_reg_base;
+	int timeout = 0;
 
 	do {
-		udelay(10);
+		udelay(30);
 		if (pcie->num_lanes == 8) {
 			val = readl(base_addr + 0xfc);
 			val = (val >> 29) & 0x1; //bit29, radm_idle
 		} else {
 			val = readl(base_addr + 0xe8);
 			val = (val >> 21) & 0x1; //bit21, radm_idle
+		}
+		timeout++;
+		if (timeout == 3) {
+			pr_err("failed check radm status\n");
+			return;
 		}
 	} while (val != 1);
 }
@@ -1120,7 +1126,8 @@ static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 	int ret;
 	int err;
 	uint32_t val;
-	void __iomem *sii_reg_base = pcie->sii_reg_base;;
+	void __iomem *sii_reg_base = pcie->sii_reg_base;
+	int timeout = 0;
 
 	phy_init(pcie->phy);
 	pcie_config_soft_phy_reset(pcie, PCIE_RST_ASSERT);
@@ -1139,10 +1146,22 @@ static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 
 	/*pcie wait core clk*/
 	do {
-		udelay(10);
 		val = readl(sii_reg_base + 0x5c); //GEN_CTRL_4
 		val = (val >> 8) & 1;
-	} while (val != 1);
+		if (val == 1) {
+			dev_err(pcie->dev, "phy config success\n");
+			break;
+		} else {
+			timeout++;
+			msleep(10);
+		}
+
+		if (timeout == 50) {
+			dev_err(pcie->dev, "wait core clk failed\n");
+			return -1;
+		}
+
+	} while (1);
 
 	pcie_check_radm_status(pcie);
 

@@ -163,7 +163,7 @@ static int pci_platform_init(struct pci_dev *pdev)
 	pci_info(pdev, "MSI IRQ %d\n", pdev->irq);
 #endif
 	hdev->bus_num = pdev->bus->number >> 4;
-	dev_err(&pdev->dev, "probe pci bus-%d ep device, fix device pcie bus to %d\n",
+	dev_err(&pdev->dev, "probe pci bus-0x%x ep device, fix device pcie bus to 0x%x\n",
 		pdev->bus->number, hdev->bus_num);
 
 err2_out:

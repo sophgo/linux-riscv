@@ -147,7 +147,7 @@ static irqreturn_t perst_interrupt(int irq, void *dev_id)
 {
 	struct sophgo_pcie_ep *sg_ep = (struct sophgo_pcie_ep *)dev_id;
 
-	pr_err("%s get perst interrupt, clr irq va:0x%llx\n", sg_ep->name, (uint64_t)sg_ep->clr_irq);
+	pr_err("[%s] get perst interrupt, clr irq va:0x%llx\n", sg_ep->name, (uint64_t)sg_ep->clr_irq);
 
 	if (sg_ep->clr_irq)
 		writel(sg_ep->clr_irq_data, sg_ep->clr_irq);

@@ -453,6 +453,7 @@ int sophgo_pcie_ep_config_cdma_route(struct sophgo_pcie_ep *pcie)
 }
 EXPORT_SYMBOL_GPL(sophgo_pcie_ep_config_cdma_route);
 
+#ifndef CONFIG_SOPHGO_TX_MSIX_USED
 static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 {
 	uint64_t socket_id = sg_ep->ep_info.socket_id;
@@ -542,7 +543,85 @@ static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 
 	return 0;
 }
+#else
+static void setup_msix_gen(struct sophgo_pcie_ep *sg_ep)
+{
+	uint32_t val = 0;
+	uint32_t msix_addr_low = 0;
+	uint32_t msix_addr_high = 0;
+	uint64_t socket_id = sg_ep->ep_info.socket_id;
+	void __iomem *pcie_ctrl_base = (void __iomem *)sg_ep->ctrl_reg_base;
+	void __iomem *pcie_dbi_base = (void __iomem *)sg_ep->dbi_base;
+	void __iomem *c2c_top = (void __iomem *)sg_ep->c2c_top_base;
 
+	//clear 2nd intr trigger bit
+	val = readl(c2c_top + 0x88);
+	val &= ~(1 << 16);
+	writel(val, (c2c_top + 0x88));
+
+        //init msix high 32bit addr
+	msix_addr_high  = 0x3f;
+
+	// Write to REF control and status register to enable memory and IO accesses
+	// Config write TLPs are triggered via AXI writes to region 0 in DUT core axi wrapper
+	val = readl(pcie_dbi_base + 0x4);
+	val = (val & 0xfffffff8) | 0x7;
+	writel(val, (pcie_dbi_base + 0x4));
+
+	//reg_pciex8_1_msi_msix_int_mask, write 1 to clear
+	val = 0xffffffff;
+	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_MASK_IRQ_REG));
+
+	// config PCI_MSIX_ENABLE enable
+	val = readl(pcie_dbi_base + 0xb0);
+	val = (val & 0x7fffffff) | 0x80000000;
+	writel(val, (pcie_dbi_base + 0xb0));
+	// ********************************************************************************
+	// 1. EP configure MSIX_ADDRESS_MATCH_EN enable, then assign MSIX_ADDRESS_MATCH_LOW
+	//    and MSIX_ADDRESS_MATCH_HIGH
+	// ********************************************************************************
+	// First configure MSIX_ADDRESS_MATCH_EN, and assign MSIX_ADDRESS_MATCH_LOW
+	val = msix_addr_low | 0x1;
+	writel(val, (pcie_dbi_base + 0x940));
+
+	// assign MSIX_ADDRESS_MATCH_HIGH
+	val = msix_addr_high;
+	writel(val, (pcie_dbi_base + 0x944));
+
+	// ********************************************************************************
+	// 2. EP configure msi_gen_en enable, then assign msi_lower_addr and msi_upper_addr,
+	//    last configure msi_user_data
+	// *********************************************************************************
+	// First configure msi_gen_en enable
+	val = readl(pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_CTRL_REG);
+	val = val | 0x1;
+	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_CTRL_REG));
+
+	// Second assign msi_lower_addr and msi_upper_addr
+	val = msix_addr_low;
+	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_LOWER_ADDR_REG));
+
+	val = msix_addr_high;
+	if (socket_id == 1) {
+		val |= (0x2 << 22); //chip_id
+		val |= (0x7 << 25); //target
+	} else {
+		val |= (0x1 << 22); //chip_id
+	}
+	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG));
+
+	// Last configure msi_user_data[TODO]
+	if (socket_id == 0)
+		val = 0x0;
+	else
+		val = 0x1 << 24;
+	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_USER_DATA_REG));
+
+	//multi msi-x
+	writel(0xff, (c2c_top + C2C_TOP_MSI_GEN_MODE_REG));
+
+}
+#endif
 static int setup_msi_info(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t pci_msi_ctrl;
@@ -591,7 +670,11 @@ static int setup_msi_info(struct sophgo_pcie_ep *sg_ep)
 
 static int bm1690_set_vector(struct sophgo_pcie_ep *sg_ep)
 {
+#ifndef CONFIG_SOPHGO_TX_MSIX_USED
 	setup_msi_gen(sg_ep);
+#else
+	setup_msix_gen(sg_ep);
+#endif
 	setup_msi_info(sg_ep);
 
 	return 0;

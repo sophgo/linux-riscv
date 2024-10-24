@@ -308,14 +308,25 @@
 	};
 
 	watchdog0: bm-wd@7040004000 {
-			compatible = "snps,dw-wdt";
-			reg = <0x70 0x40004000 0x0 0x1000>;
-			subctrl-syscon = <&top_misc>;
-			interrupt-parent = <&intc>;
-			interrupts = <29 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&div_clk GATE_CLK_APB_WDT>;
-			resets = <&rst SG2044_RST_WDT>;
-			status = "disable";
+		compatible = "snps,dw-wdt";
+		reg = <0x70 0x40004000 0x0 0x1000>;
+		subctrl-syscon = <&top_misc>;
+		interrupt-parent = <&intc>;
+		interrupts = <29 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&div_clk GATE_CLK_APB_WDT>;
+		resets = <&rst SG2044_RST_WDT>;
+		status = "disable";
+	};
+
+	efuse: efuse@7040000000 {
+		compatible = "sg,efuse";
+		reg = <0x70 0x40000000 0x0 0x1000>;
+		clock-names = "base_clk", "apb_clk";
+		clocks = <&div_clk GATE_CLK_EFUSE>,
+			 <&div_clk GATE_CLK_APB_EFUSE>;
+		num_address_bits = <8>;
+		num_cells = <128>;
+		cell_width = <4>;
 	};
 
 	base {

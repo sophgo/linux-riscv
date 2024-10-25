@@ -975,7 +975,7 @@ static void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
 			val = (val >> 21) & 0x1; //bit21, radm_idle
 		}
 		timeout++;
-		if (timeout == 3) {
+		if (timeout == 200) {
 			pr_err("failed check radm status\n");
 			return;
 		}

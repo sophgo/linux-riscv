@@ -756,13 +756,6 @@ static void sophgo_dw_pcie_iatu_detect(struct sophgo_dw_pcie *pcie)
 		 pcie->region_align / SZ_1K, (pcie->region_limit + 1) / SZ_1G);
 }
 
-int sophgo_dw_pcie_parse_irq_and_map_pci(const struct pci_dev *dev, u8 slot, u8 pin)
-{
-	return 0; /* Proper return code 0 == NO_IRQ */
-}
-
-
-
 static int pcie_config_eq(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
@@ -1291,7 +1284,7 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	bridge->sysdata = pp;
 	bridge->dev.parent = dev;
 	bridge->ops = &sophgo_dw_pcie_ops;
-	bridge->map_irq = sophgo_dw_pcie_parse_irq_and_map_pci;
+	bridge->map_irq = of_irq_parse_and_map_pci;
 	bridge->swizzle_irq = pci_common_swizzle;
 
 	ret = pci_host_probe(bridge);

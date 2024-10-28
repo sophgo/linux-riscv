@@ -263,7 +263,11 @@
 			     <848 IRQ_TYPE_LEVEL_HIGH>, <849 IRQ_TYPE_LEVEL_HIGH>,
 			     <850 IRQ_TYPE_LEVEL_HIGH>, <851 IRQ_TYPE_LEVEL_HIGH>,
 			     <852 IRQ_TYPE_LEVEL_HIGH>, <853 IRQ_TYPE_LEVEL_HIGH>,
-			     <854 IRQ_TYPE_LEVEL_HIGH>, <855 IRQ_TYPE_LEVEL_HIGH>;
+			     <854 IRQ_TYPE_LEVEL_HIGH>, <855 IRQ_TYPE_LEVEL_HIGH>,
+			     <856 IRQ_TYPE_LEVEL_HIGH>, <857 IRQ_TYPE_LEVEL_HIGH>,
+			     <858 IRQ_TYPE_LEVEL_HIGH>, <859 IRQ_TYPE_LEVEL_HIGH>,
+			     <860 IRQ_TYPE_LEVEL_HIGH>, <861 IRQ_TYPE_LEVEL_HIGH>,
+			     <862 IRQ_TYPE_LEVEL_HIGH>, <863 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "msi0",  "msi1",  "msi2",  "msi3",
 				  "msi4",  "msi5",  "msi6",  "msi7",
 				  "msi8",  "msi9",  "msi10", "msi11",
@@ -389,7 +393,8 @@
 				  "msi488", "msi489", "msi490", "msi491",
 				  "msi492", "msi493", "msi494", "msi495",
 				  "msi496", "msi497", "msi498", "msi499",
-				  "msi500", "msi501", "msi502", "msi503";
-
+				  "msi500", "msi501", "msi502", "msi503",
+				  "msi504", "msi505", "msi506", "msi507",
+				  "msi508", "msi509", "msi510", "msi511";
 	};
 };

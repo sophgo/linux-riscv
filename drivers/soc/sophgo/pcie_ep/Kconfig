@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config SOPHGO_PCIE_MODE
+	bool "sophgo soc as pcie ep"
+
+config SOPHGO_TX_MSIX_USED
+	bool "EP report interrupt to host by using msi-x mode"

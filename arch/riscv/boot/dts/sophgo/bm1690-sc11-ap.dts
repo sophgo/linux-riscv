@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/reset/sophgo,sg2044-reset.h>
+#include <dt-bindings/clock/sophgo,sg2044-clock.h>
+#include "bm1690-cpu-ap.dtsi"
+#include "sg2044-clock.dtsi"
+#include "sg2044-pinctrl.dtsi"
+#include "sg2044-peri-sys.dtsi"
+#include "bm1690-video-sys.dtsi"
+#include "bm1690-pcie-tpu-card.dtsi"
+#include "bm1690-pcie-intc.dtsi"
+
+/ {
+	/delete-node/ memory@80200000;
+	/delete-node/ bm-emmc@703000A000;
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,128M maxcpus=4 no5lvl";
+		stdout-path = "serial0";
+	};
+};
+
+/soc {
+	uart0: serial@7030000000 {
+		compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
+		reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
+		interrupt-parent = <&intc>;
+		interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
+		clock-frequency = <500000000>;
+		current-speed = <115200>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+	};
+
+	////c2c0 x8/x4_0
+	//pciephy_0: pciephy_0@6C00781000 {
+	//	compatible = "sophgo,pcie-phy";
+	//	#phy-cells = <1>;
+
+	//	reg = <0x6c 0x00781000 0x0 0x00001000>;
+	//	bus-width = <8>;
+	//};
+
+	//c2c0 x8/x4_1
+	pciephy_1: pciephy_0@6C00f81000 {
+		compatible = "sophgo,pcie-phy";
+		#phy-cells = <1>;
+
+		reg = <0x6c 0x00f81000 0x0 0x00001000>;
+		bus-width = <8>;
+	};
+
+	//c2c1 x8/x4_0
+	pciephy_2: pciephy_0@6C02781000 {
+		compatible = "sophgo,pcie-phy";
+		#phy-cells = <1>;
+
+		reg =	<0x6c 0x02780000 0x0 0x00001000>,
+			<0x6c 0x02781000 0x0 0x00001000>;
+		bus-width = <8>;
+	};
+
+	c2c_enable {
+		compatible = "sophgo,c2c_enable";
+	};
+
+
+	//c2c1_x8_0 cascade
+	pcie@6c02400000 {
+		compatible = "sophgo,bm1690-pcie-host";
+		device_type = "pci";
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x00 0x7f>;
+		linux,pci-domain = <0>;
+		interrupt-parent = <&intc1>;
+		reg = <0x6c 0x02400000  0x0 0x00001000>,
+		      <0x6c 0x02780000  0x0 0x00001000>,
+		      <0x6c 0x02700000  0x0 0x00004000>,
+		      <0x50 0x00000000  0x0 0x00001000>;
+		reg-names = "dbi", "ctrl", "atu", "config", "c2c_top";
+		c2c_top = <0x6C 0x027D0000  0x0 0x00001000>;
+		dma-coherent;
+		pcie-card;
+		// IO, check IO_SPACE_LIMIT
+		// 32bit prefetchable memory
+		// 32bit non-prefetchable memory
+		// 64bit prefetchable memory
+		// 64bit non-prefetchable memory
+
+		phys = <&pciephy_2 0>;
+		phy-names = "pcie-phy";
+
+		max-link-speed = <4>;
+		num-lanes = <8>;
+
+		prst = <&port0a 20 0>;
+		c2c_prst = <&port0a 2 0>;
+
+		ranges = <0x01000000 0x0  0x00000000  0x50 0x10000000  0x0 0x00400000>,
+			 <0x42000000 0x0  0x20000000  0x0  0x20000000  0x0 0x04000000>,
+			 <0x02000000 0x0  0x24000000  0x0  0x24000000  0x0 0x04000000>,
+			 <0x43000000 0x52 0x00000000  0x52 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x51 0x00000000  0x51 0x00000000  0x1 0x00000000>;
+		dma-ranges = <0x03000000 0x0 0x0 0x0 0x0 0x40 0x0>,
+			     <0x43000000 0x40 0x0 0x40 0x0 0x40 0x0>;
+		cfg_range = <0x6c 0x02000000 0x6c 0x03ffffff>;
+		slv_range = <0x50 0x00000000 0x53 0xffffffff>;
+		dw_range = <0x0 0x20000000 0x0 0x27ffffff>;
+		up_start_addr = <0x04000050 0x00000000>;
+
+		//status = "disable";
+	};
+
+	//c2c0_x8_1 c2c rc
+	pcie@6c00000000 {
+		compatible = "sophgo,bm1690-c2c-pcie-host";
+		device_type = "pci";
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x80 0xff>;
+		linux,pci-domain = <1>;
+		interrupt-parent = <&intc1>;
+		reg = <0x6c 0x00000000  0x0 0x00001000>,
+		      <0x6c 0x000c0000  0x0 0x00001000>,
+		      <0x6c 0x00300000  0x0 0x00004000>,
+		      <0x48 0x00000000  0x0 0x00001000>;
+		reg-names = "dbi", "ctrl", "atu", "config";
+		c2c_top =  <0x6C 0x007D0000  0x0 0x00001000>;
+		dma-coherent;
+		pcie-card;
+		// IO, check IO_SPACE_LIMIT
+		// 32bit prefetchable memory
+		// 32bit non-prefetchable memory
+		// 64bit prefetchable memory
+		// 64bit non-prefetchable memory
+
+		phys = <&pciephy_1 0>;
+		phy-names = "pcie-phy";
+
+		max-link-speed = <4>;
+		num-lanes = <8>;
+
+		prst = <&port0a 2 0>;
+
+		ranges = <0x01000000 0x0  0x00000000  0x48 0x10000000  0x0 0x00400000>,
+			 <0x42000000 0x0  0x10000000  0x0  0x10000000  0x0 0x04000000>,
+			 <0x02000000 0x0  0x14000000  0x0  0x14000000  0x0 0x04000000>,
+			 <0x43000000 0x4a 0x00000000  0x4a 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x49 0x00000000  0x49 0x00000000  0x1 0x00000000>;
+		dma-ranges = <0x03000000 0x0 0x0 0x0 0x0 0x40 0x0>,
+			     <0x43000000 0x40 0x0 0x40 0x0 0x40 0x0>;
+		cfg_range = <0x6c 0x00000000 0x6c 0x003fffff>;
+		slv_range = <0x48 0x00000000 0x4b 0xffffffff>;
+		dw_range = <0x0 0x10000000 0x0 0x17ffffff>;
+		up_start_addr = <0x04000048 0x00000000>;
+
+		//status = "disable";
+	};
+
+	veth:  veth {
+		compatible = "sg2260, sgveth";
+		reg = <0x00000000 0x10000000 0x00000000 0x1000>,
+			<0x00000000 0x10010000 0x00000000 0x70000>,
+			<0x00000000 0x10080000 0x00000000 0x70000>,
+			<0x0000006e 0x10000000 0x00000000 0x100>;
+		reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+		interrupt-parent = <&intc>;
+		interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rx";
+		status = "okay";
+	};
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,128M maxcpus=4 no5lvl";
+		stdout-path = "serial0";
+	};
+};

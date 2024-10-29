@@ -169,6 +169,16 @@ config DWMAC_SOCFPGA
 	  for the stmmac device driver. This driver is used for
 	  arria5 and cyclone5 FPGA SoCs.
 
+config DWMAC_SOPHGO
+	tristate "Sophgo dwmac support"
+	default ARCH_SOPHGO
+	depends on OF && COMMON_CLK
+	help
+	  Support for Ethernet controller on Sophgo sg2044 and bm1690 SoCs.
+
+	  This selects the Sophgo SoC glue layer support for the
+	  stmmac device driver. This driver is used for sg2044 and bm1690 SoCs.
+
 config DWMAC_STARFIVE
 	tristate "StarFive dwmac support"
 	depends on OF && (ARCH_STARFIVE || COMPILE_TEST)

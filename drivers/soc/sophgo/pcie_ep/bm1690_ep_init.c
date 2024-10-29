@@ -605,8 +605,6 @@ static void setup_msix_gen(struct sophgo_pcie_ep *sg_ep)
 	if (socket_id == 1) {
 		val |= (0x2 << 22); //chip_id
 		val |= (0x7 << 25); //target
-	} else {
-		val |= (0x1 << 22); //chip_id
 	}
 	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG));
 

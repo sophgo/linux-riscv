@@ -52,3 +52,12 @@ config PINCTRL_SOPHGO_SG2002
 	  This pin controller allows selecting the mux function for
 	  each pin. This driver can also be built as a module called
 	  pinctrl-sg2002.
+
+config PINCTRL_SG2044
+	bool "Sophgo SG2044 SoC Pinctrl driver"
+	select PINMUX
+	select PINCTRL_GROUPS
+	select GENERIC_PINCONF
+	select GENERIC_PINCTRL_GROUPS
+	help
+	  This selects GPIO and pinctrl driver for SG2044 SoC.

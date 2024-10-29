@@ -1,0 +1,290 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/ {
+	soc {
+	    pctrl@7050001000 {
+			compatible = "sophgo, pinctrl-sg2044";
+			subctrl-syscon = <&top_misc>;
+			top_pinctl_offset = <0x1000>;
+			smbus0_acquire: smbus0_acquire {
+				mux {
+					groups = "smbus0_grp";
+					function = "smbus0_a";
+				};
+			};
+			smbus0_release: smbus0_release {
+				mux {
+					groups = "smbus0_grp";
+					function = "smbus0_r";
+				};
+			};
+			smbus1_acquire: smbus1_acquire {
+				mux {
+					groups = "smbus1_grp";
+					function = "smbus1_a";
+				};
+			};
+			smbus1_release: smbus1_release {
+				mux {
+					groups = "smbus1_grp";
+					function = "smbus1_r";
+				};
+			};
+			smbus2_acquire: smbus2_acquire {
+				mux {
+					groups = "smbus2_grp";
+					function = "smbus2_a";
+				};
+			};
+			smbus2_release: smbus2_release {
+				mux {
+					groups = "smbus2_grp";
+					function = "smbus2_r";
+				};
+			};
+			smbus3_acquire: smbus3_acquire {
+				mux {
+					groups = "smbus3_grp";
+					function = "smbus3_a";
+				};
+			};
+			smbus3_release: smbus3_release {
+				mux {
+					groups = "smbus3_grp";
+					function = "smbus3_r";
+				};
+			};
+			pwm2_acquire: pwm2_acquire {
+				mux {
+					groups = "pwm2_grp";
+					function = "pwm2_a";
+				};
+			};
+			pwm2_release: pwm2_release {
+				mux {
+					groups = "pwm2_grp";
+					function = "pwm2_r";
+				};
+			};
+			pwm3_acquire: pwm3_acquire {
+				mux {
+					groups = "pwm3_grp";
+					function = "pwm3_a";
+				};
+			};
+			pwm3_release: pwm3_release {
+				mux {
+					groups = "pwm3_grp";
+					function = "pwm3_r";
+				};
+			};
+			fan2_acquire: fan2_acquire {
+				mux {
+					groups = "fan2_grp";
+					function = "fan2_a";
+				};
+			};
+			fan2_release: fan2_release {
+				mux {
+					groups = "fan2_grp";
+					function = "fan2_r";
+				};
+			};
+			fan3_acquire: fan3_acquire {
+				mux {
+					groups = "fan3_grp";
+					function = "fan3_a";
+				};
+			};
+			fan3_release: fan3_release {
+				mux {
+					groups = "fan3_grp";
+					function = "fan3_r";
+				};
+			};
+			iic0_acquire: iic0_acquire {
+				mux {
+					groups = "iic0_grp";
+					function = "iic0_a";
+				};
+			};
+			iic0_release: iic0_release {
+				mux {
+					groups = "iic0_grp";
+					function = "iic0_r";
+				};
+			};
+			iic1_acquire: iic1_acquire {
+				mux {
+					groups = "iic1_grp";
+					function = "iic1_a";
+				};
+			};
+			iic1_release: iic1_release {
+				mux {
+					groups = "iic1_grp";
+					function = "iic1_r";
+				};
+			};
+			iic2_acquire: iic2_acquire {
+				mux {
+					groups = "iic2_grp";
+					function = "iic2_a";
+				};
+			};
+			iic2_release: iic2_release {
+				mux {
+					groups = "iic2_grp";
+					function = "iic2_r";
+				};
+			};
+	        iic3_acquire: iic3_acquire {
+				mux {
+					groups = "iic3_grp";
+					function = "iic3_a";
+				};
+			};
+			iic3_release: iic3_release {
+				mux {
+					groups = "iic3_grp";
+					function = "iic3_r";
+				};
+			};
+			uart0_acquire: uart0_acquire {
+				mux {
+					groups = "uart0_grp";
+					function = "uart0_a";
+				};
+			};
+			uart0_release: uart0_release {
+				mux {
+					groups = "uart0_grp";
+					function = "uart0_r";
+				};
+			};
+	        uart1_acquire: uart1_acquire {
+				mux {
+					groups = "uart1_grp";
+					function = "uart1_a";
+				};
+			};
+			uart1_release: uart1_release {
+				mux {
+					groups = "uart1_grp";
+					function = "uart1_r";
+				};
+			};
+	        uart2_acquire: uart2_acquire {
+				mux {
+					groups = "uart2_grp";
+					function = "uart2_a";
+				};
+			};
+			uart2_release: uart2_release {
+				mux {
+					groups = "uart2_grp";
+					function = "uart2_r";
+				};
+			};
+	        uart3_acquire: uart3_acquire {
+				mux {
+					groups = "uart3_grp";
+					function = "uart3_a";
+				};
+			};
+			uart3_release: uart3_release {
+				mux {
+					groups = "uart3_grp";
+					function = "uart3_r";
+				};
+			};
+			spi0_acquire: spi0_acquire {
+				mux {
+					groups = "spi0_grp";
+					function = "spi0_a";
+				};
+			};
+			spi0_release: spi0_release {
+				mux {
+					groups = "spi0_grp";
+					function = "spi0_r";
+				};
+			};
+			spi1_acquire: spi1_acquire {
+				mux {
+					groups = "spi1_grp";
+					function = "spi1_a";
+				};
+			};
+			spi1_release: spi1_release {
+				mux {
+					groups = "spi1_grp";
+					function = "spi1_r";
+				};
+			};
+	        jtag0_acquire: jtag0_acquire {
+				mux {
+					groups = "jtag0_grp";
+					function = "jtag0_a";
+				};
+			};
+			jtag0_release: jtag0_release {
+				mux {
+					groups = "jtag0_grp";
+					function = "jtag0_r";
+				};
+			};
+			jtag1_acquire: jtag1_acquire {
+				mux {
+					groups = "jtag1_grp";
+					function = "jtag1_a";
+				};
+			};
+			jtag1_release: jtag1_release {
+				mux {
+					groups = "jtag1_grp";
+					function = "jtag1_r";
+				};
+			};
+	        jtag2_acquire: jtag2_acquire {
+				mux {
+					groups = "jtag2_grp";
+					function = "jtag2_a";
+				};
+			};
+			jtag2_release: jtag2_release {
+				mux {
+					groups = "jtag2_grp";
+					function = "jtag2_r";
+				};
+			};
+			plllock_acquire: plllock_acquire {
+				mux {
+					groups = "plllock_grp";
+					function = "plllock_a";
+				};
+			};
+			plllock_release: plllock_release {
+				mux {
+					groups = "plllock_grp";
+					function = "plllock_r";
+				};
+			};
+			dbgiic_acquire: dbgiic_acquire {
+				mux {
+					groups = "dbgiic_grp";
+					function = "dbgiic_a";
+				};
+			};
+			dbgiic_release: dbgiic_release {
+				mux {
+					groups = "dbgiic_grp";
+					function = "dbgiic_r";
+				};
+			};
+		};
+	};
+};

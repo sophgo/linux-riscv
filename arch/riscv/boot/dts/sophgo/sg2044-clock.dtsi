@@ -1,0 +1,237 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/ {
+	soc {
+		clocks {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			cgi: ctrystal {
+				compatible = "fixed-clock";
+				clock-frequency = <25000000>;
+				clock-output-names = "cgi";
+				#clock-cells = <0>;
+			};
+			/* pll clock */
+			mpll0: mpll0 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL0_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll0_clock";
+			};
+			mpll1: mpll1 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL1_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll1_clock";
+			};
+			mpll2: mpll2 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL2_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll2_clock";
+			};
+			mpll3: mpll3 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL3_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll3_clock";
+			};
+			mpll4: mpll4 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL4_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll4_clock";
+			};
+			mpll5: mpll5 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL5_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll5_clock";
+			};
+			fpll0: fpll0 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <FPLL0_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "fpll0_clock";
+			};
+			fpll1: fpll1 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <FPLL1_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "fpll1_clock";
+			};
+			dpll0: dpll0 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL0_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll0_clock";
+			};
+			dpll1: dpll1 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL1_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll1_clock";
+			};
+			dpll2: dpll2 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL2_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll2_clock";
+			};
+			dpll3: dpll3 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL3_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll3_clock";
+			};
+			dpll4: dpll4 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL4_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll4_clock";
+			};
+			dpll5: dpll5 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL5_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll5_clock";
+			};
+			dpll6: dpll6 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL6_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll6_clock";
+			};
+			dpll7: dpll7 {
+				compatible = "sg2044, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL7_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll7_clock";
+			};
+			div_clk: div_clk {
+				compatible = "sg2044, pll-child-clock";
+				#clock-cells = <1>;
+				id = <DIV_CLK_TABLE>;
+				subctrl-syscon = <&top_misc>;
+			};
+			mux_clk: mux_clk {
+				compatible = "sg2044, pll-mux-clock";
+				#clock-cells = <1>;
+				id = <MUX_CLK_TABLE>;
+				subctrl-syscon = <&top_misc>;
+			};
+			clock_init: default_rates {
+				compatible = "sg2044, clk-default-rates";
+				#clock-cells = <1>;
+				clocks = \
+					<&mpll0>, <&mpll1>, <&mpll2>, <&mpll3>,
+					<&mpll4>, <&mpll5>,
+					<&div_clk DIV_CLK_MPLL0_AP_CPU_NORMAL_0>,
+					<&div_clk DIV_CLK_MPLL1_RP_SYS_0>,
+					<&div_clk DIV_CLK_MPLL2_TPU_SYS_0>,
+					<&div_clk DIV_CLK_MPLL3_CC_GRP_SYS_0>,
+					<&div_clk DIV_CLK_MPLL4_SRC0_0>,
+					<&div_clk DIV_CLK_MPLL5_SRC1_0>,
+					<&div_clk DIV_CLK_FPLL0_CC_GRP_SYS_1>,
+					<&div_clk DIV_CLK_FPLL0_TPU_SYS_1>,
+					<&div_clk DIV_CLK_FPLL0_RP_SYS_1>,
+					<&div_clk DIV_CLK_FPLL0_AP_CPU_NORMAL_1>,
+					<&div_clk DIV_CLK_FPLL0_SRC0_1>,
+					<&div_clk DIV_CLK_FPLL0_SRC1_1>,
+					<&div_clk DIV_CLK_FPLL0_TOP_50M>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER1>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER2>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER3>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER4>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER5>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER6>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER7>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER8>,
+					<&div_clk DIV_CLK_FPLL0_PKA>,
+					<&div_clk DIV_CLK_FPLL0_UART_500M>,
+					<&div_clk DIV_CLK_FPLL0_EFUSE>,
+					<&div_clk DIV_CLK_FPLL0_TX_ETH0>,
+					<&div_clk DIV_CLK_FPLL0_PTP_REF_I_ETH0>,
+					<&div_clk DIV_CLK_FPLL0_REF_ETH0>,
+					<&div_clk DIV_CLK_FPLL0_EMMC>,
+					<&div_clk DIV_CLK_FPLL0_SD>,
+					<&div_clk DIV_CLK_FPLL0_TOP_AXI0>,
+					<&div_clk DIV_CLK_FPLL0_DIV_100K_SD>,
+					<&div_clk DIV_CLK_FPLL0_DIV_100K_EMMC>,
+					<&div_clk DIV_CLK_FPLL0_DIV_GPIO_DB>,
+					<&div_clk DIV_CLK_FPLL0_TOP_AXI_HSPERI>,
+					<&div_clk DIV_CLK_FPLL1_CXP_MAC_0>,
+					<&div_clk DIV_CLK_FPLL1_PCIE_1G>;
+				clock-rates = \
+					<2000000000>, <2000000000>, <1000000000>, <2000000000>,
+					<1050000000>, <900000000>,
+					/* MPLL */
+					<2000000000>, <2000000000>, <1000000000>,
+					<2000000000>, <1050000000>, <900000000>,
+					/* FPLL */
+					<2000000000>, <1000000000>, <2000000000>,
+					<2000000000>, <1050000000>, <900000000>,
+					<50000000>,
+					<50000000>, <50000000>, <50000000>, <50000000>,
+					<50000000>, <50000000>, <50000000>, <50000000>,
+					<1000000000>, <500000000>,
+					<25000000>, <125000000>, <50000000>,
+					<25000000>, <400000000>, <400000000>,
+					<100000000>, <100000>, <100000>, <100000>,
+					<250000000>, <1000000000>, <1000000000>;
+			};
+		};
+	};
+};

@@ -269,6 +269,14 @@ config RESET_SOCFPGA
 	  This enables the reset driver for the SoCFPGA ARMv7 platforms. This
 	  driver gets initialized early during platform init calls.
 
+config RESET_SOPHGO
+	bool "SG2044 Reset Driver"
+	default CONFIG_ARCH_SOPHGO
+	select RESET_SIMPLE
+	help
+	  This enables the reset driver for the SG2044 platforms. This
+	  driver gets initialized early during platform init calls.
+
 config RESET_SUNPLUS
 	bool "Sunplus SoCs Reset Driver" if COMPILE_TEST
 	default ARCH_SUNPLUS

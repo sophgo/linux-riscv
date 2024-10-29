@@ -1,0 +1,9 @@
+config SOPHGO_P2P
+	tristate "Sophgon P2P Ethernet Driver over 100G eth"
+	default m
+	help
+	  Option to select ethernet drivers for sophgo p2p network
+	  on Sophgo SG2044 SoCs.
+
+	  Sophgo P2P network interface card transmit packages
+	  though 100G eth on Sophgo SG2044 SoCs.

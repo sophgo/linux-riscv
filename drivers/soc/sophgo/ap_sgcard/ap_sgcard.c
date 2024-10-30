@@ -1084,11 +1084,6 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
 	struct task_head *task_head = (struct task_head *)port->write_buf;
 	int i;
 
-	if (count > PAGE_SIZE) {
-		pr_err("Too many requests received\n");
-		return 0;
-	}
-
 	ret = copy_from_user(port->write_buf, buf, count);
 	if (ret) {
 		pr_err("%s failed\n", __func__);

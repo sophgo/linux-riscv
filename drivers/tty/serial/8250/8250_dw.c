@@ -363,6 +363,7 @@ dw8250_do_pm(struct uart_port *port, unsigned int state, unsigned int old)
 		pm_runtime_put_sync_suspend(port->dev);
 }
 
+#ifndef CONFIG_ARCH_SOPHGO
 static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
 			       const struct ktermios *old)
 {
@@ -386,6 +387,7 @@ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
 
 	dw8250_do_set_termios(p, termios, old);
 }
+#endif
 
 static void dw8250_set_ldisc(struct uart_port *p, struct ktermios *termios)
 {
@@ -526,7 +528,9 @@ static int dw8250_probe(struct platform_device *pdev)
 	p->flags	= UPF_FIXED_PORT;
 	p->dev		= dev;
 	p->set_ldisc	= dw8250_set_ldisc;
+#ifndef CONFIG_ARCH_SOPHGO
 	p->set_termios	= dw8250_set_termios;
+#endif
 
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)

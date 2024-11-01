@@ -20,6 +20,7 @@ mkdir -p "${destdir}"
 (
 	cd "${srctree}"
 	echo Makefile
+	find . -name 'Makefile*' -o -name 'Kconfig*' -o -name '*.pl'
 	find "arch/${SRCARCH}" -maxdepth 1 -name 'Makefile*'
 	find "arch/${SRCARCH}" -name generated -prune -o -name include -type d -print
 	find "arch/${SRCARCH}" -name Kbuild.platforms -o -name Platform
@@ -77,3 +78,7 @@ if [ "${CC}" != "${HOSTCC}" ]; then
 fi
 
 find "${destdir}" \( -name '.*.cmd' -o -name '*.o' \) -delete
+
+# copy .config manually to be where it's expected to be
+cp "${KCONFIG_CONFIG}" "${destdir}/.config"
+cp System.map "${destdir}"

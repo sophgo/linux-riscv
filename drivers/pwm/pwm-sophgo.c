@@ -51,45 +51,35 @@ struct sophgo_pwm_channel {
  * @tclk1:		external clock 1 (can be ERR_PTR if not present)
  */
 struct sophgo_pwm_chip {
-	struct pwm_chip chip;
+//	struct pwm_chip chip;
 	void __iomem *base;
 	struct clk *base_clk;
 	u8 polarity_mask;
 	bool no_polarity;
 	uint32_t pwm_saved_regs[PWM_REG_NUM];
+	struct sophgo_pwm_channel channel;
 };
 
 
 static inline
 struct sophgo_pwm_chip *to_sophgo_pwm_chip(struct pwm_chip *chip)
 {
-	return container_of(chip, struct sophgo_pwm_chip, chip);
+	return pwmchip_get_drvdata(chip);
 }
 
 static int pwm_sophgo_request(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 {
-	struct sophgo_pwm_channel *channel;
-
-	channel = kzalloc(sizeof(*channel), GFP_KERNEL);
-	if (!channel)
-		return -ENOMEM;
-
-	return pwm_set_chip_data(pwm_dev, channel);
+	struct sophgo_pwm_chip* sophgo_chip = pwmchip_get_drvdata(chip);
+	memset(&sophgo_chip->channel, 0, sizeof(sophgo_chip->channel));
+	return 0;
 }
 
-static void pwm_sophgo_free(struct pwm_chip *chip, struct pwm_device *pwm_dev)
-{
-	struct sophgo_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
-
-	pwm_set_chip_data(pwm_dev, NULL);
-	kfree(channel);
-}
 
 static int pwm_sophgo_config(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 			     int duty_ns, int period_ns)
 {
 	struct sophgo_pwm_chip *our_chip = to_sophgo_pwm_chip(chip);
-	struct sophgo_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
+	struct sophgo_pwm_channel *channel = &our_chip->channel;
 	u64 cycles;
 
 	cycles = clk_get_rate(our_chip->base_clk);
@@ -118,7 +108,7 @@ static int pwm_sophgo_config(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 static int pwm_sophgo_enable(struct pwm_chip *chip, struct pwm_device *pwm_dev)
 {
 	struct sophgo_pwm_chip *our_chip = to_sophgo_pwm_chip(chip);
-	struct sophgo_pwm_channel *channel = pwm_get_chip_data(pwm_dev);
+	struct sophgo_pwm_channel *channel = &our_chip->channel;
 	uint32_t pwm_start_value;
 	uint32_t value;
 
@@ -161,7 +151,7 @@ static int pwm_sophgo_set_polarity(struct pwm_chip *chip,
 	struct sophgo_pwm_chip *our_chip = to_sophgo_pwm_chip(chip);
 
 	if (our_chip->no_polarity) {
-		dev_err(chip->dev, "no polarity\n");
+		dev_err(&chip->dev, "no polarity\n");
 		return -ENOTSUPP;
 	}
 
@@ -187,24 +177,24 @@ static int pwm_sophgo_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	ret = pwm_sophgo_config(chip, pwm, state->duty_cycle, state->period);
 	if (ret) {
-		dev_err(chip->dev, "pwm apply err\n");
+		dev_err(&chip->dev, "pwm apply err\n");
 		return ret;
 	}
 
 	ret = pwm_sophgo_set_polarity(chip, pwm, state->polarity);
 	if (ret) {
-		dev_err(chip->dev, "pwm apply err\n");
+		dev_err(&chip->dev, "pwm apply err\n");
 		return ret;
 	}
 
-	dev_dbg(chip->dev, "pwm_sophgo_apply state->enabled = %d\n", state->enabled);
+	dev_dbg(&chip->dev, "pwm_sophgo_apply state->enabled = %d\n", state->enabled);
 	if (state->enabled)
 		ret = pwm_sophgo_enable(chip, pwm);
 	else
 		pwm_sophgo_disable(chip, pwm);
 
 	if (ret) {
-		dev_err(chip->dev, "pwm apply failed\n");
+		dev_err(&chip->dev, "pwm apply failed\n");
 		return ret;
 	}
 	return ret;
@@ -258,7 +248,6 @@ static int pwm_sophgo_capture(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 
 static const struct pwm_ops pwm_sophgo_ops = {
 	.request	= pwm_sophgo_request,
-	.free		= pwm_sophgo_free,
 	.enable		= pwm_sophgo_enable,
 	.disable	= pwm_sophgo_disable,
 	.config		= pwm_sophgo_config,
@@ -277,77 +266,72 @@ MODULE_DEVICE_TABLE(of, sophgo_pwm_match);
 static int pwm_sophgo_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct sophgo_pwm_chip *chip;
-	struct resource *res;
+	struct sophgo_pwm_chip *sophgo_chip;
+	struct pwm_chip *chip;
 	int ret;
 
 	pr_debug("%s\n", __func__);
 
-	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
-	if (chip == NULL)
-		return -ENOMEM;
+	// fixed npwm to 4.
+	// if (of_property_read_bool(pdev->dev.of_node, "pwm-num"))
+	// device_property_read_u32(&pdev->dev, "pwm-num", &chip->chip.npwm);
+	chip = devm_pwmchip_alloc(dev, 4, sizeof(*sophgo_chip));
+	if (IS_ERR(chip))
+		return -PTR_ERR(chip);
 
-	chip->chip.dev = &pdev->dev;
-	chip->chip.ops = &pwm_sophgo_ops;
-	chip->chip.base = -1;
-	chip->polarity_mask = 0;
-	chip->chip.of_xlate = of_pwm_xlate_with_flags;
-	chip->chip.of_pwm_n_cells = 3;
+	sophgo_chip = (struct sophgo_pwm_chip*) pwmchip_get_drvdata(chip);
+	chip->ops = &pwm_sophgo_ops;
+	// chip.base = -1;  
+	sophgo_chip->polarity_mask = 0;
+	chip->of_xlate = of_pwm_xlate_with_flags;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	chip->base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(chip->base))
-		return PTR_ERR(chip->base);
+	sophgo_chip->base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(sophgo_chip->base))
+		return PTR_ERR(sophgo_chip->base);
 
-	chip->base_clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(chip->base_clk)) {
+	sophgo_chip->base_clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(sophgo_chip->base_clk)) {
 		dev_err(dev, "failed to get pwm source clk\n");
-		return PTR_ERR(chip->base_clk);
+		return PTR_ERR(sophgo_chip->base_clk);
 	}
 
-	ret = clk_prepare_enable(chip->base_clk);
+	ret = clk_prepare_enable(sophgo_chip->base_clk);
 	if (ret < 0) {
 		dev_err(dev, "failed to enable base clock\n");
 		return ret;
 	}
 
-	//pwm-num default is 4, compatible with bm1682
-	if (of_property_read_bool(pdev->dev.of_node, "pwm-num"))
-		device_property_read_u32(&pdev->dev, "pwm-num", &chip->chip.npwm);
-	else
-		chip->chip.npwm = 4;
-
 	//no_polarity default is false(have polarity) , compatible with bm1682
 	if (of_property_read_bool(pdev->dev.of_node, "no-polarity"))
-		chip->no_polarity = true;
+		sophgo_chip->no_polarity = true;
 	else
-		chip->no_polarity = false;
+		sophgo_chip->no_polarity = false;
 	// pr_debug("chip->chip.npwm = %d  chip->no_polarity = %d\n", chip->chip.npwm, chip->no_polarity);
 
+	// todo: origin sophgo-chip, but should be chip?
 	platform_set_drvdata(pdev, chip);
 
-	ret = pwmchip_add(&chip->chip);
+	ret = pwmchip_add(chip);
 	if (ret < 0) {
 		dev_err(dev, "failed to register PWM chip\n");
-		clk_disable_unprepare(chip->base_clk);
+		clk_disable_unprepare(sophgo_chip->base_clk);
 		return ret;
 	}
 
 	return 0;
 }
 
-static int pwm_sophgo_remove(struct platform_device *pdev)
+static void pwm_sophgo_remove(struct platform_device *pdev)
 {
-	struct sophgo_pwm_chip *chip = platform_get_drvdata(pdev);
+	struct pwm_chip *chip = platform_get_drvdata(pdev);
+	struct sophgo_pwm_chip *sophgo_chip = pwmchip_get_drvdata(chip);
 	// int ret;
 
 	// ret = pwmchip_remove(&chip->chip);
 	// if (ret < 0)
 	// 	return ret;
-	pwmchip_remove(&chip->chip);
-	clk_disable_unprepare(chip->base_clk);
-
-	return 0;
+	pwmchip_remove(chip);
+	clk_disable_unprepare(sophgo_chip->base_clk);
 }
 
 #ifdef CONFIG_PM_SLEEP

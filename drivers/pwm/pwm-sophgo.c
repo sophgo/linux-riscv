@@ -28,7 +28,7 @@
 #define REG_PWM_OE		0xD0
 
 #define PWM_REG_NUM		0x80
-
+#define PWM_NPWM		4
 /**
  * struct sophgo_pwm_channel - private data of PWM channel
  * @period_ns:	current period in nanoseconds programmed to the hardware
@@ -275,13 +275,12 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 	// fixed npwm to 4.
 	// if (of_property_read_bool(pdev->dev.of_node, "pwm-num"))
 	// device_property_read_u32(&pdev->dev, "pwm-num", &chip->chip.npwm);
-	chip = devm_pwmchip_alloc(dev, 4, sizeof(*sophgo_chip));
+	chip = devm_pwmchip_alloc(dev, PWM_NPWM, sizeof(*sophgo_chip));
 	if (IS_ERR(chip))
 		return -PTR_ERR(chip);
 
 	sophgo_chip = (struct sophgo_pwm_chip*) pwmchip_get_drvdata(chip);
 	chip->ops = &pwm_sophgo_ops;
-	// chip.base = -1;  
 	sophgo_chip->polarity_mask = 0;
 	chip->of_xlate = of_pwm_xlate_with_flags;
 
@@ -308,7 +307,6 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 		sophgo_chip->no_polarity = false;
 	// pr_debug("chip->chip.npwm = %d  chip->no_polarity = %d\n", chip->chip.npwm, chip->no_polarity);
 
-	// todo: origin sophgo-chip, but should be chip?
 	platform_set_drvdata(pdev, chip);
 
 	ret = pwmchip_add(chip);
@@ -325,11 +323,7 @@ static void pwm_sophgo_remove(struct platform_device *pdev)
 {
 	struct pwm_chip *chip = platform_get_drvdata(pdev);
 	struct sophgo_pwm_chip *sophgo_chip = pwmchip_get_drvdata(chip);
-	// int ret;
 
-	// ret = pwmchip_remove(&chip->chip);
-	// if (ret < 0)
-	// 	return ret;
 	pwmchip_remove(chip);
 	clk_disable_unprepare(sophgo_chip->base_clk);
 }

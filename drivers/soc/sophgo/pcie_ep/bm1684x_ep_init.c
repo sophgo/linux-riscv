@@ -28,14 +28,14 @@ static uint32_t pcie_msi_data;
 static uint32_t pcie_msi_addr;
 
 
-uint32_t cpu_read32(uint32_t addr)
+static uint32_t cpu_read32(uint32_t addr)
 {
 	uint64_t va = pcie_base - 0x5fa00000 + addr;
 
 	return readl((void __iomem *)va);
 }
 
-uint32_t cpu_write32(uint32_t addr, uint32_t val)
+static uint32_t cpu_write32(uint32_t addr, uint32_t val)
 {
 	uint64_t va = pcie_base - 0x5fa00000 + addr;
 	// printf("write addr:0x%lx\n", va);

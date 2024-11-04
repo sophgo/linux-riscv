@@ -367,7 +367,7 @@ static int copy_to_circbuf(struct circ_buf *rx_buf, char *from, int length, uint
 	return length;
 }
 
-inline int channel_clr_irq(struct v_channel *channel)
+static inline int channel_clr_irq(struct v_channel *channel)
 {
 	uint32_t *addr = channel->rx_clean_irq.clr_irq_va;
 	uint32_t data = channel->rx_clean_irq.clr_irq_data;
@@ -379,7 +379,7 @@ inline int channel_clr_irq(struct v_channel *channel)
 	return 0;
 }
 
-int channel_tx_send_irq(struct v_channel *channel)
+static int channel_tx_send_irq(struct v_channel *channel)
 {
 	void __iomem *addr = (void __iomem *)channel->tx_send_irq.msi_va;
 	uint32_t data = channel->tx_send_irq.msi_data;
@@ -892,7 +892,7 @@ static inline void sync_is(void)
 	asm volatile (".long 0x01b0000b");
 }
 
-int cache_memory_read(void *circ_buf, void *user_buf, uint64_t size)
+static int cache_memory_read(void *circ_buf, void *user_buf, uint64_t size)
 {
 	arch_invalidate_pmem(circ_buf, size);
 	sync_is();
@@ -901,7 +901,7 @@ int cache_memory_read(void *circ_buf, void *user_buf, uint64_t size)
 	return size;
 }
 
-int cache_memory_write(void *circ_buf, void *user_buf, uint64_t size)
+static int cache_memory_write(void *circ_buf, void *user_buf, uint64_t size)
 {
 	memcpy(circ_buf, user_buf, size);
 	arch_wb_cache_pmem(circ_buf, size);
@@ -910,14 +910,14 @@ int cache_memory_write(void *circ_buf, void *user_buf, uint64_t size)
 	return size;
 }
 
-int device_memory_read(void *circ_buf, void *user_buf, uint64_t size)
+static int device_memory_read(void *circ_buf, void *user_buf, uint64_t size)
 {
 	memcpy_fromio(user_buf, circ_buf, size);
 
 	return size;
 }
 
-int device_memory_write(void *circ_buf, void *user_buf, uint64_t size)
+static int device_memory_write(void *circ_buf, void *user_buf, uint64_t size)
 {
 	memcpy_toio(circ_buf, user_buf, size);
 
@@ -1164,7 +1164,7 @@ static int sg_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-void destroy_stream_work_func(struct work_struct *work)
+static void destroy_stream_work_func(struct work_struct *work)
 {
 	struct v_port *port = container_of(work, struct v_port, destroy_stream_work.work);
 
@@ -1885,7 +1885,7 @@ fail:
 	return ret;
 }
 
-static int sgcard_remove(struct platform_device *pdev)
+static void sgcard_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sg_card *card = dev_get_drvdata(dev);
@@ -1907,7 +1907,7 @@ static int sgcard_remove(struct platform_device *pdev)
 	devm_iounmap(dev, card->membase);
 	kfree(card);
 
-	return 0;
+	return;
 }
 
 static struct of_device_id sophgo_card_of_match[] = {

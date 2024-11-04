@@ -242,7 +242,7 @@ err_io:
 	return ret;
 }
 
-static int sgdrv_remove(struct platform_device *pdev)
+static void sgdrv_remove(struct platform_device *pdev)
 {
 	dev_info(&pdev->dev, "sgdrv: remove start\n");
 
@@ -255,7 +255,7 @@ static int sgdrv_remove(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "sgdrv: remove done\n");
 
-	return 0;
+	return;
 }
 
 static struct platform_driver sg_tpu_driver = {

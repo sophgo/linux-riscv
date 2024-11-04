@@ -64,14 +64,15 @@ struct p_dev {
 	int data_link_role;
 };
 
-static void top_reg_write(struct p_dev *hdev, u32 reg_offset, u32 val)
-{
-	iowrite32(val, hdev->top_bar_vaddr + reg_offset);
-}
-
 static u32 top_reg_read(struct p_dev *hdev, u32 reg_offset)
 {
 	return ioread32(hdev->top_bar_vaddr + reg_offset);
+}
+//comment for compile unused warning 
+#if 0
+static void top_reg_write(struct p_dev *hdev, u32 reg_offset, u32 val)
+{
+	iowrite32(val, hdev->top_bar_vaddr + reg_offset);
 }
 
 static irqreturn_t pci_irq_handler(int irq, void *data)
@@ -80,7 +81,7 @@ static irqreturn_t pci_irq_handler(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-
+#endif
 static int pci_platform_init(struct pci_dev *pdev)
 {
 	struct p_dev *hdev = pci_get_drvdata(pdev);
@@ -270,7 +271,7 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	hdev->copy_data_bar_vaddr = hdev->BarVirt[3];
 }
 
-int show_pcie_info(int pcie_id, char *head, struct pcie_info *info)
+static int show_pcie_info(int pcie_id, char *head, struct pcie_info *info)
 {
 	pr_info("[%s pcie%d]->slot id:0x%llx\n", head, pcie_id, info->slot_id);
 	pr_info("[%s pcie%d]->socket id:0x%llx\n", head, pcie_id, info->socket_id);

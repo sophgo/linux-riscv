@@ -12,7 +12,7 @@
 #include "sg_io.h"
 
 #ifdef PLAT_BM1686
-void sgdrv_start_tpu_scalar(struct sg_dev *sgdev)
+static void sgdrv_start_tpu_scalar(struct sg_dev *sgdev)
 {
 	u64 rvba_phys = TPU_SCALAR_RVBA_ADDR;
 	u32 reset_base = (rvba_phys >> 4) & 0xffffffff;
@@ -30,7 +30,7 @@ void sgdrv_start_tpu_scalar(struct sg_dev *sgdev)
 	mdelay(100);
 }
 
-void sgdrv_stop_tpu_scalar(struct sg_dev *sgdev)
+static void sgdrv_stop_tpu_scalar(struct sg_dev *sgdev)
 {
 	u32 ctrl_word;
 
@@ -45,7 +45,7 @@ void sgdrv_stop_tpu_scalar(struct sg_dev *sgdev)
 	top_reg_write(sgdev, TOP_SW_RESET, ctrl_word);
 }
 #else
-void sgdrv_start_tpu_scalar(struct sg_dev *sgdev)
+static void sgdrv_start_tpu_scalar(struct sg_dev *sgdev)
 {
 	u64 rvba_phys = TPU_SCALAR_RVBA_ADDR;
 	int core_id;
@@ -66,7 +66,7 @@ void sgdrv_start_tpu_scalar(struct sg_dev *sgdev)
 	}
 }
 
-void sgdrv_stop_tpu_scalar(struct sg_dev *sgdev)
+static void sgdrv_stop_tpu_scalar(struct sg_dev *sgdev)
 {
 	// int core_id;
 	// for (core_id = 0; core_id < sgdev->tpu_num; core_id++)
@@ -76,7 +76,9 @@ void sgdrv_stop_tpu_scalar(struct sg_dev *sgdev)
 #endif
 
 // TODO
-void sgdrv_init_msgfifo_info(void)
+// comment for compile unused warning
+#if 0
+static void sgdrv_init_msgfifo_info(void)
 {
 	void __iomem *msgfifo_base_virt;
 	u64 msgfifo_base_phys = 0x400000000;
@@ -88,7 +90,7 @@ void sgdrv_init_msgfifo_info(void)
 	*(u64 *)((unsigned long)msgfifo_base_virt + 0x40) = 0;
 	iounmap(msgfifo_base_virt);
 }
-
+#endif
 void sgdrv_set_fw_mode(struct sg_dev *sgdev, struct platform_device *pdev)
 {
 	struct device_node *tpu_node;
@@ -103,7 +105,7 @@ void sgdrv_set_fw_mode(struct sg_dev *sgdev, struct platform_device *pdev)
 	pr_info("set tpu scalar firmware mode to 0x%x\n", val);
 }
 
-int sgdrv_wait_fwinit_done(struct sg_dev *sgdev)
+static int sgdrv_wait_fwinit_done(struct sg_dev *sgdev)
 {
 	int cnt = 5000;
 	int polling_ms = 1;

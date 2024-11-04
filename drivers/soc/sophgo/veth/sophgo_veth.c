@@ -18,12 +18,12 @@ static int set_ready_flag(struct veth_dev *vdev);
 void *vaddr_tx;
 void *vaddr_rx;
 
-void sg_write32(void __iomem *base, u32 offset, u32 value)
+static void sg_write32(void __iomem *base, u32 offset, u32 value)
 {
 	iowrite32(value, (void __iomem *)(((unsigned long)base) + offset));
 }
 
-u32 sg_read32(void __iomem *base, u32 offset)
+static u32 sg_read32(void __iomem *base, u32 offset)
 {
 	return ioread32((void __iomem *)(((unsigned long)base) + offset));
 }
@@ -389,7 +389,7 @@ static int veth_napi_poll_rx(struct napi_struct *napi, int budget)
 	return err;
 }
 
-void bm1684x_veth_alloc_addr(struct veth_dev *vdev)
+static void bm1684x_veth_alloc_addr(struct veth_dev *vdev)
 {
 	// int skb_len = ETH_MTU + 0xd;
 	// // struct eth_dev_info *veth = &bmdi->vir_eth;
@@ -596,7 +596,7 @@ err_free_netdev:
 	return err;
 }
 
-static int sg_veth_remove(struct platform_device *pdev)
+static void sg_veth_remove(struct platform_device *pdev)
 {
 	struct veth_dev *vdev;
 	struct net_device *ndev;
@@ -604,14 +604,16 @@ static int sg_veth_remove(struct platform_device *pdev)
 	ndev = platform_get_drvdata(pdev);
 
 	netif_carrier_off(ndev);
-	if (!ndev)
-		return -ENODEV;
+	if (!ndev) {
+		pr_err("sg_veth_remove failed because ndev is null.\n");
+		return;
+	}
 
 	vdev = netdev_priv(ndev);
 	disable_irq(vdev->rx_irq);
 
 	unset_ready_flag(vdev);
-	return 0;
+	return;
 }
 
 static const struct of_device_id sg_veth_match[] = {

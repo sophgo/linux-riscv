@@ -36,7 +36,7 @@ static struct sophgo_pcie_phy *to_pcie_phy(struct phy_pcie_instance *inst)
 }
 
 static struct phy *sophgo_pcie_phy_of_xlate(struct device *dev,
-					      struct of_phandle_args *args)
+					    const struct of_phandle_args *args)
 {
 	struct sophgo_pcie_phy *sg_phy = dev_get_drvdata(dev);
 
@@ -159,7 +159,7 @@ err_out:
 	return 0;
 }
 
-int sophgo_pcie_config(struct phy *phy, union phy_configure_opts *opts)
+static int sophgo_pcie_config(struct phy *phy, union phy_configure_opts *opts)
 {
 	struct phy_pcie_instance *inst = phy_get_drvdata(phy);
 	struct sophgo_pcie_phy *sg_phy = to_pcie_phy(inst);

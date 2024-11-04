@@ -150,18 +150,17 @@ static void sg_vtty_hangup(struct tty_struct *tty)
 	tty_port_hangup(tty->port);
 }
 
-static int sg_vtty_write(struct tty_struct *tty, const unsigned char *buf,
-			 int count)
+static ssize_t sg_vtty_write(struct tty_struct *tty, const u8 *buf, size_t count)
 {
 	struct sg_vtty *vtty = &sg_vttys[tty->index];
 	struct circ_buf *circ = &vtty->xmit;
 	char *xmit_buf = vtty->xmit.buf;
-	int ret = 0;
+	ssize_t ret = 0;
 
 	if (!(vtty->device_type == TP && vtty->ap_status == CLOSE)) {
 		inval_tx_tail(vtty);
 		while (1) {
-			int c = CIRC_SPACE_TO_END(circ->head, circ->tail,
+			size_t c = CIRC_SPACE_TO_END(circ->head, circ->tail,
 						  VTTY_BUFF_SIZE);
 			if (count < c)
 				c = count;
@@ -503,7 +502,7 @@ err_ret:
 	return ret;
 }
 
-static int sg_vtty_remove(struct platform_device *pdev)
+static void sg_vtty_remove(struct platform_device *pdev)
 {
 	struct sg_vtty *vtty = platform_get_drvdata(pdev);
 	tty_unregister_device(sg_vtty_driver, vtty->index);
@@ -511,7 +510,7 @@ static int sg_vtty_remove(struct platform_device *pdev)
 	sg_vtty_count--;
 	if (sg_vtty_count == 0)
 		sg_vtty_delete_driver();
-	return 0;
+	return;
 }
 
 static const struct of_device_id sg_vtty_of_match[] = {

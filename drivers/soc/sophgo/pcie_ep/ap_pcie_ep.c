@@ -208,7 +208,7 @@ static int sophgo_c2c_ep_enable_probe(struct platform_device *pdev)
 	return ret;
 }
 
-void c2c_init_ep(struct work_struct *p_work)
+static void c2c_init_ep(struct work_struct *p_work)
 {
 	struct sophgo_pcie_ep *sg_ep = container_of(p_work, struct sophgo_pcie_ep, link_work.work);
 
@@ -307,11 +307,9 @@ fail:
 	return ret;
 }
 
-static int sophgo_ep_remove(struct platform_device *pdev)
+static void sophgo_ep_remove(struct platform_device *pdev)
 {
-
-
-	return 0;
+	return;
 }
 
 struct vector_info *sophgo_ep_alloc_vector(int pcie_id, int vector_id)

@@ -149,7 +149,7 @@ static int dump_pcie_info(struct pcie_info *pcie_info)
 	return 0;
 }
 
-int check_all_rc(struct c2c_info *info)
+static int check_all_rc(struct c2c_info *info)
 {
 	struct pcie_info *pcie_info;
 
@@ -196,14 +196,14 @@ static int sophgo_c2c_enable_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int sophgo_c2c_enable_remove(struct platform_device *pdev)
+static void sophgo_c2c_enable_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	device_remove_file(dev, &dev_attr_c2c_enable);
 	pr_info("[c2c_enable]: remove c2c_enable success\n");
 
-	return 0;
+	return;
 }
 
 static struct c2c_chip_info bm1690_c2c_if = {

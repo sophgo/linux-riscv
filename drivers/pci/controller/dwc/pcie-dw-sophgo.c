@@ -1207,7 +1207,7 @@ static int sophgo_pcie_config_cdma_route(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
-static int sophgo_dw_pcie_probe(struct platform_device *pdev)
+int sophgo_dw_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sophgo_dw_pcie *pcie;

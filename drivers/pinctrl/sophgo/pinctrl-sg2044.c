@@ -8,6 +8,7 @@
 #include <linux/pinctrl/pinconf-generic.h>
 #include <linux/device.h>
 #include <linux/of.h>
+#include <linux/acpi.h>
 
 #include "../pinctrl-utils.h"
 #include "pinctrl-sophgo.h"
@@ -288,6 +289,15 @@ static const struct of_device_id sg2044_pinctrl_of_table[] = {
 	{},
 };
 
+static const struct acpi_device_id pinctrl_acpi_match[] = {
+	{
+		.id = "SGPH0021",
+		.driver_data = (kernel_ulong_t)&sg2044_pinctrl_data,
+	},
+	{}	
+};
+MODULE_DEVICE_TABLE(acpi, pinctrl_acpi_match);
+
 static int sg2044_pinctrl_probe(struct platform_device *pdev)
 {
 	return sophgo_pinctrl_probe(pdev);
@@ -298,6 +308,7 @@ static struct platform_driver sg2044_pinctrl_driver = {
 	.driver = {
 		.name = DRV_PINCTRL_NAME,
 		.of_match_table = of_match_ptr(sg2044_pinctrl_of_table),
+		.acpi_match_table = ACPI_PTR(pinctrl_acpi_match),
 	},
 };
 

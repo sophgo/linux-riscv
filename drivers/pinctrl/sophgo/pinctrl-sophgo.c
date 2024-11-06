@@ -231,16 +231,16 @@ ssize_t pinmux_store(struct device *dev,
 
 int sophgo_pinctrl_probe(struct platform_device *pdev)
 {
+	struct fwnode_handle *fwnode;
 	struct sg_pinctrl *sgpctrl;
 	struct pinctrl_desc *desc;
 	struct sg_soc_pinctrl_data *data;
 	struct device *dev = &pdev->dev;
 	struct device *pin_dev = NULL;
-	struct device_node *np = dev->of_node, *np_top;
 	static struct regmap *syscon;
 	int ret;
 
-	data = (struct sg_soc_pinctrl_data *)of_device_get_match_data(&pdev->dev);
+	data = (struct sg_soc_pinctrl_data *)device_get_match_data(&pdev->dev);
 	if (!data)
 		return -EINVAL;
 	sgpctrl = devm_kzalloc(&pdev->dev, sizeof(*sgpctrl), GFP_KERNEL);
@@ -249,13 +249,13 @@ int sophgo_pinctrl_probe(struct platform_device *pdev)
 
 	sgpctrl->dev = &pdev->dev;
 
-	np_top = of_parse_phandle(np, "subctrl-syscon", 0);
-	if (!np_top) {
+	fwnode = fwnode_find_reference(dev_fwnode(&pdev->dev), "subctrl-syscon", 0);
+	if (!fwnode) {
 		dev_err(dev, "%s can't get subctrl-syscon node\n", __func__);
 		return -EINVAL;
 	}
 
-	syscon = syscon_node_to_regmap(np_top);
+	syscon = syscon_fwnode_to_regmap(fwnode);
 	if (IS_ERR(syscon)) {
 		dev_err(dev, "cannot get regmap\n");
 		return PTR_ERR(syscon);

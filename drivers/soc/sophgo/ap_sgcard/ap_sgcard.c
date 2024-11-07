@@ -136,6 +136,7 @@ struct v_channel {
 	char name[16];
 	struct v_channel_info channel_info;
 	int (*channel_irq_handel)(struct sg_card *card, struct v_channel *channle);
+	struct delayed_work channel_delayed_work;
 };
 
 struct v_port_info {
@@ -398,6 +399,14 @@ static int channel_tx_send_irq(struct v_channel *channel)
 
 static uint64_t host_int_cnt;
 
+void host_int_work_func (struct work_struct *p_work)
+{
+	struct v_channel *channel = container_of(p_work, struct v_channel, channel_delayed_work.work);
+
+	iowrite32(0x1, channel->rx_clean_irq.clr_irq_va);
+	pr_err("dealy work queue trigger host irq\n");
+}
+
 static int host_int(struct sg_card *card, struct v_channel *channel)
 {
 	struct cacheline_align_circ_buf *rx_buf = NULL;
@@ -501,6 +510,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
 			if (c < length + sizeof(request_action)) {
 				pr_err("warning: there are not enough space for prot rx buf\n");
+				schedule_delayed_work(&channel->channel_delayed_work, 1);
 				break;
 			}
 			DBG_MSG("copy [%s]-0x%llx to %s, port buf head:0x%x, tail:0x%x\n",
@@ -550,6 +560,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
 			if (c < sizeof(request_action)) {
 				pr_err("warning: there are not enough space for prot rx buf\n");
+				schedule_delayed_work(&channel->channel_delayed_work, 1);
 				break;
 			}
 
@@ -974,11 +985,12 @@ static int config_channel(struct sg_card *card)
 		INIT_LIST_HEAD(&channel->port_list);
 		INIT_LIST_HEAD(&channel->channel_info.rp_list);
 
-		if (i == 0)
+		if (i == 0) {
+			INIT_DELAYED_WORK(&channel->channel_delayed_work, host_int_work_func);
 			channel->channel_irq_handel = host_int;
-		else if (i >= CHANNEL_TPU0 && i < CHANNEL_TPU0 + card->tpu_channel_count)
+		} else if (i >= CHANNEL_TPU0 && i < CHANNEL_TPU0 + card->tpu_channel_count) {
 			channel->channel_irq_handel = tpu_int;
-		else
+		}else
 			channel->channel_irq_handel = media_int;
 	}
 

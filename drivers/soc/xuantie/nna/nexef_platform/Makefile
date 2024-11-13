@@ -12,7 +12,7 @@ ccflags-y += -I$(CONFIG_NEXEF_NNPU_INCLUDE)
 
 ccflags-y += -I$(src)/../include
 ccflags-y += -I$(src)/
-ccflags-y += -Wall -g
+# ccflags-y += -Wall -g
 
 # This should not be needed, but on some platform (especially old kernel)
 # the module can't be build without it.

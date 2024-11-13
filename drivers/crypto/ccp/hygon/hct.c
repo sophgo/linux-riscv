@@ -145,8 +145,6 @@ struct hct_shr_pg_cfg {
 	unsigned int vq_work_mode[MCCP_DEV_QUEUE];
 	unsigned int dev_lock_state;
 	unsigned int dev_init_state;
-	unsigned int vq_sync_count;
-	unsigned int vq_async_count;
 	unsigned int numa_node;
 } ____cacheline_aligned;
 

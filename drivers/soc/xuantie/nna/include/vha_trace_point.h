@@ -93,5 +93,12 @@ TRACE_EVENT(vha_irq,
 
 #endif /* _TRACE_VHA_H */
 
+#undef TRACE_INCLUDE_PATH
+#undef TRACE_INCLUDE_FILE
+#define TRACE_INCLUDE_PATH .
+
+/* This is needed because the name of this file doesn't match TRACE_SYSTEM. */
+#define TRACE_INCLUDE_FILE vha_trace_point
+
 /* This part must be outside protection */
 #include <trace/define_trace.h>

@@ -259,6 +259,9 @@ int aplic_msi_setup(struct device *dev, void __iomem *regs)
 		 */
 		if (is_of_node(dev->fwnode))
 			of_msi_configure(dev, to_of_node(dev->fwnode));
+
+		if (!dev_get_msi_domain(dev))
+			return -EPROBE_DEFER;
 	}
 
 	if (!msi_create_device_irq_domain(dev, MSI_DEFAULT_DOMAIN, &aplic_msi_template,

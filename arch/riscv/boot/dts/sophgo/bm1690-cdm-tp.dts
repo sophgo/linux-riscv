@@ -102,6 +102,12 @@
 			reg-io-width = <4>;
 		};
 
+		msg_cmd_conflict_intr: msg_cmd_conflict_intr {
+			compatible = "sophgo,msg-cmd-conflict-intr";
+			interrupt-parent = <&intc>;
+			interrupts = <53>;
+		};
+
 		vtty0: vtty@bfff0000 {
 			compatible = "sophgo,vtty-tp";
 			#size-cells = <0x2>;

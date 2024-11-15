@@ -6,5 +6,6 @@ source "drivers/soc/sophgo/pcie_ep/Kconfig"
 source "drivers/soc/sophgo/tp_driver/Kconfig"
 source "drivers/soc/sophgo/veth/Kconfig"
 source "drivers/soc/sophgo/map_memory/Kconfig"
+source "drivers/soc/sophgo/tpsys_err_intr/Kconfig"
 
 endmenu

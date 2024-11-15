@@ -29,6 +29,17 @@
 		reg-io-width = <4>;
 	};
 
+	tysys_err_intr: tysys_err_intr {
+		compatible = "sophgo,tpsys-err-intr";
+		interrupt-parent = <&intc>;
+		interrupts = <312 IRQ_TYPE_LEVEL_HIGH>, <313 IRQ_TYPE_LEVEL_HIGH>,
+					<314 IRQ_TYPE_LEVEL_HIGH>, <315 IRQ_TYPE_LEVEL_HIGH>,
+					<316 IRQ_TYPE_LEVEL_HIGH>, <317 IRQ_TYPE_LEVEL_HIGH>,
+					<318 IRQ_TYPE_LEVEL_HIGH>, <319 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "tpsys0_err",  "tpsys1_err",  "tpsys2_err",  "tpsys3_err",
+				  "tpsys4_err",  "tpsys5_err",  "tpsys6_err",  "tpsys7_err";
+	};
+
 	vtty0: vtty@bfff0000 {
 		compatible = "sophgo,vtty-ap";
 		#size-cells = <0x2>;

@@ -12,7 +12,7 @@
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"
 #include "bm1690-tpu-sys.dtsi"
-#include "bm1690-video-sys.dtsi"
+#include "bm1690-video-sys-soc.dtsi"
 #include "sg2044-pcie-intc.dtsi"
 //#include "sg2044-pcie-5rc-rp.dtsi"
 

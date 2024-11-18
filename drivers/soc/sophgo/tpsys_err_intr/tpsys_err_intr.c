@@ -152,14 +152,14 @@ static int tpsys_err_intr_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int tpsys_err_intr_remove(struct platform_device *pdev)
+static void tpsys_err_intr_remove(struct platform_device *pdev)
 {
 	int i;
 
 	for (i = 0; i < tpsys_err_intr_count; i++)
 		devm_free_irq(&pdev->dev, irq_infos[i].irq, &irq_infos[i]);
 
-	return 0;
+	return;
 }
 
 static const struct of_device_id tpsys_err_intr_of_match[] = {

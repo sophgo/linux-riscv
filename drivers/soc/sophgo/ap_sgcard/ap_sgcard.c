@@ -32,6 +32,7 @@
 
 void arch_wb_cache_pmem(void *addr, size_t size);
 void arch_invalidate_pmem(void *addr, size_t size);
+int probe_sgcard(struct sophgo_pcie_vfun *sg_vfun);
 
 struct sg_card;
 
@@ -399,7 +400,7 @@ static int channel_tx_send_irq(struct v_channel *channel)
 
 static uint64_t host_int_cnt;
 
-void host_int_work_func (struct work_struct *p_work)
+static void host_int_work_func (struct work_struct *p_work)
 {
 	struct v_channel *channel = container_of(p_work, struct v_channel, channel_delayed_work.work);
 
@@ -1176,12 +1177,14 @@ static int sg_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+#if 0
 static void destroy_stream_work_func(struct work_struct *work)
 {
 	struct v_port *port = container_of(work, struct v_port, destroy_stream_work.work);
 
 	destroy_stream_cdev_by_fd(port);
 }
+#endif
 
 static int sg_close(struct inode *inode, struct file *file)
 {

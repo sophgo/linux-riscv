@@ -28,7 +28,7 @@
 #include "bm1690_ep_init.h"
 
 
-void pcie_wait_core_clk(struct sophgo_pcie_ep *sg_ep)
+static void pcie_wait_core_clk(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	void __iomem *base_addr = sg_ep->sii_base;
@@ -40,7 +40,7 @@ void pcie_wait_core_clk(struct sophgo_pcie_ep *sg_ep)
 	} while (val != 1);
 }
 
-void pcie_config_ctrl(struct sophgo_pcie_ep *sg_ep)
+static void pcie_config_ctrl(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	uint32_t pcie_gen_slt = sg_ep->speed;
@@ -77,7 +77,7 @@ struct PCIE_EQ_COEF {
 	uint32_t post_cursor;
 };
 
-void pcie_config_eq(struct sophgo_pcie_ep *sg_ep)
+static void pcie_config_eq(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	uint32_t speed = 0;
@@ -121,7 +121,7 @@ void pcie_config_eq(struct sophgo_pcie_ep *sg_ep)
 	}
 }
 
-void pcie_config_link(struct sophgo_pcie_ep *sg_ep)
+static void pcie_config_link(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	void __iomem *base_addr = sg_ep->dbi_base;
@@ -139,7 +139,7 @@ void pcie_config_link(struct sophgo_pcie_ep *sg_ep)
 }
 
 
-void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
+static void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	uint32_t func = 0;
@@ -210,7 +210,8 @@ void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
 
 }
 
-void pcie_config_ep_bar(struct sophgo_pcie_ep *sg_ep)
+#if 0
+static void pcie_config_ep_bar(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	void __iomem *pcie_dbi_base = sg_ep->dbi_base;
@@ -236,8 +237,9 @@ void pcie_config_ep_bar(struct sophgo_pcie_ep *sg_ep)
 	val &= 0xfffffffe;
 	writel(val, (pcie_dbi_base + 0x8bc));
 }
+#endif
 
-void pcie_enable_ltssm(struct sophgo_pcie_ep *sg_ep)
+static void pcie_enable_ltssm(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	void __iomem *base_addr = sg_ep->sii_base;
@@ -248,7 +250,7 @@ void pcie_enable_ltssm(struct sophgo_pcie_ep *sg_ep)
 	writel(val, (base_addr + PCIE_SII_GENERAL_CTRL3_REG));
 }
 
-void pcie_wait_link(struct sophgo_pcie_ep *sg_ep)
+static void pcie_wait_link(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	void __iomem *base_addr = sg_ep->sii_base;
@@ -260,7 +262,7 @@ void pcie_wait_link(struct sophgo_pcie_ep *sg_ep)
 	} while (val != 1);
 }
 
-void pcie_check_link_status(struct sophgo_pcie_ep *sg_ep)
+static void pcie_check_link_status(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val = 0;
 	uint32_t speed = 0;

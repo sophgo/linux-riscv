@@ -22,6 +22,7 @@
 #include "c2c_rc.h"
 
 int sophgo_dw_pcie_probe(struct platform_device *pdev);
+int sophgo_set_all_c2c_rc_num(uint64_t all_rc);
 
 #define PER_CONFIG_STR_OFFSET	(0x1000)
 #define PCIE_INFO_DEF_VAL	0x5a

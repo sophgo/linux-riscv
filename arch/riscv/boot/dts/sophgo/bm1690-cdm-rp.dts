@@ -5,7 +5,7 @@
 /dts-v1/;
 #include <dt-bindings/interrupt-controller/irq.h>
 #include "sg2044-cpu.dtsi"
-#include "bm1690-video-sys.dtsi"
+#include "bm1690-video-sys-pcie.dtsi"
 
 / {
 	/delete-node/ memory@80000000;

@@ -11,7 +11,7 @@
 #include "sg2044-clock.dtsi"
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"
-#include "bm1690-video-sys.dtsi"
+#include "bm1690-video-sys-pcie.dtsi"
 #include "bm1690-pcie-intc.dtsi"
 
 / {

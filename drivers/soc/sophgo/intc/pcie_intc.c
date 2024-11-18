@@ -11,6 +11,8 @@
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
 
+struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void);
+
 #define MAX_IRQ_NUMBER 512
 /*
  * here we assume all plic hwirq and pic(PCIe Interrupt

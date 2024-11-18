@@ -26,6 +26,7 @@
 
 #include "pcie-dw-sophgo.h"
 
+int sophgo_dw_pcie_probe(struct platform_device *pdev);
 
 static void sophgo_dw_pcie_msi_ack_irq(struct irq_data *d)
 {

@@ -11,6 +11,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/version.h>
+#include <linux/acpi.h>
 
 #define REG_HLPERIOD		0x0
 #define REG_PERIOD		0x4
@@ -54,6 +55,7 @@ struct sophgo_pwm_chip {
 //	struct pwm_chip chip;
 	void __iomem *base;
 	struct clk *base_clk;
+	u64 clock;
 	u8 polarity_mask;
 	bool no_polarity;
 	uint32_t pwm_saved_regs[PWM_REG_NUM];
@@ -65,6 +67,14 @@ static inline
 struct sophgo_pwm_chip *to_sophgo_pwm_chip(struct pwm_chip *chip)
 {
 	return pwmchip_get_drvdata(chip);
+}
+
+static unsigned long sophgo_pwm_get_base_clock(struct sophgo_pwm_chip *sophgo_chip)
+{
+	if (sophgo_chip->base_clk)
+		return clk_get_rate(sophgo_chip->base_clk);
+	else
+		return sophgo_chip->clock;
 }
 
 static int pwm_sophgo_request(struct pwm_chip *chip, struct pwm_device *pwm_dev)
@@ -82,7 +92,7 @@ static int pwm_sophgo_config(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 	struct sophgo_pwm_channel *channel = &our_chip->channel;
 	u64 cycles;
 
-	cycles = clk_get_rate(our_chip->base_clk);
+	cycles = sophgo_pwm_get_base_clock(our_chip);
 	pr_debug("clk_get_rate=%llu\n", cycles);
 
 	cycles *= period_ns;
@@ -232,7 +242,7 @@ static int pwm_sophgo_capture(struct pwm_chip *chip, struct pwm_device *pwm_dev,
 	pr_debug("pwm_sophgo_capture: cycle_cnt = %llu\n", cycle_cnt);
 
 	// Convert from cycle count to period ns
-	cycles = clk_get_rate(our_chip->base_clk);
+	cycles = sophgo_pwm_get_base_clock(our_chip);
 	cycle_cnt *= NSEC_PER_SEC;
 	do_div(cycle_cnt, cycles);
 
@@ -258,10 +268,24 @@ static const struct pwm_ops pwm_sophgo_ops = {
 };
 
 static const struct of_device_id sophgo_pwm_match[] = {
-	{ .compatible = "sophgo,sg-pwm" },
+	{
+		.compatible = "sophgo,sg-pwm",
+		.data = &pwm_sophgo_ops,
+	},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, sophgo_pwm_match);
+
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id pwm_sophgo_acpi_ids[] = {
+	{
+		.id = "SGPH0005",
+		.driver_data = (kernel_ulong_t)&pwm_sophgo_ops
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(acpi, pwm_sophgo_acpi_ids);
+#endif
 
 static int pwm_sophgo_probe(struct platform_device *pdev)
 {
@@ -285,21 +309,28 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 	sophgo_chip->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(sophgo_chip->base))
 		return PTR_ERR(sophgo_chip->base);
+	if (dev->of_node) {
+		sophgo_chip->base_clk = devm_clk_get(&pdev->dev, NULL);
+		if (IS_ERR(sophgo_chip->base_clk)) {
+			dev_err(dev, "failed to get pwm source clk\n");
+			return PTR_ERR(sophgo_chip->base_clk);
+		}
 
-	sophgo_chip->base_clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(sophgo_chip->base_clk)) {
-		dev_err(dev, "failed to get pwm source clk\n");
-		return PTR_ERR(sophgo_chip->base_clk);
+		ret = clk_prepare_enable(sophgo_chip->base_clk);
+		if (ret < 0) {
+			dev_err(dev, "failed to enable base clock\n");
+			return ret;
+		}
+	} else {
+		ret = device_property_read_u64(dev, "base-clk", &sophgo_chip->clock);
+		if (ret < 0) {
+			dev_err(dev, "failed to get base clock from ACPI Table\n");
+			return ret;
+		}
 	}
 
-	ret = clk_prepare_enable(sophgo_chip->base_clk);
-	if (ret < 0) {
-		dev_err(dev, "failed to enable base clock\n");
-		return ret;
-	}
-
-	//no_polarity default is false(have polarity) , compatible with bm1682
-	if (of_property_read_bool(pdev->dev.of_node, "no-polarity"))
+	if (of_property_read_bool(pdev->dev.of_node, "no-polarity") || \
+		device_property_read_bool(dev, "no-polarity"))
 		sophgo_chip->no_polarity = true;
 	else
 		sophgo_chip->no_polarity = false;
@@ -310,7 +341,8 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 	ret = pwmchip_add(chip);
 	if (ret < 0) {
 		dev_err(dev, "failed to register PWM chip\n");
-		clk_disable_unprepare(sophgo_chip->base_clk);
+		if (dev->of_node)
+			clk_disable_unprepare(sophgo_chip->base_clk);
 		return ret;
 	}
 
@@ -319,11 +351,13 @@ static int pwm_sophgo_probe(struct platform_device *pdev)
 
 static void pwm_sophgo_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct pwm_chip *chip = platform_get_drvdata(pdev);
 	struct sophgo_pwm_chip *sophgo_chip = pwmchip_get_drvdata(chip);
 
 	pwmchip_remove(chip);
-	clk_disable_unprepare(sophgo_chip->base_clk);
+	if (dev->of_node)
+		clk_disable_unprepare(sophgo_chip->base_clk);
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -354,6 +388,7 @@ static struct platform_driver pwm_sophgo_driver = {
 		.name	= "sophgo-pwm",
 		.pm	= &pwm_sophgo_pm_ops,
 		.of_match_table = of_match_ptr(sophgo_pwm_match),
+		.acpi_match_table = ACPI_PTR(pwm_sophgo_acpi_ids),
 	},
 	.probe		= pwm_sophgo_probe,
 	.remove		= pwm_sophgo_remove,

@@ -144,6 +144,38 @@
 			};
 		};
 
+		spi0: spi@7030004000 {
+			compatible = "snps,dw-apb-ssi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70 0x30004000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <39 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&div_clk GATE_CLK_APB_SPI>,
+				<&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-frequency = <250000000>;
+			resets = <&rst SG2044_RST_SPI0>;
+			reset-names = "spi";
+			num-cs = <2>;
+			status = "disable";
+		};
+
+		spi1: spi@7030005000 {
+			compatible = "snps,dw-apb-ssi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x70 0x30005000 0x0 0x1000>;
+			interrupt-parent = <&intc>;
+			interrupts = <40 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&div_clk GATE_CLK_APB_SPI>,
+				<&div_clk GATE_CLK_SYSDMA_AXI>;
+			clock-frequency = <250000000>;
+			resets = <&rst SG2044_RST_SPI1>;
+			reset-names = "spi";
+			num-cs = <2>;
+			status = "disable";
+		};
+
 		gpio1: gpio@704000a000 {
 			compatible = "snps,dw-apb-gpio";
 			reg = <0x70 0x4000a000 0x0 0x1000>;

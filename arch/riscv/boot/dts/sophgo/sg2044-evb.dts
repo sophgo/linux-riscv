@@ -36,3 +36,11 @@
 		reg = <0x17>;
 	};
 };
+
+&spi0 {
+	status = "okay";
+};
+
+&spi1 {
+	status = "okay";
+};

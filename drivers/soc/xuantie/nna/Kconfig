@@ -1,0 +1,64 @@
+menuconfig VHA
+       tristate "IMG neural network accelerator"
+       default n
+
+if VHA
+choice 
+      prompt "VHA platform"
+      default VHA_XUANTIE_TH1520
+      config VHA_XUANTIE_TH1520_FPGA_C910
+             bool "driver runs with XuanTie Th1520-FPGA hw platform using a device tree"
+             select HW_AX3
+      config VHA_XUANTIE_TH1520
+             bool "driver runs with XuanTie Th1520 hw platform using a device tree"
+             select HW_AX3
+             select VHA_LO_PRI_SUBSEGS
+      config VHA_DUMMY
+             bool "driver runs without hardware"
+             select HW_AX3
+endchoice
+
+config HW_AX2
+      bool "driver runs AX2145 and AX2185 hardware"
+      select VHA_SYS_MIRAGE
+
+config HW_AX3
+      bool "driver runs AX31xx/AX33xx/AX35xx hardware"
+      select VHA_MMU_MIRRORED_CTX
+      select VHA_SYS_AURA
+
+config HW_AX3_MC
+      bool "driver runs AXAX3797 multicore hardware"
+
+config TARGET_OSID
+      int "driver is compiled for selected OS id."
+      default 0
+      depends on HW_AX3
+
+config VHA_MMU_MIRRORED_CTX
+      bool "driver is compiled with mirrored MMU page tables regarding MODEL & IO."
+      depends on HW_AX3
+
+choice
+      prompt "system configuration options"
+      config VHA_SYS_MIRAGE
+             bool "driver runs with Mirage system configuration file."
+             depends on HW_AX2
+      config VHA_SYS_AURA
+             bool "driver runs with Aura system configuration file."
+             depends on HW_AX3
+      config VHA_SYS_VAGUS
+             bool "driver runs with Vagus system configuration file."
+             depends on HW_AX3
+      config VHA_SYS_MAGNA
+             bool "driver runs with Magna system configuration file."
+             depends on HW_AX3_MC
+endchoice
+config VHA_SCF
+      bool "driver is compiled with safety critical features."
+      depends on VHA_SYS_VAGUS
+config VHA_LO_PRI_SUBSEGS
+      bool "driver is compiled to support low priority subsegments."
+      depends on HW_AX3
+endif
+

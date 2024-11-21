@@ -8,4 +8,5 @@ config TH1520_REBOOTMODE
 	help
 	 This driver supports check rebootmode feature in TH1520 FM platform
 
+source "drivers/soc/xuantie/nna/Kconfig"
 endmenu

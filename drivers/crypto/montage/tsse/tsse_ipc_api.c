@@ -53,13 +53,11 @@ int tsse_im_service_handle_alloc(
 {
 	struct tsse_service_instance *service_instance;
 	int ret;
-	int device_handle;
 
 	service_instance = kzalloc(sizeof(struct tsse_service_instance), GFP_ATOMIC);
 	if (!service_instance)
 		return -ENOMEM;
 	service_instance->service_opened = 0;
-	service_instance->device_handle = device_handle;
 	service_instance->cb = cb;
 	strscpy(service_instance->service_name, name, TSSE_IM_SERVICE_NAME_LEN);
 

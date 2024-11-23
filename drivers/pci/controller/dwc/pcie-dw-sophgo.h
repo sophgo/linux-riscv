@@ -28,6 +28,7 @@
 #include "pcie-designware.h"
 
 //PCIE CTRL REG
+#define PCIE_CTRL_INT_SIG_0_REG                             0x048
 #define PCIE_CTRL_SFT_RST_SIG_REG                           0x050
 #define PCIE_CTRL_REMAPPING_EN_REG                          0x060
 #define PCIE_CTRL_HNI_UP_START_ADDR_REG                     0x064
@@ -41,10 +42,12 @@
 #define PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG                0x08c
 #define PCIE_CTRL_AXI_MSI_GEN_USER_DATA_REG                 0x090
 #define PCIE_CTRL_AXI_MSI_GEN_MASK_IRQ_REG                  0x094
+#define PCIE_CTRL_IRQ_EN_REG                                0x0a0
 
 #define PCIE_SII_GENERAL_CTRL1_REG                          0x050
 #define PCIE_SII_GENERAL_CTRL3_REG                          0x058
 
+#define PCIE_CTRL_INT_SIG_0_PCIE_INTX_SHIFT_BIT             5
 #define PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT                 0
 #define PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT                  1
 #define PCIE_CTRL_SFT_RST_SIG_WARM_RSTN_BIT                 2
@@ -53,6 +56,7 @@
 #define PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT           2
 #define PCIE_CTRL_REMAP_EN_SN_TO_PCIE_DW4G_EN_BIT           3
 #define PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_EN_BIT           0
+#define PCIE_CTRL_IRQ_EN_INTX_SHIFT_BIT                     1
 
 #define CDMA_CSR_RCV_ADDR_H32				(0x1004)
 #define CDMA_CSR_RCV_ADDR_M16				(0x1008)
@@ -132,6 +136,8 @@ struct sophgo_dw_pcie {
 	u32			num_ob_windows;
 	u32			region_align;
 	u64			region_limit;
+	int			irq;
+	struct irq_domain	*intx_domain;
 	struct dw_pcie_rp	pp;
 	const struct dw_pcie_ops *ops;
 	u32			version;
@@ -152,7 +158,8 @@ struct sophgo_dw_pcie {
 #define to_sophgo_dw_pcie_from_pp(port) container_of((port), struct sophgo_dw_pcie, pp)
 
 extern struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void);
-
+u32 sophgo_dw_pcie_read_ctrl(struct sophgo_dw_pcie *pcie, u32 reg, size_t size);
+void sophgo_dw_pcie_write_ctrl(struct sophgo_dw_pcie *pcie, u32 reg, size_t size, u32 val);
 u32 sophgo_dw_pcie_read_dbi(struct sophgo_dw_pcie *pcie, u32 reg, size_t size);
 void sophgo_dw_pcie_write_dbi(struct sophgo_dw_pcie *pcie, u32 reg, size_t size, u32 val);
 u32 sophgo_dw_pcie_readl_atu(struct sophgo_dw_pcie *pcie, u32 dir, u32 index, u32 reg);
@@ -258,3 +265,4 @@ struct sophgo_dw_pcie {
 #endif
 
 #endif
+

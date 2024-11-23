@@ -28,6 +28,136 @@
 
 int sophgo_dw_pcie_probe(struct platform_device *pdev);
 
+static void sophgo_dw_intx_mask(struct irq_data *data)
+{
+	struct sophgo_dw_pcie *pcie = irq_data_get_irq_chip_data(data);
+	unsigned long flags = 0;
+	u32 val = 0;
+
+	raw_spin_lock_irqsave(&pcie->pp.lock, flags);
+	val = sophgo_dw_pcie_read_ctrl(pcie, PCIE_CTRL_IRQ_EN_REG, 4);
+	val &= ~BIT(data->hwirq + PCIE_CTRL_IRQ_EN_INTX_SHIFT_BIT);
+	sophgo_dw_pcie_write_ctrl(pcie, PCIE_CTRL_IRQ_EN_REG, 4, val);
+	raw_spin_unlock_irqrestore(&pcie->pp.lock, flags);
+}
+
+static void sophgo_dw_intx_unmask(struct irq_data *data)
+{
+	struct sophgo_dw_pcie *pcie = irq_data_get_irq_chip_data(data);
+	unsigned long flags;
+	u32 val;
+
+	raw_spin_lock_irqsave(&pcie->pp.lock, flags);
+	val = sophgo_dw_pcie_read_ctrl(pcie, PCIE_CTRL_IRQ_EN_REG, 4);
+	val |= BIT(data->hwirq + PCIE_CTRL_IRQ_EN_INTX_SHIFT_BIT);
+	sophgo_dw_pcie_write_ctrl(pcie, PCIE_CTRL_IRQ_EN_REG, 4, val);
+	raw_spin_unlock_irqrestore(&pcie->pp.lock, flags);
+}
+
+/**
+ * mtk_intx_eoi() - Clear INTx IRQ status at the end of interrupt
+ * @data: pointer to chip specific data
+ *
+ * As an emulated level IRQ, its interrupt status will remain
+ * until the corresponding de-assert message is received; hence that
+ * the status can only be cleared when the interrupt has been serviced.
+ */
+static void sophgo_dw_intx_eoi(struct irq_data *data)
+{
+
+}
+
+static int sophgo_dw_pcie_set_affinity(struct irq_data *data,
+				 const struct cpumask *mask, bool force)
+{
+	return -EINVAL;
+}
+
+static struct irq_chip sophgo_dw_intx_irq_chip = {
+	.irq_mask		= sophgo_dw_intx_mask,
+	.irq_unmask		= sophgo_dw_intx_unmask,
+	.irq_eoi		= sophgo_dw_intx_eoi,
+	.irq_set_affinity	= sophgo_dw_pcie_set_affinity,
+	.name			= "sophgo-dw-intx",
+};
+
+static int sophgo_pcie_intx_map(struct irq_domain *domain, unsigned int irq,
+			     irq_hw_number_t hwirq)
+{
+	irq_set_chip_data(irq, domain->host_data);
+	irq_set_chip_and_handler_name(irq, &sophgo_dw_intx_irq_chip,
+				      handle_fasteoi_irq, "sophgo-dw-intx");
+	return 0;
+}
+
+static const struct irq_domain_ops intx_domain_ops = {
+	.map = sophgo_pcie_intx_map,
+};
+
+static int sophgo_dw_pcie_init_intx_domains(struct sophgo_dw_pcie *pcie)
+{
+	struct device *dev = pcie->dev;
+	struct device_node *intc_node, *node = dev->of_node;
+	int ret = 0;
+
+	/* Setup INTx */
+	intc_node = of_get_child_by_name(node, "interrupt-controller");
+	if (!intc_node) {
+		dev_err(dev, "missing interrupt-controller node\n");
+		return -ENODEV;
+	}
+
+	pcie->intx_domain = irq_domain_add_linear(intc_node, PCI_NUM_INTX,
+						  &intx_domain_ops, pcie);
+	if (!pcie->intx_domain) {
+		dev_err(dev, "failed to create INTx IRQ domain\n");
+		ret = -ENODEV;
+	}
+
+	of_node_put(intc_node);
+
+	return ret;
+}
+
+static void sophgo_dw_pcie_irq_handler(struct irq_desc *desc)
+{
+	struct sophgo_dw_pcie *pcie = irq_desc_get_handler_data(desc);
+	struct irq_chip *irqchip = irq_desc_get_chip(desc);
+	unsigned long status;
+	irq_hw_number_t irq_bit = PCIE_CTRL_INT_SIG_0_PCIE_INTX_SHIFT_BIT;
+
+	chained_irq_enter(irqchip, desc);
+
+	status = sophgo_dw_pcie_read_ctrl(pcie, PCIE_CTRL_INT_SIG_0_REG, 4);
+	for_each_set_bit_from(irq_bit, &status, PCI_NUM_INTX +
+			      PCIE_CTRL_INT_SIG_0_PCIE_INTX_SHIFT_BIT)
+		generic_handle_domain_irq(pcie->intx_domain,
+					  irq_bit - PCIE_CTRL_INT_SIG_0_PCIE_INTX_SHIFT_BIT);
+
+	chained_irq_exit(irqchip, desc);
+
+}
+
+static int sophgo_dw_pcie_setup_irq(struct sophgo_dw_pcie *pcie)
+{
+	struct device *dev = pcie->dev;
+	struct platform_device *pdev = to_platform_device(dev);
+	int err;
+
+	err = sophgo_dw_pcie_init_intx_domains(pcie);
+	if (err)
+		return err;
+
+	pcie->irq = platform_get_irq_byname(pdev, "pcie_irq");
+	pr_info("%s, irq = %d\n", __func__, pcie->irq);
+	if (pcie->irq < 0)
+		return pcie->irq;
+
+	irq_set_chained_handler_and_data(pcie->irq, sophgo_dw_pcie_irq_handler, pcie);
+
+	return 0;
+}
+
 static void sophgo_dw_pcie_msi_ack_irq(struct irq_data *d)
 {
 	irq_chip_ack_parent(d);
@@ -73,6 +203,27 @@ static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp)
 	}
 
 	return 0;
+}
+
+u32 sophgo_dw_pcie_read_ctrl(struct sophgo_dw_pcie *pcie, u32 reg, size_t size)
+{
+	int ret = 0;
+	u32 val = 0;
+
+	ret = dw_pcie_read(pcie->ctrl_reg_base + reg, size, &val);
+	if (ret)
+		dev_err(pcie->dev, "Read ctrl address failed\n");
+
+	return val;
+}
+
+void sophgo_dw_pcie_write_ctrl(struct sophgo_dw_pcie *pcie, u32 reg, size_t size, u32 val)
+{
+	int ret = 0;
+
+	ret = dw_pcie_write(pcie->ctrl_reg_base + reg, size, val);
+	if (ret)
+		dev_err(pcie->dev, "Write ctrl address failed\n");
 }
 
 u32 sophgo_dw_pcie_read_dbi(struct sophgo_dw_pcie *pcie, u32 reg, size_t size)
@@ -374,6 +525,13 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		pcie->dbi_base = devm_pci_remap_cfg_resource(pcie->dev, res);
 		if (IS_ERR(pcie->dbi_base))
 			return PTR_ERR(pcie->dbi_base);
+	}
+
+	if (!pcie->ctrl_reg_base) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl");
+		pcie->ctrl_reg_base = devm_pci_remap_cfg_resource(pcie->dev, res);
+		if (IS_ERR(pcie->ctrl_reg_base))
+			return PTR_ERR(pcie->ctrl_reg_base);
 	}
 
 	/* For non-unrolled iATU/eDMA platforms this range will be ignored */
@@ -1281,6 +1439,10 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	ret = sophgo_dw_pcie_setup_rc(pp);
 	if (ret)
 		return ret;
+
+	ret = sophgo_dw_pcie_setup_irq(pcie);
+	if (ret)
+		dev_err(dev, "pcie intx interrupt request fail, ret = %d\n", ret);
 
 	bridge->sysdata = pp;
 	bridge->dev.parent = dev;

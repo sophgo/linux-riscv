@@ -5,3 +5,4 @@ obj-$(CONFIG_TH1520_REBOOTMODE)	+= th1520_event.o
 obj-y += nna/
 obj-$(CONFIG_VIDEO_VC8000D)    += vpu-vc8000d-kernel/linux/subsys_driver/ vpu-vc8000d-kernel/linux/memalloc/
 obj-$(CONFIG_VIDEO_VC8000E)    += vpu-vc8000e-kernel/linux/kernel_module/
+obj-$(CONFIG_VIDEO_MEMORY) += video_memory/driver/

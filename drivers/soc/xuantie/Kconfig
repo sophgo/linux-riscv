@@ -9,4 +9,6 @@ config TH1520_REBOOTMODE
 	 This driver supports check rebootmode feature in TH1520 FM platform
 
 source "drivers/soc/xuantie/nna/Kconfig"
+source "drivers/soc/xuantie/vpu-vc8000d-kernel/Kconfig"
+source "drivers/soc/xuantie/vpu-vc8000e-kernel/Kconfig"
 endmenu

@@ -806,7 +806,8 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 			pr_err("vtty%d get irq num failed\n", i);
 			goto free_request;
 		} else {
-			cpu = i % cpus;
+			//cpu = i % cpus;
+			cpu = 0;
 			irq_set_affinity(card->channel[i].irq, get_cpu_mask(cpu));
 			pr_err("ch%d irq:%llu->cpu%u\n", i, card->channel[i].irq, cpu);
 		}

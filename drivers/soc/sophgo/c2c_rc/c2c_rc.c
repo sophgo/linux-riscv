@@ -45,9 +45,13 @@ int sophgo_set_all_c2c_rc_num(uint64_t all_rc);
 
 #define CHIP_ID_MAX	5
 
+#define PCIE_BUS_MAX	10
+
 static int c2c_enable;
 static uint64_t all_c2c_rc;
 static atomic_t ready_c2c_rc;
+static uint8_t c2c_link_status[PCIE_BUS_MAX];
+static uint8_t want_c2c_link[PCIE_BUS_MAX];
 
 struct pcie_info {
 	uint64_t slot_id;
@@ -157,8 +161,10 @@ static int check_all_rc(struct c2c_info *info)
 	for (int i = 0; i < 10; i++) {
 		pcie_info = (struct pcie_info *)(info->pcie_info + i * PER_CONFIG_STR_OFFSET);
 		dump_pcie_info(pcie_info);
-		if (pcie_info->data_link_type == PCIE_DATA_LINK_C2C && pcie_info->link_role == PCIE_LINK_ROLE_RC)
+		if (pcie_info->data_link_type == PCIE_DATA_LINK_C2C && pcie_info->link_role == PCIE_LINK_ROLE_RC) {
 			all_c2c_rc++;
+			want_c2c_link[i] = 1;
+		}
 	}
 
 	return all_c2c_rc;
@@ -242,15 +248,23 @@ int sophgo_check_c2c(void)
 	all_ready = atomic_read(&ready_c2c_rc);
 
 	if (all_ready == all_c2c_rc)
-		return 1;
-	else
-		return 0;
+		return -1;
+
+	for (int i = 0; i < PCIE_BUS_MAX; i++) {
+		if (want_c2c_link[i] != c2c_link_status[i]) {
+			pr_err("pcie[%d] c2c link failed\n", i);
+			return i;
+		}
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL_GPL(sophgo_check_c2c);
 
-int sophgo_set_c2c_ready(void)
+int sophgo_set_c2c_ready(int bus_num)
 {
 	atomic_add(1, &ready_c2c_rc);
+	c2c_link_status[bus_num] = 1;
 
 	return 0;
 }

@@ -11,7 +11,7 @@
 #include "sg2044-clock.dtsi"
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"
-#include "sg2044-pcie-intc.dtsi"
+#include "sg2044-pcie-msi.dtsi"
 #include "sg2044-pcie-5rc.dtsi"
 
 /delete-node/ &uart0;

@@ -157,7 +157,7 @@ struct sophgo_dw_pcie {
 
 #define to_sophgo_dw_pcie_from_pp(port) container_of((port), struct sophgo_dw_pcie, pp)
 
-extern struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void);
+extern struct irq_domain *sophgo_get_msi_irq_domain(void);
 u32 sophgo_dw_pcie_read_ctrl(struct sophgo_dw_pcie *pcie, u32 reg, size_t size);
 void sophgo_dw_pcie_write_ctrl(struct sophgo_dw_pcie *pcie, u32 reg, size_t size, u32 val);
 u32 sophgo_dw_pcie_read_dbi(struct sophgo_dw_pcie *pcie, u32 reg, size_t size);

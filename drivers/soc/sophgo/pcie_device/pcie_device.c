@@ -386,7 +386,7 @@ static int pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			goto failed;
 
 		config_ep_huge_bar(hdev);
-		sophgo_set_c2c_ready();
+		sophgo_set_c2c_ready(hdev->bus_num);
 	} else {
 		top_base = ioremap(0x7050000000, 0x1000);
 		pr_err("top ioremap va:0x%llx\n", (uint64_t)top_base);

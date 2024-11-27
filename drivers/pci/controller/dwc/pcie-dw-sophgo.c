@@ -190,7 +190,7 @@ static struct msi_domain_info sophgo_dw_pcie_msi_domain_info = {
 
 static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp)
 {
-	struct irq_domain *irq_parent = sophgo_dw_pcie_get_parent_irq_domain();
+	struct irq_domain *irq_parent = sophgo_get_msi_irq_domain();
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pcie->dev->of_node);
 

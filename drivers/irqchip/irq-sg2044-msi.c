@@ -11,23 +11,22 @@
 #include <linux/irqdomain.h>
 #include <linux/irqchip/chained_irq.h>
 
-struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void);
+struct irq_domain *sophgo_get_msi_irq_domain(void);
 
 #define MAX_IRQ_NUMBER 512
 /*
- * here we assume all plic hwirq and pic(PCIe Interrupt
- * Controller) hwirq should be contiguous.
- * pcie_intc hwirq is index of bitmap (both software and
+ * here we assume all plic hwirq and msi hwirq
+ * (for PCIe Interrupt Controller, pic) should be contiguous.
+ * msi hwirq is index of bitmap (both software and
  * hardware), and starts from 0.
- * so we use pic hwirq as index to get plic hwirq and its
+ * so we use msi hwirq as index to get plic hwirq and its
  * irq data.
- * when used as a msi parent, pic hwirq is written to Top
- * reg for triggering irq by a PCIe device.
- *
+ * msi hwirq is written to Top reg for triggering irq
+ * by a PCIe device.
  * now we pre-requested plic interrupt, but may try request
  * plic interrupt when needed, like gicp_irq_domain_alloc.
  */
-struct pcie_intc_data {
+struct sg2044_msi_data {
 	struct platform_device *pdev;
 	int irq_num;
 	struct irq_domain *domain;
@@ -45,26 +44,26 @@ struct pcie_intc_data {
 	irq_hw_number_t		plic_hwirqs[MAX_IRQ_NUMBER];
 	int			plic_irqs[MAX_IRQ_NUMBER];
 	struct irq_data		*plic_irq_datas[MAX_IRQ_NUMBER];
-	int			pic_to_plic[MAX_IRQ_NUMBER]; // mapping from tic hwirq to plic hwirq
+	int			msi_to_plic[MAX_IRQ_NUMBER]; // mapping from msi hwirq to plic hwirq
 };
 
 // workaround for using in other modules
-struct pcie_intc_data *pic_data;
+struct sg2044_msi_data *msi_data;
 
-struct irq_domain *sophgo_dw_pcie_get_parent_irq_domain(void)
+struct irq_domain *sophgo_get_msi_irq_domain(void)
 {
-	if (pic_data)
-		return pic_data->domain;
+	if (msi_data)
+		return msi_data->domain;
 	else
 		return NULL;
 }
 
-static int pcie_intc_domain_translate(struct irq_domain *d,
+static int sg2044_msi_domain_translate(struct irq_domain *d,
 				    struct irq_fwspec *fwspec,
 				    unsigned long *hwirq,
 				    unsigned int *type)
 {
-	struct pcie_intc_data *data = d->host_data;
+	struct sg2044_msi_data *data = d->host_data;
 
 	if (fwspec->param_count != 2)
 		return -EINVAL;
@@ -77,14 +76,14 @@ static int pcie_intc_domain_translate(struct irq_domain *d,
 	return 0;
 }
 
-static int pcie_intc_domain_alloc(struct irq_domain *domain,
+static int sg2044_msi_domain_alloc(struct irq_domain *domain,
 				unsigned int virq, unsigned int nr_irqs,
 				void *args)
 {
 	unsigned long flags;
 	irq_hw_number_t hwirq;
 	int i, ret = -1;
-	struct pcie_intc_data *data = domain->host_data;
+	struct sg2044_msi_data *data = domain->host_data;
 
 	// dynamically alloc hwirq
 	spin_lock_irqsave(&data->lock, flags);
@@ -103,7 +102,7 @@ static int pcie_intc_domain_alloc(struct irq_domain *domain,
 				    data->chip,
 				    data, handle_edge_irq,
 				    NULL, NULL);
-		data->pic_to_plic[hwirq + i] = data->plic_hwirqs[hwirq + i];
+		data->msi_to_plic[hwirq + i] = data->plic_hwirqs[hwirq + i];
 	}
 
 	pr_debug("%s hwirq %ld, irq %d, plic irq %d, total %d\n", __func__,
@@ -111,11 +110,11 @@ static int pcie_intc_domain_alloc(struct irq_domain *domain,
 	return 0;
 }
 
-static void pcie_intc_domain_free(struct irq_domain *domain,
+static void sg2044_msi_domain_free(struct irq_domain *domain,
 				    unsigned int virq, unsigned int nr_irqs)
 {
 	struct irq_data *d = irq_domain_get_irq_data(domain, virq);
-	struct pcie_intc_data *data = irq_data_get_irq_chip_data(d);
+	struct sg2044_msi_data *data = irq_data_get_irq_chip_data(d);
 	unsigned long flags;
 
 	pr_debug("%s hwirq %ld, irq %d, total %d\n", __func__, d->hwirq, virq, nr_irqs);
@@ -126,15 +125,15 @@ static void pcie_intc_domain_free(struct irq_domain *domain,
 	spin_unlock_irqrestore(&data->lock, flags);
 }
 
-static const struct irq_domain_ops pcie_intc_domain_ops = {
-	.translate = pcie_intc_domain_translate,
-	.alloc	= pcie_intc_domain_alloc,
-	.free	= pcie_intc_domain_free,
+static const struct irq_domain_ops sg2044_msi_domain_ops = {
+	.translate = sg2044_msi_domain_translate,
+	.alloc	= sg2044_msi_domain_alloc,
+	.free	= sg2044_msi_domain_free,
 };
 
-static void pcie_intc_ack_irq(struct irq_data *d)
+static void sg2044_msi_ack_irq(struct irq_data *d)
 {
-	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
+	struct sg2044_msi_data *data  = irq_data_get_irq_chip_data(d);
 	int reg_off = 0;
 	struct irq_data *plic_irq_data = data->plic_irq_datas[d->hwirq];
 
@@ -147,9 +146,9 @@ static void pcie_intc_ack_irq(struct irq_data *d)
 		plic_irq_data->chip->irq_ack(plic_irq_data);
 }
 
-static void pcie_intc_mask_irq(struct irq_data *d)
+static void sg2044_msi_mask_irq(struct irq_data *d)
 {
-	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
+	struct sg2044_msi_data *data  = irq_data_get_irq_chip_data(d);
 	struct irq_data *plic_irq_data = data->plic_irq_datas[d->hwirq];
 
 	pr_debug("%s %ld, parent %s/%ld\n", __func__, d->hwirq,
@@ -157,9 +156,9 @@ static void pcie_intc_mask_irq(struct irq_data *d)
 	plic_irq_data->chip->irq_mask(plic_irq_data);
 }
 
-static void pcie_intc_unmask_irq(struct irq_data *d)
+static void sg2044_msi_unmask_irq(struct irq_data *d)
 {
-	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
+	struct sg2044_msi_data *data  = irq_data_get_irq_chip_data(d);
 	struct irq_data *plic_irq_data = data->plic_irq_datas[d->hwirq];
 
 	pr_debug("%s %ld, parent %s/%ld\n", __func__, d->hwirq,
@@ -167,9 +166,9 @@ static void pcie_intc_unmask_irq(struct irq_data *d)
 	plic_irq_data->chip->irq_unmask(plic_irq_data);
 }
 
-static void pcie_intc_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
+static void sg2044_msi_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 {
-	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
+	struct sg2044_msi_data *data  = irq_data_get_irq_chip_data(d);
 
 	msg->address_lo = lower_32_bits(data->reg_set_phys) + 4 * (d->hwirq / 32);
 	msg->address_hi = upper_32_bits(data->reg_set_phys);
@@ -179,10 +178,10 @@ static void pcie_intc_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 		(int)d->hwirq, msg->address_hi, msg->address_lo, msg->data);
 }
 
-static int pcie_intc_set_affinity(struct irq_data *d,
+static int sg2044_msi_set_affinity(struct irq_data *d,
 				 const struct cpumask *mask, bool force)
 {
-	struct pcie_intc_data *data  = irq_data_get_irq_chip_data(d);
+	struct sg2044_msi_data *data  = irq_data_get_irq_chip_data(d);
 	struct irq_data *plic_irq_data = data->plic_irq_datas[d->hwirq];
 
 	irq_data_update_effective_affinity(d, mask);
@@ -192,7 +191,7 @@ static int pcie_intc_set_affinity(struct irq_data *d,
 		return -EINVAL;
 }
 
-static int pcie_intc_set_type(struct irq_data *d, u32 type)
+static int sg2044_msi_set_type(struct irq_data *d, u32 type)
 {
 	/*
 	 * dummy function, so __irq_set_trigger can continue to set
@@ -201,40 +200,40 @@ static int pcie_intc_set_type(struct irq_data *d, u32 type)
 	return 0;
 }
 
-static struct irq_chip pcie_intc_irq_chip = {
-	.name = "pcie-intc",
-	.irq_ack = pcie_intc_ack_irq,
-	.irq_mask = pcie_intc_mask_irq,
-	.irq_unmask = pcie_intc_unmask_irq,
-	.irq_compose_msi_msg = pcie_intc_setup_msi_msg,
-	.irq_set_affinity = pcie_intc_set_affinity,
-	.irq_set_type = pcie_intc_set_type,
+static struct irq_chip sg2044_msi_irq_chip = {
+	.name = "SG2044 MSI",
+	.irq_ack = sg2044_msi_ack_irq,
+	.irq_mask = sg2044_msi_mask_irq,
+	.irq_unmask = sg2044_msi_unmask_irq,
+	.irq_compose_msi_msg = sg2044_msi_setup_msi_msg,
+	.irq_set_affinity = sg2044_msi_set_affinity,
+	.irq_set_type = sg2044_msi_set_type,
 };
 
-static void pcie_intc_irq_handler(struct irq_desc *plic_desc)
+static void sg2044_msi_irq_handler(struct irq_desc *plic_desc)
 {
 	struct irq_chip *plic_chip = irq_desc_get_chip(plic_desc);
-	struct pcie_intc_data *data = irq_desc_get_handler_data(plic_desc);
+	struct sg2044_msi_data *data = irq_desc_get_handler_data(plic_desc);
 	irq_hw_number_t plic_hwirq = irq_desc_get_irq_data(plic_desc)->hwirq;
-	irq_hw_number_t pcie_intc_hwirq;
-	int pcie_intc_irq, i, ret;
+	irq_hw_number_t sg2044_msi_hwirq;
+	int sg2044_msi_irq, i, ret;
 
 	chained_irq_enter(plic_chip, plic_desc);
 
 	for (i = 0; i < data->irq_num; i++) {
-		if (data->pic_to_plic[i] == plic_hwirq)
+		if (data->msi_to_plic[i] == plic_hwirq)
 			break;
 	}
 	if (i < data->irq_num) {
-		pcie_intc_hwirq = i;
-		pcie_intc_irq = irq_find_mapping(data->domain, pcie_intc_hwirq);
-		pr_debug("%s plic hwirq %ld, tic hwirq %ld, tic irq %d\n", __func__,
-				plic_hwirq, pcie_intc_hwirq, pcie_intc_irq);
-		if (pcie_intc_irq)
-			ret = generic_handle_irq(pcie_intc_irq);
-		pr_debug("%s handled pic irq %d, %d\n", __func__, pcie_intc_irq, ret);
+		sg2044_msi_hwirq = i;
+		sg2044_msi_irq = irq_find_mapping(data->domain, sg2044_msi_hwirq);
+		pr_debug("%s plic hwirq %ld, msi hwirq %ld, msi irq %d\n", __func__,
+				plic_hwirq, sg2044_msi_hwirq, sg2044_msi_irq);
+		if (sg2044_msi_irq)
+			ret = generic_handle_irq(sg2044_msi_irq);
+		pr_debug("%s handled msi irq %d, %d\n", __func__, sg2044_msi_irq, ret);
 	} else {
-		pr_debug("%s not found tic hwirq for plic hwirq %ld\n", __func__, plic_hwirq);
+		pr_debug("%s not found msi hwirq for plic hwirq %ld\n", __func__, plic_hwirq);
 		// workaround, ack unexpected(unregistered) interrupt
 		writel(1 << (plic_hwirq - data->plic_hwirqs[0]), data->reg_clr);
 	}
@@ -242,15 +241,15 @@ static void pcie_intc_irq_handler(struct irq_desc *plic_desc)
 	chained_irq_exit(plic_chip, plic_desc);
 }
 
-static int pcie_intc_probe(struct platform_device *pdev)
+static int sg2044_msi_probe(struct platform_device *pdev)
 {
-	struct pcie_intc_data *data;
+	struct sg2044_msi_data *data;
 	struct resource *res;
-	struct fwnode_handle *fwnode = of_node_to_fwnode(pdev->dev.of_node);
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
 	int ret = 0, i;
 
 	// alloc private data
-	data = kzalloc(sizeof(struct pcie_intc_data), GFP_KERNEL);
+	data = kzalloc(sizeof(struct sg2044_msi_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 	platform_set_drvdata(pdev, data);
@@ -267,6 +266,7 @@ static int pcie_intc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(data->reg_set);
 		goto out;
 	}
+
 	data->reg_set_phys = res->start;
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "clr");
 	data->reg_clr = devm_ioremap_resource(&pdev->dev, res);
@@ -297,13 +297,13 @@ static int pcie_intc_probe(struct platform_device *pdev)
 
 	// create IRQ domain
 	data->domain = irq_domain_create_linear(fwnode, data->irq_num,
-						&pcie_intc_domain_ops, data);
+						&sg2044_msi_domain_ops, data);
 	if (!data->domain) {
 		dev_err(&pdev->dev, "create linear irq doamin failed\n");
 		ret = -ENODEV;
 		goto out;
 	}
-	data->chip = &pcie_intc_irq_chip;
+	data->chip = &sg2044_msi_irq_chip;
 
 	/*
 	 * workaround to deal with IRQ conflict with TPU driver,
@@ -312,13 +312,13 @@ static int pcie_intc_probe(struct platform_device *pdev)
 	//bitmap_allocate_region(data->irq_bitmap, 0, order_base_2(1));
 	for (i = 0; i < data->irq_num; i++)
 		irq_set_chained_handler_and_data(data->plic_irqs[i],
-							pcie_intc_irq_handler, data);
+							sg2044_msi_irq_handler, data);
 
 	irq_domain_update_bus_token(data->domain, DOMAIN_BUS_NEXUS);
-	if (pic_data)
-		dev_err(&pdev->dev, "pic_data is not empty, %s\n",
-			dev_name(&pic_data->pdev->dev));
-	pic_data = data;
+	if (msi_data)
+		dev_err(&pdev->dev, "msi_data is not empty, %s\n",
+			dev_name(&msi_data->pdev->dev));
+	msi_data = data;
 
 	return ret;
 
@@ -331,25 +331,25 @@ out:
 	return ret;
 }
 
-static const struct of_device_id pcie_intc_of_match[] = {
+static const struct of_device_id sg2044_msi_of_match[] = {
 	{
-		.compatible = "sophgo,pcie-intc",
+		.compatible = "sophgo,sg2044-msi",
 	},
 	{},
 };
 
-static struct platform_driver pcie_intc_driver = {
+static struct platform_driver sg2044_msi_driver = {
 	.driver = {
-		.name = "sophgo,pcie-intc",
+		.name = "sg2044-msi",
 		.owner = THIS_MODULE,
-		.of_match_table = of_match_ptr(pcie_intc_of_match),
+		.of_match_table = of_match_ptr(sg2044_msi_of_match),
 	},
-	.probe = pcie_intc_probe,
+	.probe = sg2044_msi_probe,
 };
 
-static int __init pcie_intc_init(void)
+static int __init sg2044_msi_init(void)
 {
-	return platform_driver_register(&pcie_intc_driver);
+	return platform_driver_register(&sg2044_msi_driver);
 }
 
-arch_initcall(pcie_intc_init);
+arch_initcall(sg2044_msi_init);

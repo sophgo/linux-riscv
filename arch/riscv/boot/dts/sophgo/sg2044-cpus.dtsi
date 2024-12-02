@@ -2549,7 +2549,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2559,7 +2559,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2569,7 +2569,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2579,7 +2579,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2589,7 +2589,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2599,7 +2599,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2609,7 +2609,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2619,7 +2619,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2629,7 +2629,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2639,7 +2639,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2649,7 +2649,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2659,7 +2659,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2669,7 +2669,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2679,7 +2679,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2689,7 +2689,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2699,7 +2699,7 @@
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-size = <2097152>;
-			cache-sets = <1024>;
+			cache-sets = <2048>;
 			cache-unified;
 			next-level-cache = <&l3_cache>;
 		};
@@ -2709,7 +2709,7 @@
 			cache-block-size = <64>;
 			cache-level = <3>;
 			cache-size = <67108864>;
-			cache-sets = <2048>;
+			cache-sets = <4096>;
 			cache-unified;
 		};
 	};

@@ -51,6 +51,7 @@ ccflags-$(CONFIG_VHA_SYS_MAGNA)  += -DCFG_SYS_MAGNA
 
 ccflags-y        += -I$(srctree)/$(src)/$(PLAT)/
 ccflags-y        += -I$(srctree)/$(src)/../include
+ccflags-y        += -I$(srctree)/$(src)/../vha/
 
 ifdef CONFIG_NEXEF_NNPU_INCLUDE
     subdir-ccflags-y += -I${CONFIG_NEXEF_NNPU_INCLUDE}

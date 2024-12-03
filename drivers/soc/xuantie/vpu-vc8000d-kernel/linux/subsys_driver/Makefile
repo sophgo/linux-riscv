@@ -72,6 +72,8 @@ endif
 ifneq ($(KERNELRELEASE),)
 # recursive call from kernel build system
 
+CFLAGS_hantro_vcmd.o += -I$(src)
+
 hantrodec-objs := hantro_dec.o hantro_mmu.o hantro_axife.o hantro_vcmd.o bidirect_list.o vcmdswhwregisters.o subsys.o kernel_allocator.o
 obj-m         += hantrodec.o
 

@@ -459,6 +459,21 @@
 			};
 
 		};
+
+        // pka device, change size from 0x1000 to 0x6000
+        pka: pka@7040040000 {
+            compatible = "snps,designware-pka";
+            reg = <0x70 0x40040000 0x0 0x6000>;
+            interrupt-parent = <&intc>;
+            interrupts = <322 IRQ_TYPE_LEVEL_HIGH>;
+            bus-width = <4>;
+            resets-names = "pka";
+            resets = <&rst SG2044_RST_PKA>;
+            clock-names = "pka";
+            clocks = <&div_clk GATE_CLK_PKA>;
+            status = "disabled";
+        };
+
 	#if 0
 		xlgmac_axi_setup: xlgmac-axi-config {
 			snps,wr_osr_lmt = <63>;

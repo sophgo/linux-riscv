@@ -138,45 +138,51 @@ struct sg2044_pll_clock sg2044_root_pll_clks[] = {
 
 /* divider clocks */
 static const struct sg2044_divider_clock div_clks[] = {
-	{ DIV_CLK_MPLL0_AP_CPU_NORMAL_0, "clk_div_ap_cpu_normal_0", "mpll0_clock",
+	{ DIV_CLK_MPLL0_AP_CPU_NORMAL_0, "clk_div_ap_sys_0", "clk_gate_ap_sys_div0",
 		0, 0x2040, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_MPLL1_RP_SYS_0, "clk_div_rp_sys_0", "mpll1_clock",
+	{ DIV_CLK_MPLL1_RP_SYS_0, "clk_div_rp_sys_0", "clk_gate_rp_sys_div0",
 		0, 0x204c, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_MPLL2_TPU_SYS_0, "clk_div_tpu_sys_0", "mpll2_clock",
+	{ DIV_CLK_MPLL2_TPU_SYS_0, "clk_div_tpu_sys_0", "clk_gate_tpu_sys_div0",
 		0, 0x2054, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_MPLL3_CC_GRP_SYS_0, "clk_div_cc_grp_sys_0", "mpll3_clock",
+	{ DIV_CLK_MPLL3_CC_GRP_SYS_0, "clk_div_ccgrp_sys_0", "clk_gate_ccgrp_sys_div0",
 		0, 0x206c, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_MPLL4_SRC0_0, "clk_div_src0_0", "mpll4_clock",
+	{ DIV_CLK_MPLL4_SRC0_0, "clk_div_src0_0", "clk_gate_src0_div0",
 		0, 0x2074, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_MPLL5_SRC1_0, "clk_div_src1_0", "mpll5_clock",
+	{ DIV_CLK_MPLL5_SRC1_0, "clk_div_src1_0", "clk_gate_src1_div0",
 		0, 0x207c, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_CC_GRP_SYS_1, "clk_div_cc_grp_sys_1", "fpll0_clock",
+	{ DIV_CLK_FPLL1_CXP_MAC_0, "clk_div_cxp_mac_0", "clk_gate_cxp_mac_div0",
+		0, 0x2084, 16, 8, CLK_DIVIDER_ONE_BASED |
+			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
+
+	{ DIV_CLK_FPLL0_CC_GRP_SYS_1, "clk_div_ccgrp_sys_1", "clk_gate_cc_grp_sys_div1",
 		0, 0x2070, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_TPU_SYS_1, "clk_div_tpu_sys_1", "fpll0_clock",
+	{ DIV_CLK_FPLL0_TPU_SYS_1, "clk_div_tpu_sys_1", "clk_gate_tpu_sys_div1",
 		0, 0x2058, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_RP_SYS_1, "clk_div_rp_sys_1", "fpll0_clock",
+	{ DIV_CLK_FPLL0_RP_SYS_1, "clk_div_rp_sys_1", "clk_gate_rp_sys_div1",
 		0, 0x2050, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_AP_CPU_NORMAL_1, "clk_div_ap_cpu_normal_1", "fpll0_clock",
+	{ DIV_CLK_FPLL0_AP_CPU_NORMAL_1, "clk_div_ap_sys_1", "clk_gate_ap_sys_div1",
 		0, 0x2044, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_SRC0_1, "clk_div_src0_1", "fpll0_clock",
+	{ DIV_CLK_FPLL0_SRC0_1, "clk_div_src0_1", "clk_gate_src0_div1",
 		0, 0x2078, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_SRC1_1, "clk_div_src1_1", "fpll0_clock",
+	{ DIV_CLK_FPLL0_SRC1_1, "clk_div_src1_1", "clk_gate_src1_div1",
 		0, 0x2080, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL0_CXP_MAC_1, "clk_div_cxp_mac_1", "fpll0_clock",
+
+	{ DIV_CLK_FPLL0_CXP_MAC_1, "clk_div_cxp_mac_1", "clk_gate_cxp_mac_div1",
 		0, 0x2088, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
+
 	{ DIV_CLK_FPLL0_CXP_TEST_PHY, "clk_div_cxp_test_phy", "fpll0_clock",
 		0, 0x2064, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
@@ -252,9 +258,7 @@ static const struct sg2044_divider_clock div_clks[] = {
 	{ DIV_CLK_FPLL0_TOP_AXI_HSPERI, "clk_div_top_axi_hsperi", "fpll0_clock",
 		0, 0x211c, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
-	{ DIV_CLK_FPLL1_CXP_MAC_0, "clk_div_cxp_mac_0", "fpll1_clock",
-		0, 0x2084, 16, 8, CLK_DIVIDER_ONE_BASED |
-			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
+
 	{ DIV_CLK_FPLL1_PCIE_1G, "clk_div_pcie_1g", "fpll1_clock",
 		0, 0x2160, 16, 8, CLK_DIVIDER_ONE_BASED |
 			CLK_DIVIDER_ALLOW_ZERO, SG2044_CLK_USE_REG_VAL, },
@@ -310,18 +314,50 @@ static const struct sg2044_divider_clock div_clks[] = {
 
 /* gate clocks */
 static const struct sg2044_gate_clock gate_clks[] = {
-	{ GATE_CLK_AP_CPU_NORMAL, "clk_gate_ap_cpu_normal", "clk_mux_ap_cpu_normal",
+	{ GATE_CLK_AP_CPU_NORMAL_DIV0, "clk_gate_ap_sys_div0", "mpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2040, 4, 0 },
+	{ GATE_CLK_RP_SYS_DIV0, "clk_gate_rp_sys_div0", "mpll1_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x204c, 4, 0 },
+	{ GATE_CLK_TPU_SYS_DIV0, "clk_gate_tpu_sys_div0", "mpll2_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2054, 4, 0 },
+	{ GATE_CLK_CC_GRP_SYS_DIV0, "clk_gate_ccgrp_sys_div0", "mpll3_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x206c, 4, 0 },
+	{ GATE_CLK_SRC0_DIV0, "clk_gate_src0_div0", "mpll4_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2074, 4, 0 },
+	{ GATE_CLK_SRC1_DIV0, "clk_gate_src1_div0", "mpll5_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x207c, 4, 0 },
+	{ GATE_CLK_CXP_MAC_DIV0, "clk_gate_cxp_mac_div0", "fpll1_clock",
+		CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, 0x2084, 4, 0 },
+
+	{ GATE_CLK_AP_CPU_NORMAL_DIV1, "clk_gate_ap_sys_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2044, 4, 0 },
+	{ GATE_CLK_RP_SYS_DIV1, "clk_gate_rp_sys_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2050, 4, 0 },
+	{ GATE_CLK_TPU_SYS_DIV1, "clk_gate_tpu_sys_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2058, 4, 0 },
+	{ GATE_CLK_CC_GRP_SYS_DIV1, "clk_gate_cc_grp_sys_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2070, 4, 0 },
+	{ GATE_CLK_SRC0_DIV1, "clk_gate_src0_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2078, 4, 0 },
+	{ GATE_CLK_SRC1_DIV1, "clk_gate_src1_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2080, 4, 0 },
+	{ GATE_CLK_CXP_MAC_DIV1, "clk_gate_cxp_mac_div1", "fpll0_clock",
+		CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, 0x2088, 4, 0 },
+
+	{ GATE_CLK_AP_CPU_NORMAL, "clk_gate_ap_sys", "clk_mux_ap_sys",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 0, 0 },
 	{ GATE_CLK_RP_SYS, "clk_gate_rp_sys", "clk_mux_rp_sys",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 2, 0 },
 	{ GATE_CLK_TPU_SYS, "clk_gate_tpu_sys", "clk_mux_tpu_sys",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 3, 0 },
-	{ GATE_CLK_CC_GRP_SYS, "clk_gate_cc_grp_sys", "clk_mux_cc_grp_sys",
+	{ GATE_CLK_CC_GRP_SYS, "clk_gate_ccgrp_sys", "clk_mux_ccgrp_sys",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 8, 0 },
 	{ GATE_CLK_SRC0, "clk_gate_src0", "clk_mux_src0",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 9, 0 },
 	{ GATE_CLK_SRC1, "clk_gate_src1", "clk_mux_src1",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 10, 0 },
+	{ GATE_CLK_CXP_MAC, "clk_gate_cxp_mac", "clk_mux_cxp_mac",
+		CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, 0x2000, 14, 0 },
 	{ GATE_CLK_DDR0, "clk_gate_ddr0", "clk_mux_ddr0",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2008, 7, 0 },
 	{ GATE_CLK_DDR1, "clk_gate_ddr1", "clk_mux_ddr1",
@@ -446,43 +482,39 @@ static const struct sg2044_gate_clock gate_clks[] = {
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2004, 2, 0 },
 	{ GATE_CLK_SYSDMA_AXI, "clk_gate_sysdma_axi", "clk_div_top_axi_hsperi",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2004, 0, 0 },
-	{ GATE_CLK_CXP_MAC, "clk_gate_cxp_mac", "clk_mux_cxp_mac",
-		CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, 0x2000, 14, 0 },
 };
 
 /* mux clocks */
 static const char *const clk_mux_ddr0_p[] = {
-			"clk_div_ddr0_0", "clk_div_ddr0_1"};
+			"clk_div_ddr0_1", "clk_div_ddr0_0"};
 static const char *const clk_mux_ddr1_p[] = {
-			"clk_div_ddr1_0", "clk_div_ddr1_1"};
+			"clk_div_ddr1_1", "clk_div_ddr1_0"};
 static const char *const clk_mux_ddr2_p[] = {
-			"clk_div_ddr2_0", "clk_div_ddr2_1"};
+			"clk_div_ddr2_1", "clk_div_ddr2_0"};
 static const char *const clk_mux_ddr3_p[] = {
-			"clk_div_ddr3_0", "clk_div_ddr3_1"};
+			"clk_div_ddr3_1", "clk_div_ddr3_0"};
 static const char *const clk_mux_ddr4_p[] = {
-			"clk_div_ddr4_0", "clk_div_ddr4_1"};
+			"clk_div_ddr4_1", "clk_div_ddr4_0"};
 static const char *const clk_mux_ddr5_p[] = {
-			"clk_div_ddr5_0", "clk_div_ddr5_1"};
+			"clk_div_ddr5_1", "clk_div_ddr5_0"};
 static const char *const clk_mux_ddr6_p[] = {
-			"clk_div_ddr6_0", "clk_div_ddr6_1"};
+			"clk_div_ddr6_1", "clk_div_ddr6_0"};
 static const char *const clk_mux_ddr7_p[] = {
-			"clk_div_ddr7_0", "clk_div_ddr7_1"};
-static const char *const clk_mux_a53_p[] = {
-			"clk_div_a53_0", "clk_div_a53_1"};
+			"clk_div_ddr7_1", "clk_div_ddr7_0"};
 static const char *const clk_mux_cc_grp_sys_p[] = {
-			"clk_div_cc_grp_sys_0", "clk_div_cc_grp_sys_1"};
+			"clk_div_ccgrp_sys_1", "clk_div_ccgrp_sys_0"};
 static const char *const clk_mux_tpu_sys_p[] = {
-			"clk_div_tpu_sys_0", "clk_div_tpu_sys_1"};
+			"clk_div_tpu_sys_1", "clk_div_tpu_sys_0"};
 static const char *const clk_mux_rp_sys_p[] = {
-			"clk_div_rp_sys_0", "clk_div_rp_sys_1"};
+			"clk_div_rp_sys_1", "clk_div_rp_sys_0"};
 static const char *const clk_mux_ap_cpu_normal_p[] = {
-			"clk_div_ap_cpu_normal_0", "clk_div_ap_cpu_normal_1"};
+			"clk_div_ap_sys_1", "clk_div_ap_sys_0"};
 static const char *const clk_mux_src0_p[] = {
-			"clk_div_src0_0", "clk_div_src0_1"};
+			"clk_div_src0_1", "clk_div_src0_0"};
 static const char *const clk_mux_src1_p[] = {
-			"clk_div_src1_0", "clk_div_src1_1"};
+			"clk_div_src1_1", "clk_div_src1_0"};
 static const char *const clk_mux_cxp_mac_p[] = {
-			"clk_div_cxp_mac_0", "clk_div_cxp_mac_1"};
+			"clk_div_cxp_mac_1", "clk_div_cxp_mac_0"};
 
 struct sg2044_mux_clock mux_clks[] = {
 	{
@@ -534,7 +566,7 @@ struct sg2044_mux_clock mux_clks[] = {
 			CLK_MUX_READ_ONLY,
 		0x2020, 14, 1, 0,
 	}, {
-		MUX_CLK_CC_GRP_SYS, "clk_mux_cc_grp_sys", clk_mux_cc_grp_sys_p,
+		MUX_CLK_CC_GRP_SYS, "clk_mux_ccgrp_sys", clk_mux_cc_grp_sys_p,
 		ARRAY_SIZE(clk_mux_cc_grp_sys_p),
 		CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
 		0x2020, 3, 1, 0,
@@ -549,7 +581,7 @@ struct sg2044_mux_clock mux_clks[] = {
 		CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
 		0x2020, 1, 1, 0,
 	}, {
-		MUX_CLK_AP_CPU_NORMAL, "clk_mux_ap_cpu_normal", clk_mux_ap_cpu_normal_p,
+		MUX_CLK_AP_CPU_NORMAL, "clk_mux_ap_sys", clk_mux_ap_cpu_normal_p,
 		ARRAY_SIZE(clk_mux_ap_cpu_normal_p),
 		CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
 		0x2020, 0, 1, 0,

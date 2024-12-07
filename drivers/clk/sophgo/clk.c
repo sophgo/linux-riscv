@@ -38,40 +38,6 @@ struct sg2044_clk_divider {
 	spinlock_t	*lock;
 };
 
-static int sg2044_pll_mux[][2] = {
-	{MPLL0_CLK, 0}, {MPLL1_CLK, 1}, {MPLL2_CLK, 2}, {MPLL3_CLK, 3},
-	{MPLL4_CLK, 4}, {MPLL5_CLK, 5}, {FPLL1_CLK, 6}, {DPLL0_CLK, 7},
-	{DPLL1_CLK, 8}, {DPLL2_CLK, 9}, {DPLL3_CLK, 10}, {DPLL4_CLK, 11},
-	{DPLL5_CLK, 12}, {DPLL6_CLK, 13}, {DPLL7_CLK, 14}
-};
-
-static inline int sg2044_pll_id2shift(unsigned int id)
-{
-	for (int i = 0; i < 15; i++) {
-		if (sg2044_pll_mux[i][0] == id)
-			return sg2044_pll_mux[i][1];
-	}
-	BUG_ON(1);
-}
-
-static inline int sg2044_pll_switch_mux(struct regmap *map,
-					struct sg2044_pll_clock *pll, bool en)
-{
-	unsigned int value;
-	unsigned int id = pll->id;
-	int shift;
-
-	shift = sg2044_pll_id2shift(id);
-	regmap_read(map, PLL_SELECT_OFFSET, &value);
-	if (en) {
-		regmap_write(map, PLL_SELECT_OFFSET, value & (~(1<<shift)));
-	} else {
-		regmap_write(map, PLL_SELECT_OFFSET, value | (1<<shift));
-	}
-
-	return 0;
-}
-
 static inline int sg2044_pll_enable(struct regmap *map,
 					struct sg2044_pll_clock *pll, bool en)
 {
@@ -472,8 +438,7 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	memset(&pctrl_table, 0, sizeof(struct sg2044_pll_ctrl));
 	spin_lock_irqsave(sg2044_pll->lock, flags);
-	/* switch to fpll before modify mpll */
-	sg2044_pll_switch_mux(sg2044_pll->syscon_top, sg2044_pll, 1);
+
 	if (sg2044_pll_enable(sg2044_pll->syscon_top, sg2044_pll, 0)) {
 		pr_warn("Can't disable pll(%s), status error\n", sg2044_pll->name);
 		ret = -EINVAL;
@@ -496,8 +461,7 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	/* write the value to top register */
 	sg2044_pll_write(sg2044_pll->syscon_top, sg2044_pll->id, value);
 	sg2044_pll_enable(sg2044_pll->syscon_top, sg2044_pll, 1);
-	/* switch back to mpll after modify mpll */
-	sg2044_pll_switch_mux(sg2044_pll->syscon_top, sg2044_pll, 0);
+
 out:
 	spin_unlock_irqrestore(sg2044_pll->lock, flags);
 	return ret;

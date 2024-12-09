@@ -10,3 +10,4 @@ obj-$(CONFIG_ARCH_SOPHGO)		+= map_memory/
 obj-$(CONFIG_ARCH_SOPHGO)		+= veth/
 obj-$(CONFIG_ARCH_SOPHGO)		+= tpsys_err_intr/
 obj-$(CONFIG_ARCH_SOPHGO)		+= msg_intr/
+obj-$(CONFIG_ARCH_SOPHGO)		+= ras/

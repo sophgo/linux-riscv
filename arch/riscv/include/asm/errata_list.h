@@ -167,11 +167,11 @@ asm volatile(ALTERNATIVE_2(						\
 	"mv a0, %1\n\t"							\
 	"j 2f\n\t"							\
 	"3:\n\t"							\
-	"cbo." __stringify(_op) " (a0)\n\t"				\
+	CBO_##_op(a0)							\
 	"add a0, a0, %0\n\t"						\
 	"2:\n\t"							\
 	"bltu a0, %2, 3b\n\t"						\
-	"nop", 0, CPUFEATURE_ZICBOM, CONFIG_RISCV_ISA_ZICBOM,		\
+	"nop", 0, RISCV_ISA_EXT_ZICBOM, CONFIG_RISCV_ISA_ZICBOM,		\
 	"mv a0, %3\n\t"							\
 	"j 2f\n\t"							\
 	"3:\n\t"							\

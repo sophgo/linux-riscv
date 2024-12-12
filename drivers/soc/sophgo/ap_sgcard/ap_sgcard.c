@@ -404,7 +404,6 @@ void host_int_work_func (struct work_struct *p_work)
 	struct v_channel *channel = container_of(p_work, struct v_channel, channel_delayed_work.work);
 
 	iowrite32(0x1, channel->rx_clean_irq.clr_irq_va);
-	pr_err("dealy work queue trigger host irq\n");
 }
 
 static int host_int(struct sg_card *card, struct v_channel *channel)
@@ -509,7 +508,6 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			}
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
 			if (c < length + sizeof(request_action)) {
-				pr_err("warning: there are not enough space for prot rx buf\n");
 				schedule_delayed_work(&channel->channel_delayed_work, 1);
 				break;
 			}
@@ -559,7 +557,6 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 				 request_action.request_id, port->name);
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
 			if (c < sizeof(request_action)) {
-				pr_err("warning: there are not enough space for prot rx buf\n");
 				schedule_delayed_work(&channel->channel_delayed_work, 1);
 				break;
 			}

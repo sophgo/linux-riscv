@@ -1,3 +1,4 @@
+#include <linux/acpi.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -12,8 +13,11 @@
 #include <linux/irqchip/chained_irq.h>
 
 struct irq_domain *sophgo_get_msi_irq_domain(void);
-
-#define MAX_IRQ_NUMBER 512
+#if defined(CONFIG_ACPI)
+	#define MAX_IRQ_NUMBER 255
+#else
+	#define MAX_IRQ_NUMBER 512
+#endif
 /*
  * here we assume all plic hwirq and msi hwirq
  * (for PCIe Interrupt Controller, pic) should be contiguous.
@@ -259,7 +263,10 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 	if (device_property_read_u32(&pdev->dev, "reg-bitwidth", &data->reg_bitwidth))
 		data->reg_bitwidth = 32;
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "set");
+	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "set");
+	else if (ACPI_COMPANION(&pdev->dev))
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	data->reg_set = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(data->reg_set)) {
 		dev_err(&pdev->dev, "failed map set register\n");
@@ -268,7 +275,10 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 	}
 
 	data->reg_set_phys = res->start;
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "clr");
+	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "clr");
+	else if (ACPI_COMPANION(&pdev->dev))
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	data->reg_clr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(data->reg_clr)) {
 		dev_err(&pdev->dev, "failed map clear register\n");
@@ -281,8 +291,11 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 		char name[8];
 		int irq;
 
-		snprintf(name, ARRAY_SIZE(name), "msi%d", i);
-		irq = platform_get_irq_byname(pdev, name);
+		if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node) {
+			snprintf(name, ARRAY_SIZE(name), "msi%d", i);
+			irq = platform_get_irq_byname(pdev, name);
+		} else if (ACPI_COMPANION(&pdev->dev))
+			irq = platform_get_irq(pdev, i);
 		if (irq < 0)
 			break;
 
@@ -338,11 +351,19 @@ static const struct of_device_id sg2044_msi_of_match[] = {
 	{},
 };
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sg2044_msi_acpi_match[] = {
+	{ "SGPH0002", 0 },
+	{}
+};
+#endif
+
 static struct platform_driver sg2044_msi_driver = {
 	.driver = {
 		.name = "sg2044-msi",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(sg2044_msi_of_match),
+		.acpi_match_table = ACPI_PTR(sg2044_msi_acpi_match),
 	},
 	.probe = sg2044_msi_probe,
 };

@@ -281,6 +281,15 @@ static void __init parse_dtb(void)
 #if defined(CONFIG_RISCV_COMBO_SPINLOCKS)
 DEFINE_STATIC_KEY_TRUE(qspinlock_key);
 EXPORT_SYMBOL(qspinlock_key);
+
+static bool force_qspinlock;
+
+static int __init riscv_force_qspinlock(char *p)
+{
+	force_qspinlock = true;
+	return 0;
+}
+early_param("riscv_force_qspinlock", riscv_force_qspinlock);
 #endif
 
 static void __init riscv_spinlock_init(void)
@@ -301,7 +310,9 @@ static void __init riscv_spinlock_init(void)
 		using_ext = "using Ziccrse";
 	}
 #if defined(CONFIG_RISCV_COMBO_SPINLOCKS)
-	else {
+	else if (force_qspinlock) {
+		using_ext = "force";
+	} else {
 		static_branch_disable(&qspinlock_key);
 		pr_info("Ticket spinlock: enabled\n");
 		return;

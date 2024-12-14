@@ -5887,6 +5887,11 @@
 			[KNL] Disable ring 3 MONITOR/MWAIT feature on supported
 			CPUs.
 
+	riscv_force_qspinlock [RISCV, EARLY]
+			When CONFIG_RISCV_COMBO_SPINLOCKS is enabled, permit
+			qspinlock force enabled. See the Kconfig entry for
+			RISCV_COMBO_SPINLOCKS.
+
 	riscv_isa_fallback [RISCV,EARLY]
 			When CONFIG_RISCV_ISA_FALLBACK is not enabled, permit
 			falling back to detecting extension support by parsing

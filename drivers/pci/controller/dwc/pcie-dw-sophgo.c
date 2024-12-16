@@ -23,6 +23,9 @@
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/of_gpio.h>
+#include <linux/pci.h>
+#include <linux/pci-acpi.h>
+#include <linux/pci-ecam.h>
 
 #include "pcie-dw-sophgo.h"
 
@@ -193,6 +196,11 @@ static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp)
 	struct irq_domain *irq_parent = sophgo_get_msi_irq_domain();
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pcie->dev->of_node);
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled)
+		fwnode = acpi_fwnode_handle(to_acpi_device(pcie->dev));
+#endif
 
 	pp->msi_domain = pci_msi_create_irq_domain(fwnode,
 						   &sophgo_dw_pcie_msi_domain_info,
@@ -409,6 +417,15 @@ static void __iomem *sophgo_dw_pcie_other_conf_map_bus(struct pci_bus *bus,
 {
 	struct dw_pcie_rp *pp = bus->sysdata;
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled){
+		struct pci_config_window *cfg = bus->sysdata;
+		pp = cfg->priv;
+		pcie = to_sophgo_dw_pcie_from_pp(pp);
+	}
+#endif
+
 	int type = 0;
 	int ret = 0;
 	u32 busdev = 0;
@@ -447,6 +464,14 @@ static int sophgo_dw_pcie_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	int ret = 0;
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled){
+		struct pci_config_window *cfg = bus->sysdata;
+		pp = cfg->priv;
+		pcie = to_sophgo_dw_pcie_from_pp(pp);
+	}
+#endif
+
 	ret = pci_generic_config_read(bus, devfn, where, size, val);
 	if (ret != PCIBIOS_SUCCESSFUL)
 		return ret;
@@ -469,6 +494,14 @@ static int sophgo_dw_pcie_wr_other_conf(struct pci_bus *bus, unsigned int devfn,
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	int ret = 0;
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled){
+		struct pci_config_window *cfg = bus->sysdata;
+		pp = cfg->priv;
+		pcie = to_sophgo_dw_pcie_from_pp(pp);
+	}
+#endif
+
 	ret = pci_generic_config_write(bus, devfn, where, size, val);
 	if (ret != PCIBIOS_SUCCESSFUL)
 		return ret;
@@ -489,10 +522,20 @@ static void __iomem *sophgo_dw_pcie_own_conf_map_bus(struct pci_bus *bus, unsign
 	struct dw_pcie_rp *pp = bus->sysdata;
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 
-	if (PCI_SLOT(devfn) > 0)
-		return NULL;
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled){
+		struct pci_config_window *cfg = bus->sysdata;
+		pp = cfg->priv;
+		pcie = to_sophgo_dw_pcie_from_pp(pp);
+	}
+#endif
+	if (pci_is_root_bus(bus)) {
+		if (PCI_SLOT(devfn) > 0)
+			return NULL;
+		return pcie->dbi_base + where;
+	}
 
-	return pcie->dbi_base + where;
+	return sophgo_dw_pcie_other_conf_map_bus(bus, devfn, where);
 }
 
 static struct pci_ops sophgo_dw_child_pcie_ops = {
@@ -657,13 +700,64 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
+static int sophgo_dw_pcie_get_resources_acpi(struct sophgo_dw_pcie *pcie, struct resource *res)
+{
+	struct device_node *np = dev_of_node(pcie->dev);
+
+	pcie->dbi_base = devm_pci_remap_cfg_resource(pcie->dev, &res[0]);
+	if (IS_ERR(pcie->dbi_base))
+		return PTR_ERR(pcie->dbi_base);
+
+	pcie->ctrl_reg_base = devm_pci_remap_cfg_resource(pcie->dev, &res[1]);
+	if (IS_ERR(pcie->ctrl_reg_base))
+		return PTR_ERR(pcie->ctrl_reg_base);
+
+	pcie->atu_size = resource_size(&res[2]);
+	pcie->atu_base = devm_ioremap_resource(pcie->dev, &res[2]);
+	if (IS_ERR(pcie->atu_base))
+		return PTR_ERR(pcie->atu_base);
+
+	/* Set a default value suitable for at most 8 in and 8 out windows */
+	if (!pcie->atu_size)
+		pcie->atu_size = SZ_4K;
+
+	if (pcie->link_gen < 1) {
+		pcie->link_gen = of_pci_get_max_link_speed(np);
+		pcie->link_gen += 1;
+	}
+
+	return 0;
+}
+
 static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 {
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	struct resource_entry *entry;
 	int i = 0;
 	int ret = 0;
+	struct list_head resource_list, *list;
+	struct list_head resource_dma_list, *list_dma;
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled){
+		struct acpi_device *adev = to_acpi_device(pcie->dev);
+		unsigned long flags;
+		int ret;
+		INIT_LIST_HEAD(&resource_list);
+		flags = IORESOURCE_IO | IORESOURCE_MEM | IORESOURCE_BUS;
+		ret = acpi_dev_get_resources(adev, &resource_list, acpi_dev_filter_resource_type_cb, (void *)flags);
+		if (ret < 0) {
+			pr_err("failed to parse _CRS method, error code %d\n", ret);
+			return ret;
+		} else if (ret == 0) {
+			pr_err("no IO and memory resources present in _CRS\n");
+			return -EINVAL;
+		}
+		list = &resource_list;
+	}
+#else
+	list = &pp->bridge->windows;
+#endif
 	/* Note the very first outbound ATU is used for CFG IOs */
 	if (!pcie->num_ob_windows) {
 		dev_err(pcie->dev, "No outbound iATU found\n");
@@ -681,7 +775,7 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 		sophgo_dw_pcie_disable_atu(pcie, PCIE_ATU_REGION_DIR_IB, i);
 
 	i = 0;
-	resource_list_for_each_entry(entry, &pp->bridge->windows) {
+	resource_list_for_each_entry(entry, list) {
 		if (resource_type(entry->res) != IORESOURCE_MEM)
 			continue;
 
@@ -719,8 +813,29 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 		dev_warn(pcie->dev, "Ranges exceed outbound iATU size (%d)\n",
 			 pcie->num_ob_windows);
 
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	if (!acpi_disabled){
+		struct acpi_device *adev = to_acpi_device(pcie->dev);
+		unsigned long flags;
+		int ret;
+		INIT_LIST_HEAD(&resource_dma_list);
+		flags = IORESOURCE_DMA;
+		ret = acpi_dev_get_dma_resources(adev, &resource_dma_list);
+		if (ret < 0) {
+			pr_err("failed to parse _DMA method, error code %d\n", ret);
+			return ret;
+		} else if (ret == 0) {
+			pr_err("no memory resources present in _DMA\n");
+			return -EINVAL;
+		}
+		list_dma = &resource_dma_list;
+	}
+#else
+	list_dma = &pp->bridge->dma_ranges;
+#endif
 	i = 0;
-	resource_list_for_each_entry(entry, &pp->bridge->dma_ranges) {
+	resource_list_for_each_entry(entry, list_dma) {
 		if (resource_type(entry->res) != IORESOURCE_MEM)
 			continue;
 
@@ -804,11 +919,17 @@ static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 	 * the platform uses its own address translation component rather than
 	 * ATU, so we should not program the ATU here.
 	 */
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+	ret = sophgo_dw_pcie_iatu_setup(pp);
+	if (ret)
+		return ret;
+#else
 	if (pp->bridge->child_ops == &sophgo_dw_child_pcie_ops) {
 		ret = sophgo_dw_pcie_iatu_setup(pp);
 		if (ret)
 			return ret;
 	}
+#endif
 
 	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0);
 
@@ -1472,3 +1593,91 @@ static struct platform_driver sophgo_dw_pcie_driver = {
 	.probe = sophgo_dw_pcie_probe,
 };
 builtin_platform_driver(sophgo_dw_pcie_driver);
+
+
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+
+static u64 bm_dma_mask = DMA_BIT_MASK(40);
+
+static struct device *phb_dev;
+struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev);
+
+struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev)
+{
+	return acpi_fwnode_handle(to_acpi_device(phb_dev));
+}
+
+static int sophgo_pcie_init(struct pci_config_window *cfg)
+{
+	struct device *dev = cfg->parent;
+	struct acpi_device *adev = to_acpi_device(dev);
+	struct acpi_pci_root *root = acpi_driver_data(adev);
+	struct sophgo_dw_pcie *pcie;
+	struct dw_pcie_rp *pp;
+	struct resource res[4];
+	int ret = 0;
+
+	struct list_head resource_list, *list;
+	struct resource_entry *win;
+	unsigned long flags;
+
+	pcie = devm_kzalloc(dev, sizeof(*pcie), GFP_KERNEL);
+	if (!pcie)
+		return -ENOMEM;
+
+	dev->dma_mask = &bm_dma_mask;
+	dev->coherent_dma_mask = bm_dma_mask;
+
+	phb_dev = dev;
+	pcie->dev = dev;
+	pp = &pcie->pp;
+
+	ret = acpi_get_rc_target_num_resources(dev, "SGPH0001", root->segment, res, 4);
+
+	ret = sophgo_dw_pcie_get_resources_acpi(pcie, res);
+	if (ret)
+		return ret;
+	pp->cfg0_size = resource_size(&cfg->res);
+	pp->cfg0_base = cfg->res.start;
+	pp->va_cfg0_base = cfg->win;
+
+	// Get the I/O range from ACPI Table
+	INIT_LIST_HEAD(&resource_list);
+	flags = IORESOURCE_IO;
+	ret = acpi_dev_get_resources(adev, &resource_list, acpi_dev_filter_resource_type_cb, (void *)flags);
+	if (ret < 0) {
+		pr_err("failed to parse _CRS method, error code %d\n", ret);
+		return ret;
+	} else if (ret == 0) {
+		pr_err("no IO and memory resources present in _CRS\n");
+		return -EINVAL;
+	}
+	list = &resource_list;
+
+	win = resource_list_first_type(list, IORESOURCE_IO);
+	if (win) {
+		pp->io_size = resource_size(win->res);
+		pp->io_bus_addr = win->res->start - win->offset;
+		pp->io_base = win->res->start;
+	}
+
+	sophgo_dw_pcie_version_detect(pcie);
+	sophgo_dw_pcie_iatu_detect(pcie);
+	ret = sophgo_dw_pcie_setup_rc(pp);
+
+	pci_msi_register_fwnode_provider(&pci_host_bridge_acpi_get_fwnode);
+
+	cfg->priv = pp;
+	return 0;
+}
+
+const struct pci_ecam_ops sophgo_pci_ecam_ops = {
+	.init         = sophgo_pcie_init,
+	.pci_ops      = {
+		.map_bus    = sophgo_dw_pcie_own_conf_map_bus,
+		.read       = sophgo_dw_pcie_rd_other_conf,
+		.write      = sophgo_dw_pcie_wr_other_conf,
+	}
+};
+
+#endif

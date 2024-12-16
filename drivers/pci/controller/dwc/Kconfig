@@ -16,7 +16,7 @@ config PCIE_DW_EP
 
 config PCIE_DW_SOPHGO
 	bool "DesignWare Sophgo PCIe Host controller"
-	depends on OF
+	depends on OF || ACPI
 	select IRQ_DOMAIN
 	select PCIE_DW
 	help

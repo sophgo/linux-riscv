@@ -71,6 +71,8 @@ enum {
 
 	SETUP_C2C_REQUEST,
 	SETUP_C2C_RESPONSE,
+
+	AP_MSG_COUNT,
 };
 
 enum {

@@ -50,6 +50,8 @@ enum {
 	FORCE_QUIT_REQUEST,
 	SETUP_C2C_REQUEST,
 	SETUP_C2C_RESPONSE,
+
+	AP_MSG_COUNT,
 };
 
 int send_request(struct sg_dev *hdev, msg_t msg, void *msg_body, int msg_len, int sync);

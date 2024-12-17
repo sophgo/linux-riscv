@@ -8,7 +8,7 @@
 #include <dt-bindings/reset/sophgo,sg2044-reset.h>
 #include <dt-bindings/clock/sophgo,sg2044-clock.h>
 #include "bm1690-cpu-ap.dtsi"
-#include "sg2044-clock.dtsi"
+#include "bm1690-clock.dtsi"
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"
 #include "bm1690-video-sys-pcie.dtsi"

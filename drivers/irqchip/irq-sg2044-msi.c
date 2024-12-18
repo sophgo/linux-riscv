@@ -13,11 +13,9 @@
 #include <linux/irqchip/chained_irq.h>
 
 struct irq_domain *sophgo_get_msi_irq_domain(void);
-#if defined(CONFIG_ACPI)
-	#define MAX_IRQ_NUMBER 255
-#else
-	#define MAX_IRQ_NUMBER 512
-#endif
+
+#define MAX_IRQ_NUMBER 512
+
 /*
  * here we assume all plic hwirq and msi hwirq
  * (for PCIe Interrupt Controller, pic) should be contiguous.

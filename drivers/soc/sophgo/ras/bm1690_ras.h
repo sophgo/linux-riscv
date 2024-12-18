@@ -31,12 +31,14 @@
 #include <linux/delay.h>
 
 struct ap_status {
-
+	uint64_t user_space_kick_time;
+	uint64_t kernel_space_kick_time;
 };
 
 struct tp_status {
 	uint64_t kernel_exec_time;
 	uint64_t tp_alive_time;
+	uint64_t tp_read_loop_time;
 };
 
 struct sophgo_card_ras_status {
@@ -46,6 +48,7 @@ struct sophgo_card_ras_status {
 	void *status_va;
 	uint64_t last_exec_time;
 	uint64_t last_alive_time;
+	struct delayed_work ras_delayed_work;
 };
 
 #endif

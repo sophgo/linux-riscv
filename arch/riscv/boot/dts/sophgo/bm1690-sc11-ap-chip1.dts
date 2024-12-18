@@ -518,6 +518,16 @@
 		status = "disable";
 	};
 
+	ap_ras@0 {
+		compatible = "sophgo,bm1690-ras";
+		chip_type = "bm1690";
+		#address-cells = <2>;
+		#size-cells = <2>;
+
+		reg = <0x0 0x00001000 0x0 0x00001000>;
+		ap-index = <0xff>;
+	};
+
 	tp0_ras@0 {
 		compatible = "sophgo,bm1690-ras";
 		chip_type = "bm1690";
@@ -526,7 +536,6 @@
 
 		reg = <0x0 0x00002000 0x0 0x00001000>;
 		tp-index = <0>;
-		tp-num = <8>;
 	};
 
 	tp1_ras@1 {
@@ -537,7 +546,6 @@
 
 		reg = <0x0 0x00003000 0x0 0x00001000>;
 		tp-index = <1>;
-		tp-num = <8>;
 	};
 
 	tp2_ras@2 {
@@ -548,7 +556,6 @@
 
 		reg = <0x0 0x00004000 0x0 0x00001000>;
 		tp-index = <2>;
-		tp-num = <8>;
 	};
 
 	tp3_ras@3 {
@@ -559,7 +566,6 @@
 
 		reg = <0x0 0x00005000 0x0 0x00001000>;
 		tp-index = <3>;
-		tp-num = <8>;
 	};
 
 	tp4_ras@4 {
@@ -570,7 +576,6 @@
 
 		reg = <0x0 0x00006000 0x0 0x00001000>;
 		tp-index = <4>;
-		tp-num = <8>;
 	};
 
 	tp5_ras@5 {
@@ -581,7 +586,6 @@
 
 		reg = <0x0 0x00007000 0x0 0x00001000>;
 		tp-index = <5>;
-		tp-num = <8>;
 	};
 
 	tp6_ras@6 {
@@ -592,7 +596,6 @@
 
 		reg = <0x0 0x00008000 0x0 0x00001000>;
 		tp-index = <6>;
-		tp-num = <8>;
 	};
 
 	tp7_ras@7 {
@@ -603,7 +606,6 @@
 
 		reg = <0x0 0x00009000 0x0 0x00001000>;
 		tp-index = <7>;
-		tp-num = <8>;
 	};
 
 	veth:  veth {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 
+#include <linux/delay.h>
 #include "bm1690_ras.h"
 
 static ssize_t kernel_exec_time_show(struct device *dev,
@@ -52,17 +53,88 @@ static ssize_t kernel_alive_raw_time_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(kernel_alive_raw_time);
 
+static ssize_t user_heart_beat_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct sophgo_card_ras_status *ras = dev_get_drvdata(dev);
+	struct tp_status *tp = ras->status_va;
+	uint64_t tp_cur_time = tp->tp_read_loop_time;
+
+	return sprintf(buf, "%llums\n", tp_cur_time / (1000 * 1000));
+}
+static DEVICE_ATTR_RO(user_heart_beat);
+
+static ssize_t tp_status_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct sophgo_card_ras_status *ras = dev_get_drvdata(dev);
+	struct tp_status *tp = ras->status_va;
+	uint64_t last_tp_alive_time = tp->tp_alive_time;
+	uint64_t last_tp_cur_time = tp->tp_read_loop_time;
+	uint64_t tp_alive_time;
+	uint64_t tp_cur_time;
+
+	for (int i = 0; i < 300; i++) {
+		msleep(10);
+
+		tp_alive_time = tp->tp_alive_time;
+		tp_cur_time = tp->tp_read_loop_time;
+
+		if (last_tp_cur_time != tp_cur_time || last_tp_alive_time != tp_alive_time) {
+			return sprintf(buf, "tpu%u alive\n", ras->tpu_index);
+		}
+	}
+
+	return sprintf(buf, "tpu%u dead\n", ras->tpu_index);
+}
+static DEVICE_ATTR_RO(tp_status);
+
+static ssize_t ap_user_heart_beat_store(struct device *dev,
+				  struct device_attribute *attr, const char *ubuf, size_t len)
+{
+	struct sophgo_card_ras_status *ras = dev_get_drvdata(dev);
+	struct ap_status *ap = ras->status_va;
+	struct timespec64 ts;
+
+	ktime_get_real_ts64(&ts);
+	ap->user_space_kick_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
+
+	return len;
+}
+
+static ssize_t ap_user_heart_beat_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct sophgo_card_ras_status *ras = dev_get_drvdata(dev);
+	struct ap_status *ap = ras->status_va;
+
+	return sprintf(buf, "%llums\n", ap->user_space_kick_time / (1000 * 1000));
+}
+static DEVICE_ATTR_RW(ap_user_heart_beat);
+
+static ssize_t ap_kernel_heart_beat_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct sophgo_card_ras_status *ras = dev_get_drvdata(dev);
+	struct ap_status *ap = ras->status_va;
+
+	return sprintf(buf, "%llums\n", ap->kernel_space_kick_time / (1000 * 1000));
+}
+static DEVICE_ATTR_RO(ap_kernel_heart_beat);
+
 static int get_dtb_info(struct platform_device *pdev, struct sophgo_card_ras_status *ras)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *dev_node = dev_of_node(dev);
 	struct resource *regs;
-	int ret;
+	int tp_ret;
+	int ap_ret;
 	uint32_t tpu_index;
 
-	ret = of_property_read_u32(dev_node, "tp-index", &tpu_index);
-	if (ret < 0) {
-		pr_err("failed get ras-index, ret = %d, index:%u\n", ret, tpu_index);
+	tp_ret = of_property_read_u32(dev_node, "tp-index", &tpu_index);
+	ap_ret = of_property_read_u32(dev_node, "ap-index", &tpu_index);
+	if (tp_ret < 0 && ap_ret) {
+		pr_err("failed get ras-index\n");
 		return -1;
 	}
 
@@ -81,6 +153,19 @@ static int get_dtb_info(struct platform_device *pdev, struct sophgo_card_ras_sta
 	memset(ras->status_va, 0, 0x1000);
 
 	return 0;
+}
+
+void ap_kernel_kick_wdt_work_func(struct work_struct *p_work)
+{
+	struct sophgo_card_ras_status *ras = container_of(p_work, struct sophgo_card_ras_status,
+							ras_delayed_work.work);
+	struct ap_status *ap = ras->status_va;
+	struct timespec64 ts;
+
+	ktime_get_real_ts64(&ts);
+	ap->kernel_space_kick_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
+
+	schedule_delayed_work(&ras->ras_delayed_work, HZ);
 }
 
 static int sgcard_probe(struct platform_device *pdev)
@@ -102,10 +187,20 @@ static int sgcard_probe(struct platform_device *pdev)
 		return -1;
 	}
 
-	ret = device_create_file(dev, &dev_attr_kernel_exec_time);
-	ret = device_create_file(dev, &dev_attr_kernel_exec_raw_time);
+	if (ras->tpu_index != 0xff) {
+		ret = device_create_file(dev, &dev_attr_kernel_exec_time);
+		ret = device_create_file(dev, &dev_attr_kernel_exec_raw_time);
 		ret = device_create_file(dev, &dev_attr_kernel_alive_time);
-	ret = device_create_file(dev, &dev_attr_kernel_alive_raw_time);
+		ret = device_create_file(dev, &dev_attr_kernel_alive_raw_time);
+		ret = device_create_file(dev, &dev_attr_user_heart_beat);
+		ret = device_create_file(dev, &dev_attr_tp_status);
+	} else {
+		ret = device_create_file(dev, &dev_attr_ap_user_heart_beat);
+		ret = device_create_file(dev, &dev_attr_ap_kernel_heart_beat);
+		INIT_DELAYED_WORK(&ras->ras_delayed_work, ap_kernel_kick_wdt_work_func);
+		schedule_delayed_work(&ras->ras_delayed_work, HZ);
+	}
+
 	dev_set_drvdata(dev, ras);
 
 	return 0;

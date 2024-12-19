@@ -26,6 +26,7 @@
 #include <linux/pci.h>
 #include <linux/pci-acpi.h>
 #include <linux/pci-ecam.h>
+#include <linux/dma-direct.h>
 
 #include "pcie-dw-sophgo.h"
 
@@ -419,7 +420,7 @@ static void __iomem *sophgo_dw_pcie_other_conf_map_bus(struct pci_bus *bus,
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 
 #if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
-	if (!acpi_disabled){
+	if (!acpi_disabled) {
 		struct pci_config_window *cfg = bus->sysdata;
 		pp = cfg->priv;
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
@@ -729,20 +730,93 @@ static int sophgo_dw_pcie_get_resources_acpi(struct sophgo_dw_pcie *pcie, struct
 	return 0;
 }
 
+static int sophgo_dw_pcie_setup_outbound_atu(struct sophgo_dw_pcie *pcie,
+						struct list_head *list)
+{
+	struct resource_entry *entry;
+	int i, ret = 0;
+
+	resource_list_for_each_entry(entry, list) {
+		if (resource_type(entry->res) != IORESOURCE_MEM)
+			continue;
+
+		if (pcie->num_ob_windows <= ++i)
+			break;
+
+		ret = sophgo_dw_pcie_prog_outbound_atu(pcie, i, PCIE_ATU_TYPE_MEM,
+				entry->res->start,
+				entry->res->start - entry->offset,
+				resource_size(entry->res));
+		if (ret) {
+			dev_err(pcie->dev, "Failed to set MEM range %pr\n", entry->res);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int sophgo_dw_pcie_setup_inbound_atu(struct sophgo_dw_pcie *pcie,
+					struct list_head *list_dma)
+{
+	struct resource_entry *entry;
+	int i, ret = 0;
+	struct bus_dma_region *r, **map;
+	u64 end, mask;
+	struct device *dev = pcie->dev;
+
+	map = &r;
+	r = kcalloc(pcie->num_ib_windows + 1, sizeof(*r), GFP_KERNEL);
+	if (!r) {
+		return -ENOMEM;
+	}
+
+	resource_list_for_each_entry(entry, list_dma) {
+		if (resource_type(entry->res) != IORESOURCE_MEM)
+			continue;
+
+		if (pcie->num_ib_windows <= i)
+			break;
+
+		ret = sophgo_dw_pcie_prog_inbound_atu(pcie, i++, PCIE_ATU_TYPE_MEM,
+						entry->res->start,
+						entry->res->start - entry->offset,
+						resource_size(entry->res));
+		if (ret) {
+			dev_err(pcie->dev, "Failed to set DMA range %pr\n", entry->res);
+			kfree(r);
+			return ret;
+		}
+
+		r->cpu_start = entry->res->start;
+		r->dma_start = entry->res->start - entry->offset;
+		r->size = resource_size(entry->res);
+		r++;
+
+		end = dma_range_map_max(*map);
+		mask = DMA_BIT_MASK(ilog2(end) + 1);
+		dev->bus_dma_limit = end;
+		dev->coherent_dma_mask &= mask;
+		if (dev->dma_mask) {
+			*dev->dma_mask &= mask;
+		}
+	}
+
+	return 0;
+}
+
 static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 {
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
-	struct resource_entry *entry;
-	int i = 0;
-	int ret = 0;
 	struct list_head resource_list, *list;
 	struct list_head resource_dma_list, *list_dma;
+	int i, ret = 0;
 
 #if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
-	if (!acpi_disabled){
+	if (!acpi_disabled) {
 		struct acpi_device *adev = to_acpi_device(pcie->dev);
 		unsigned long flags;
-		int ret;
+
 		INIT_LIST_HEAD(&resource_list);
 		flags = IORESOURCE_IO | IORESOURCE_MEM | IORESOURCE_BUS;
 		ret = acpi_dev_get_resources(adev, &resource_list, acpi_dev_filter_resource_type_cb, (void *)flags);
@@ -774,51 +848,17 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 	for (i = 0; i < pcie->num_ib_windows; i++)
 		sophgo_dw_pcie_disable_atu(pcie, PCIE_ATU_REGION_DIR_IB, i);
 
-	i = 0;
-	resource_list_for_each_entry(entry, list) {
-		if (resource_type(entry->res) != IORESOURCE_MEM)
-			continue;
+	/* Setup outbound ATU */
+	ret = sophgo_dw_pcie_setup_outbound_atu(pcie, list);
+	if (ret)
+		return ret;
 
-		if (pcie->num_ob_windows <= ++i)
-			break;
-
-		ret = sophgo_dw_pcie_prog_outbound_atu(pcie, i, PCIE_ATU_TYPE_MEM,
-						entry->res->start,
-						entry->res->start - entry->offset,
-						resource_size(entry->res));
-		if (ret) {
-			dev_err(pcie->dev, "Failed to set MEM range %pr\n",
-				entry->res);
-			return ret;
-		}
-	}
-
-	if (pp->io_size) {
-		if (pcie->num_ob_windows > ++i) {
-			ret = sophgo_dw_pcie_prog_outbound_atu(pcie, i, PCIE_ATU_TYPE_IO,
-							pp->io_base,
-							pp->io_bus_addr,
-							pp->io_size);
-			if (ret) {
-				dev_err(pcie->dev, "Failed to set IO range %pr\n",
-					entry->res);
-				return ret;
-			}
-		} else {
-			pp->cfg0_io_shared = true;
-		}
-	}
-
-	if (pcie->num_ob_windows <= i)
-		dev_warn(pcie->dev, "Ranges exceed outbound iATU size (%d)\n",
-			 pcie->num_ob_windows);
-
-
+	/* Setup inbound ATU */
 #if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
-	if (!acpi_disabled){
+	if (!acpi_disabled) {
 		struct acpi_device *adev = to_acpi_device(pcie->dev);
 		unsigned long flags;
-		int ret;
+
 		INIT_LIST_HEAD(&resource_dma_list);
 		flags = IORESOURCE_DMA;
 		ret = acpi_dev_get_dma_resources(adev, &resource_dma_list);
@@ -829,36 +869,20 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 			pr_err("no memory resources present in _DMA\n");
 			return -EINVAL;
 		}
+
 		list_dma = &resource_dma_list;
 	}
 #else
 	list_dma = &pp->bridge->dma_ranges;
 #endif
-	i = 0;
-	resource_list_for_each_entry(entry, list_dma) {
-		if (resource_type(entry->res) != IORESOURCE_MEM)
-			continue;
 
-		if (pcie->num_ib_windows <= i)
-			break;
-
-		ret = sophgo_dw_pcie_prog_inbound_atu(pcie, i++, PCIE_ATU_TYPE_MEM,
-					       entry->res->start,
-					       entry->res->start - entry->offset,
-					       resource_size(entry->res));
-		if (ret) {
-			dev_err(pcie->dev, "Failed to set DMA range %pr\n",
-				entry->res);
-			return ret;
-		}
-	}
-
-	if (pcie->num_ib_windows <= i)
-		dev_warn(pcie->dev, "Dma-ranges exceed inbound iATU size (%u)\n",
-			 pcie->num_ib_windows);
+	ret = sophgo_dw_pcie_setup_inbound_atu(pcie, list_dma);
+	if (ret)
+		return ret;
 
 	return 0;
 }
+
 static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 {
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
@@ -1597,8 +1621,6 @@ builtin_platform_driver(sophgo_dw_pcie_driver);
 
 #if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 
-static u64 bm_dma_mask = DMA_BIT_MASK(40);
-
 static struct device *phb_dev;
 struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev);
 
@@ -1624,9 +1646,6 @@ static int sophgo_pcie_init(struct pci_config_window *cfg)
 	pcie = devm_kzalloc(dev, sizeof(*pcie), GFP_KERNEL);
 	if (!pcie)
 		return -ENOMEM;
-
-	dev->dma_mask = &bm_dma_mask;
-	dev->coherent_dma_mask = bm_dma_mask;
 
 	phb_dev = dev;
 	pcie->dev = dev;

@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/reset/sophgo,sg2044-reset.h>
+#include <dt-bindings/clock/sophgo,sg2044-clock.h>
+#include "sg2044.dtsi"
+#include "bm1690-clock.dtsi"
+#include "sg2044-pinctrl.dtsi"
+#include "sg2044-peri-sys.dtsi"
+#include "bm1690-tpu-sys.dtsi"
+#include "bm1690-video-sys-soc.dtsi"
+#include "sg2044-pcie-msi.dtsi"
+//#include "sg2044-pcie-5rc.dtsi"
+
+/delete-node/ &emmc;
+/delete-node/ &uart0;
+/delete-node/ &uart2;
+/delete-node/ &uart3;
+
+/ {
+	/delete-node/ memory@80000000;
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x10 0x00000000>;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc0b000000,32M maxcpus=64";
+		stdout-path = "serial0";
+	};
+};
+
+&sd {
+	sdhci-caps-mask = <0x0 0x10580000>;
+};
+
+&i2c1 {
+	sg2044_srst: sg2044-reset@17 {
+		compatible = "sophgo,sg2042-hwmon-mcu";
+		reg = <0x17>;
+	};
+};

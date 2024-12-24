@@ -584,6 +584,14 @@ config PWM_SL28CPLD
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-sl28cpld.
 
+config PWM_SOPHGO
+	tristate "Sophgo PWM support"
+	help
+	  Generic PWM framework driver for Sophgo SoCs.
+	  We use it to control fan.
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-sophgo
+
 config PWM_SPEAR
 	tristate "STMicroelectronics SPEAr PWM support"
 	depends on PLAT_SPEAR || COMPILE_TEST

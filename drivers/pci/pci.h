@@ -730,9 +730,11 @@ static inline int pci_dev_specific_reset(struct pci_dev *dev, bool probe)
 }
 #endif
 
-#if defined(CONFIG_PCI_QUIRKS) && defined(CONFIG_ARM64)
+#if defined(CONFIG_PCI_QUIRKS) && (defined(CONFIG_ARM64) || defined(CONFIG_RISCV))
 int acpi_get_rc_resources(struct device *dev, const char *hid, u16 segment,
 			  struct resource *res);
+int acpi_get_rc_target_num_resources(struct device *dev, const char *hid, u16 segment,
+			               struct resource *res_array, int max_resources);
 #else
 static inline int acpi_get_rc_resources(struct device *dev, const char *hid,
 					u16 segment, struct resource *res)

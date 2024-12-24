@@ -331,6 +331,11 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 			dev_name(&msi_data->pdev->dev));
 	msi_data = data;
 
+#ifdef CONFIG_ACPI
+	if (!acpi_disabled)
+		acpi_dev_clear_dependencies(ACPI_COMPANION(fwnode->dev));
+#endif
+
 	return ret;
 
 out:

@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "sg2044.dtsi"
+#include "bm1690-video-sys-pcie.dtsi"
+
+/ {
+	/delete-node/ memory@80000000;
+	memory@80200000 {
+		device_type = "memory";
+		reg = <0x00000000 0x80200000 0x00000000 0x1fe00000>;
+	};
+
+	aliases {
+		serial0 = &uart1;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,128M maxcpus=64";
+		stdout-path = "serial0";
+	};
+
+	soc {
+		uart1: serial@7030000000 {
+			compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
+			reg = <0x00000070 0x30001000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <42 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <500000000>;
+			current-speed = <115200>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		veth:  veth {
+				compatible = "sg2260, sgveth";
+				reg = <0x0000001e 0xfa000000 0x00000000 0x1000>,
+					<0x0000001e 0xfa010000 0x00000000 0x70000>,
+					<0x0000001e 0xfa080000 0x00000000 0x70000>,
+					<0x0000006d 0x50000000 0x00000000 0x1000>;
+				reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+				interrupt-parent = <&intc>;
+				interrupts = <831 IRQ_TYPE_LEVEL_HIGH>;//IRQ_TYPE_EDGE_RISING
+				interrupt-names = "rx";
+				status = "okay";
+			};
+	};
+};

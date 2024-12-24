@@ -231,7 +231,7 @@ config MMC_SDHCI_OF_HLWD
 config MMC_SDHCI_OF_DWCMSHC
 	tristate "SDHCI OF support for the Synopsys DWC MSHC"
 	depends on MMC_SDHCI_PLTFM
-	depends on OF
+	depends on OF || ACPI
 	depends on COMMON_CLK
 	select MMC_CQHCI
 	help

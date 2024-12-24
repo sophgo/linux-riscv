@@ -1,0 +1,41 @@
+#include <dt-bindings/interrupt-controller/irq.h>
+/ {
+	soc {
+		msi: msi-controller@6E10000000 {
+			compatible = "sophgo,sg2044-msi";
+			#interrupt-cells = <0x2>; // only applies to child node
+			reg = <0x0  0xFEE00060 0x0 0x8>,
+			      <0x6E 0x10000000 0x0 0x256>;
+			reg-names = "set", "clr";
+			reg-bitwidth = <32>;
+			interrupt-controller;
+			for-msi;
+
+			interrupt-parent = <&intc>;
+			interrupts = <384 IRQ_TYPE_LEVEL_HIGH>, <385 IRQ_TYPE_LEVEL_HIGH>,
+				     <386 IRQ_TYPE_LEVEL_HIGH>, <387 IRQ_TYPE_LEVEL_HIGH>,
+				     <388 IRQ_TYPE_LEVEL_HIGH>, <389 IRQ_TYPE_LEVEL_HIGH>,
+				     <390 IRQ_TYPE_LEVEL_HIGH>, <391 IRQ_TYPE_LEVEL_HIGH>,
+				     <392 IRQ_TYPE_LEVEL_HIGH>, <393 IRQ_TYPE_LEVEL_HIGH>,
+				     <394 IRQ_TYPE_LEVEL_HIGH>, <395 IRQ_TYPE_LEVEL_HIGH>,
+				     <396 IRQ_TYPE_LEVEL_HIGH>, <397 IRQ_TYPE_LEVEL_HIGH>,
+				     <398 IRQ_TYPE_LEVEL_HIGH>, <399 IRQ_TYPE_LEVEL_HIGH>,
+				     <400 IRQ_TYPE_LEVEL_HIGH>, <401 IRQ_TYPE_LEVEL_HIGH>,
+				     <402 IRQ_TYPE_LEVEL_HIGH>, <403 IRQ_TYPE_LEVEL_HIGH>,
+				     <404 IRQ_TYPE_LEVEL_HIGH>, <405 IRQ_TYPE_LEVEL_HIGH>,
+				     <406 IRQ_TYPE_LEVEL_HIGH>, <407 IRQ_TYPE_LEVEL_HIGH>,
+				     <408 IRQ_TYPE_LEVEL_HIGH>, <409 IRQ_TYPE_LEVEL_HIGH>,
+				     <410 IRQ_TYPE_LEVEL_HIGH>, <411 IRQ_TYPE_LEVEL_HIGH>,
+				     <412 IRQ_TYPE_LEVEL_HIGH>, <413 IRQ_TYPE_LEVEL_HIGH>,
+				     <414 IRQ_TYPE_LEVEL_HIGH>, <415 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi0",  "msi1",  "msi2",  "msi3",
+					  "msi4",  "msi5",  "msi6",  "msi7",
+					  "msi8",  "msi9",  "msi10", "msi11",
+					  "msi12", "msi13", "msi14", "msi15",
+					  "msi16", "msi17", "msi18", "msi19",
+					  "msi20", "msi21", "msi22", "msi23",
+					  "msi24", "msi25", "msi26", "msi27",
+					  "msi28", "msi29", "msi30", "msi31";
+		};
+	};
+};

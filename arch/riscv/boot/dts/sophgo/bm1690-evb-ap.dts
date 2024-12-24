@@ -1,0 +1,146 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/reset/sophgo,sg2044-reset.h>
+#include <dt-bindings/clock/sophgo,sg2044-clock.h>
+#include "bm1690-cpu-ap.dtsi"
+#include "bm1690-clock.dtsi"
+#include "sg2044-pinctrl.dtsi"
+#include "sg2044-peri-sys.dtsi"
+#include "bm1690-video-sys-soc.dtsi"
+#include "bm1690-pcie-msi.dtsi"
+
+/delete-node/ &emmc;
+/delete-node/ &sd;
+/delete-node/ &uart1;
+/delete-node/ &uart2;
+/delete-node/ &uart3;
+
+/ {
+	/delete-node/ memory@80200000;
+	memory@1ea0200000 {
+		device_type = "memory";
+		reg = <0x0000001e 0xa0200000 0x00000000 0x4fe00000>;
+	};
+
+	soc {
+		uart0: serial@7030000000 {
+			compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
+			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <500000000>;
+			current-speed = <115200>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		sgtpu {
+			compatible = "sophgo,tpu-1690";
+			reg = <0x70 0x50000000 0x0 0x8000>,
+				<0x69 0x08050000 0x0 0x3000>, 	// TPSYS0_SYS_REG, size should be 0C00
+				<0x69 0x18050000 0x0 0x3000>,
+				<0x69 0x28050000 0x0 0x3000>,
+				<0x69 0x38050000 0x0 0x3000>,
+				<0x69 0x48050000 0x0 0x3000>,
+				<0x69 0x58050000 0x0 0x3000>,
+				<0x69 0x68050000 0x0 0x3000>,
+				<0x69 0x78050000 0x0 0x3000>;
+			sophgo_fw_mode = <1>;
+		};
+
+		pcie_ep@0 {
+			compatible = "sophgo,pcie-link-ep";
+			chip_type = "bm1690";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;//this is must, must, must, must
+			pcie_id = <0x0 0x0>;
+			socket_id = <0x0 0x0>;
+			speed = <0x0 0x5>;
+			lane_num = <0x0 0x8>;
+			func_num = <0x0 0x1>;
+
+			// c2c0_x4_1
+			reg =   <0x6c 0x00C00000 0x00000000 0x00300000>,
+				<0x6c 0x00f00000 0x00000000 0x00004000>,
+				<0x6c 0x00f80000 0x00000000 0x00001000>;
+
+			c2c_config_range = <0x6c 0x02000000 0x00000000 0x01ffffff>;
+			c2c_top = <0x6c 0x007d0000 0x00000000 0x00001000>;
+
+			reg-names = "dbi", "atu", "ctrl";
+
+			sophgo_card@0 {
+				compatible = "sophgo,sophgo-card";
+				reg = <0x1e  0xf8000000 0x00000000 0x01400000>,
+				      <0x70 0x101ff000 0x00000000 0x00001000>,
+				      <0x70 0x50000000 0x00000000 0x00001000>;
+				reg-names = "share-memory", "config_file", "top-reg";
+
+				host-channel-num = <1>;
+				tpu-channel-num = <8>;
+				media-channel-num = <0>;
+				tx-channel = <0x0 0x2 0x4 0x6 0x8 0xa 0xc 0xe 0x10>;
+				rx-channel = <0x1 0x3 0x5 0x7 0x9 0xb 0xd 0xf 0x11>;
+				channel-size = <0x100000>;
+				share-memory-type = <1>;
+
+				interrupt-parent = <&intc>;
+				interrupts = <352 IRQ_TYPE_EDGE_RISING>,
+					     <353 IRQ_TYPE_EDGE_RISING>,
+					     <354 IRQ_TYPE_EDGE_RISING>,
+					     <355 IRQ_TYPE_EDGE_RISING>,
+					     <356 IRQ_TYPE_EDGE_RISING>,
+					     <357 IRQ_TYPE_EDGE_RISING>,
+					     <358 IRQ_TYPE_EDGE_RISING>,
+				             <359 IRQ_TYPE_EDGE_RISING>,
+					     <360 IRQ_TYPE_EDGE_RISING>;
+				clr-irq = <0x6E 0x10000000 0x00000000 0x00000000>,
+					  <0x6E 0x10000004 0x00000000 0x00000000>,
+					  <0x6E 0x10000008 0x00000000 0x00000000>,
+					  <0x6E 0x1000000c 0x00000000 0x00000000>,
+					  <0x6E 0x10000010 0x00000000 0x00000000>,
+					  <0x6E 0x10000014 0x00000000 0x00000000>,
+					  <0x6E 0x10000018 0x00000000 0x00000000>,
+					  <0x6E 0x1000001c 0x00000000 0x00000000>,
+					  <0x6E 0x10000020 0x00000000 0x00000000>;
+				virtual-msi = <0x0 0x0 0x00000000 0x00000000>,
+					      <0x69 0x0cd00000 0x00000000 0x00000001>,
+					      <0x69 0x1cd00000 0x00000000 0x00000001>,
+					      <0x69 0x2cd00000 0x00000000 0x00000001>,
+					      <0x69 0x3cd00000 0x00000000 0x00000001>,
+					      <0x69 0x4cd00000 0x00000000 0x00000001>,
+					      <0x69 0x5cd00000 0x00000000 0x00000001>,
+					      <0x69 0x6cd00000 0x00000000 0x00000001>,
+					      <0x69 0x7cd00000 0x00000000 0x00000001>;
+			};
+		};
+
+		veth:  veth {
+			compatible = "sg2260, sgveth";
+			reg = <0x0000001e 0xfa100000 0x00000000 0x1000>,
+			      <0x0000001e 0xfa110000 0x00000000 0x70000>,
+			      <0x0000001e 0xfa180000 0x00000000 0x70000>,
+			      <0x0000006d 0x50000000 0x00000000 0x1000>;
+			reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+			interrupt-parent = <&intc>;
+			interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "rx";
+			status = "okay";
+		};
+	};
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x1eab000000,64M maxcpus=4";
+		stdout-path = "serial0";
+	};
+};

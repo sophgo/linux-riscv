@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/soc {
+	pcie@6c08000000 {
+		compatible = "sophgo,sg2044-pcie-host";
+		device_type = "pci";
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <0>;
+		msi-parent = <&msi>;
+		reg = <0x6c 0x08400000  0x0 0x00001000>,
+		      <0x6c 0x08700000  0x0 0x00004000>,
+		      <0x60 0x00000000  0x0 0x00001000>;
+		reg-names = "dbi", "atu", "config";
+		dma-coherent;
+		// IO, check IO_SPACE_LIMIT
+		// 32bit prefetchable memory
+		// 32bit non-prefetchable memory
+		// 64bit prefetchable memory
+		// 64bit non-prefetchable memory
+		ranges = <0x01000000 0x0  0x00000000  0x60 0x10000000  0x0 0x00400000>,
+			 <0x42000000 0x0  0x40000000  0x0  0x40000000  0x0 0x04000000>,
+			 <0x02000000 0x0  0x44000000  0x0  0x44000000  0x0 0x04000000>,
+			 <0x43000000 0x62 0x00000000  0x62 0x00000000  0x2 0x00000000>,
+			 <0x03000000 0x61 0x00000000  0x61 0x00000000  0x1 0x00000000>;
+		dma-ranges = <0x03000000 0x0 0x0 0x0 0x0 0x40 0x0>;
+
+		status = "okay";
+	};
+
+};

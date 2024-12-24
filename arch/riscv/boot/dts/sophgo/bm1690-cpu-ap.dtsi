@@ -1,0 +1,143 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/ {
+    model = "SOPHGO BM1690 TOP CPU";
+	compatible = "sophgo,sg2044";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	dma-noncoherent;
+
+	memory@80200000 {
+		device_type = "memory";
+		reg = <0x00000000 0x80200000 0x00000000 0x7fe00000>;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <50000000>;
+		cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
+			mmu-type = "riscv,sv48";
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+		cpu@1 {
+			device_type = "cpu";
+			reg = <1>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
+			mmu-type = "riscv,sv48";
+			cpu1_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+		cpu@2 {
+			device_type = "cpu";
+			reg = <2>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
+			mmu-type = "riscv,sv48";
+			cpu2_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+		cpu@3 {
+			device_type = "cpu";
+			reg = <3>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,isa = "rv64imafdcv_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
+			mmu-type = "riscv,sv48";
+			cpu3_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+
+		aclint_mswi: interrupt-controller@6e04000000 {
+			compatible = "sophgo,sg2044-aclint-mswi", "thead,c900-aclint-mswi";
+			reg = <0x0000006e 0x04000000 0x00000000 0x00004000>;
+			interrupts-extended = <
+				&cpu0_intc 3
+				&cpu1_intc 3
+				&cpu2_intc 3
+				&cpu3_intc 3
+				>;
+		};
+
+		aclint_mtimer: timer@6840000000 {
+			compatible = "thead,c900-clint-mtimer";
+			reg = <0x00000068 0x40000000 0x00000000 0x00008000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <
+				&cpu0_intc 7
+				&cpu1_intc 7
+				&cpu2_intc 7
+				&cpu3_intc 7
+				>;
+		};
+
+		aclint_sswi: interrupt-controller@6e0400c000 {
+			compatible = "sophgo,sg2044-aclint-sswi", "thead,c900-aclint-sswi";
+			reg = <0x0000006e 0x0400c000 0x00000000 0x00004000>;
+			#interrupt-cells = <0>;
+			interrupt-controller;
+			interrupts-extended =
+				<&cpu0_intc  1>,
+				<&cpu1_intc  1>,
+				<&cpu2_intc  1>,
+				<&cpu3_intc  1>;
+		};
+
+		//4cores PLIC2
+		intc: interrupt-controller@6e00000000 {
+			compatible = "thead,c900-plic";
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+			interrupts-extended = <
+				&cpu0_intc  0xffffffff &cpu0_intc  9
+				&cpu1_intc  0xffffffff &cpu1_intc  9
+				&cpu2_intc  0xffffffff &cpu2_intc  9
+				&cpu3_intc  0xffffffff &cpu3_intc  9
+				>;
+			reg = <0x0000006e 0x00000000 0x00000000 0x10000000>;
+			reg-names = "control";
+			riscv,max-priority = <7>;
+			riscv,ndev = <415>;
+		};
+	};
+};

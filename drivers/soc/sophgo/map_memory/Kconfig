@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config SOPHGO_MAP_MEMORY
+	bool "sophgo soc map memory"

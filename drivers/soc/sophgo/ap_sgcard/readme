@@ -1,0 +1,17 @@
+// dtb example for bm1690
+sophgo_card@0 {
+	compatible = "sophgo,sophgo-card";
+	reg = <0x4 0x00000000 0x00000000 0x40000000>;
+	// memory-region = <&vpu_reserved>;
+	channel-num = <2>;
+	tx-channel = <0x0 0x2 0x4 0x6 0x8>;
+	rx-channel = <0x1 0x3 0x5 0x7 0x9>;
+	channel-size = <0x2000>;
+	interrupt-parent = <&gic>;
+	interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+	clr-irq = <0x00000000 0x5001019c 0x00000000 0x00000001>,
+			<0x00000000 0x5001019c 0x00000000 0x00000002>;
+	virtual-msi = <0x0 0x5fbf0198 0x00000000 0x00000002>,
+			<0x00000000 0x50010198 0x00000000 0x00000004>;
+};

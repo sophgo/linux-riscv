@@ -198,10 +198,8 @@ static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp)
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pcie->dev->of_node);
 
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled)
 		fwnode = acpi_fwnode_handle(to_acpi_device(pcie->dev));
-#endif
 
 	pp->msi_domain = pci_msi_create_irq_domain(fwnode,
 						   &sophgo_dw_pcie_msi_domain_info,
@@ -419,13 +417,11 @@ static void __iomem *sophgo_dw_pcie_other_conf_map_bus(struct pci_bus *bus,
 	struct dw_pcie_rp *pp = bus->sysdata;
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled) {
 		struct pci_config_window *cfg = bus->sysdata;
 		pp = cfg->priv;
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
 	}
-#endif
 
 	int type = 0;
 	int ret = 0;
@@ -465,13 +461,11 @@ static int sophgo_dw_pcie_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	int ret = 0;
 
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled){
 		struct pci_config_window *cfg = bus->sysdata;
 		pp = cfg->priv;
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
 	}
-#endif
 
 	ret = pci_generic_config_read(bus, devfn, where, size, val);
 	if (ret != PCIBIOS_SUCCESSFUL)
@@ -495,13 +489,11 @@ static int sophgo_dw_pcie_wr_other_conf(struct pci_bus *bus, unsigned int devfn,
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	int ret = 0;
 
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled){
 		struct pci_config_window *cfg = bus->sysdata;
 		pp = cfg->priv;
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
 	}
-#endif
 
 	ret = pci_generic_config_write(bus, devfn, where, size, val);
 	if (ret != PCIBIOS_SUCCESSFUL)
@@ -523,13 +515,12 @@ static void __iomem *sophgo_dw_pcie_own_conf_map_bus(struct pci_bus *bus, unsign
 	struct dw_pcie_rp *pp = bus->sysdata;
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled){
 		struct pci_config_window *cfg = bus->sysdata;
 		pp = cfg->priv;
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
 	}
-#endif
+
 	if (pci_is_root_bus(bus)) {
 		if (PCI_SLOT(devfn) > 0)
 			return NULL;
@@ -812,7 +803,6 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 	struct list_head resource_dma_list, *list_dma;
 	int i, ret = 0;
 
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled) {
 		struct acpi_device *adev = to_acpi_device(pcie->dev);
 		unsigned long flags;
@@ -828,10 +818,9 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 			return -EINVAL;
 		}
 		list = &resource_list;
-	}
-#else
-	list = &pp->bridge->windows;
-#endif
+	} else
+		list = &pp->bridge->windows;
+
 	/* Note the very first outbound ATU is used for CFG IOs */
 	if (!pcie->num_ob_windows) {
 		dev_err(pcie->dev, "No outbound iATU found\n");
@@ -854,7 +843,6 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 		return ret;
 
 	/* Setup inbound ATU */
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled) {
 		struct acpi_device *adev = to_acpi_device(pcie->dev);
 		unsigned long flags;
@@ -871,10 +859,8 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 		}
 
 		list_dma = &resource_dma_list;
-	}
-#else
-	list_dma = &pp->bridge->dma_ranges;
-#endif
+	} else
+		list_dma = &pp->bridge->dma_ranges;
 
 	ret = sophgo_dw_pcie_setup_inbound_atu(pcie, list_dma);
 	if (ret)
@@ -943,17 +929,15 @@ static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 	 * the platform uses its own address translation component rather than
 	 * ATU, so we should not program the ATU here.
 	 */
-#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
-	ret = sophgo_dw_pcie_iatu_setup(pp);
-	if (ret)
-		return ret;
-#else
-	if (pp->bridge->child_ops == &sophgo_dw_child_pcie_ops) {
+	if (!acpi_disabled) {
+		ret = sophgo_dw_pcie_iatu_setup(pp);
+		if (ret)
+			return ret;
+	} else if (pp->bridge->child_ops == &sophgo_dw_child_pcie_ops) {
 		ret = sophgo_dw_pcie_iatu_setup(pp);
 		if (ret)
 			return ret;
 	}
-#endif
 
 	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0);
 

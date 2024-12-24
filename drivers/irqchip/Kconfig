@@ -406,6 +406,14 @@ config LS_SCFG_MSI
 config PARTITION_PERCPU
 	bool
 
+config SOPHGO_SG2044_MSI
+	bool "Sophgo SG2044 MSI controller"
+	depends on ARCH_SOPHGO
+	help
+	  Support for the Sophgo SG2044 MSI Controller.
+	  This on-chip interrupt controller enables MSI sources to be
+	  routed to the primary PLIC controller on SoC.
+
 config STM32MP_EXTI
 	tristate "STM32MP extended interrupts and event controller"
 	depends on (ARCH_STM32 && !ARM_SINGLE_ARMV7M) || COMPILE_TEST

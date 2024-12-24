@@ -8,6 +8,7 @@
  * Author: Dong Aisheng <dong.aisheng@linaro.org>
  */
 
+#include <linux/acpi.h>
 #include <linux/cleanup.h>
 #include <linux/clk.h>
 #include <linux/err.h>
@@ -336,6 +337,32 @@ struct regmap *syscon_regmap_lookup_by_phandle_optional(struct device_node *np,
 }
 EXPORT_SYMBOL_GPL(syscon_regmap_lookup_by_phandle_optional);
 
+struct regmap *syscon_fwnode_to_regmap(struct fwnode_handle *fwnode)
+{
+    struct regmap *regmap = NULL;
+    if (is_of_node(fwnode)) {
+		struct device_node *syscon_np;
+        syscon_np = to_of_node(fwnode);
+        if (!syscon_np)
+            return ERR_PTR(-ENODEV);
+        regmap = syscon_node_to_regmap(syscon_np);
+        of_node_put(syscon_np);
+    } else if (is_acpi_node(fwnode)) {
+	    struct device *dev;
+        struct syscon *syscon;
+	    dev = bus_find_device_by_fwnode(&platform_bus_type, fwnode);
+        if (!dev)
+            return ERR_PTR(-ENODEV);
+        syscon = platform_get_drvdata(to_platform_device(dev));
+        if (!syscon)
+            return ERR_PTR(-ENODEV);
+        regmap = syscon->regmap;
+    }
+    return regmap;
+}
+EXPORT_SYMBOL_GPL(syscon_fwnode_to_regmap);
+
+
 static int syscon_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -378,9 +405,15 @@ static const struct platform_device_id syscon_ids[] = {
 	{ }
 };
 
+static const struct acpi_device_id syscon_acpi_match[] = {
+	{ "SOPH0011", },
+    {}
+};
+
 static struct platform_driver syscon_driver = {
 	.driver = {
 		.name = "syscon",
+		.acpi_match_table = ACPI_PTR(syscon_acpi_match),
 	},
 	.probe		= syscon_probe,
 	.id_table	= syscon_ids,

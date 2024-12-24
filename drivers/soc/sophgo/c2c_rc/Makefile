@@ -1,0 +1,1 @@
+obj-$(CONFIG_SOPHGO_PCIE_MODE)	+= c2c_rc.o

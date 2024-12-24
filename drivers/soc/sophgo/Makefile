@@ -1,0 +1,12 @@
+obj-$(CONFIG_ARCH_SOPHGO)		+= pcie_ep/
+obj-$(CONFIG_ARCH_SOPHGO)		+= ap_sgcard/
+obj-$(CONFIG_ARCH_SOPHGO)		+= tp_driver/
+obj-$(CONFIG_ARCH_SOPHGO)		+= pcie_phy/
+obj-$(CONFIG_ARCH_SOPHGO)		+= pcie_device/
+obj-$(CONFIG_ARCH_SOPHGO)		+= c2c_rc/
+obj-$(CONFIG_ARCH_SOPHGO)		+= map_memory/
+obj-$(CONFIG_ARCH_SOPHGO)		+= veth/
+obj-$(CONFIG_ARCH_SOPHGO)		+= rxu/rxu.o
+obj-$(CONFIG_ARCH_SOPHGO)		+= tpsys_err_intr/
+obj-$(CONFIG_ARCH_SOPHGO)		+= msg_intr/
+obj-$(CONFIG_ARCH_SOPHGO)		+= ras/

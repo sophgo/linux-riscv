@@ -1390,6 +1390,10 @@ static const struct acpi_device_id sdhci_dwcmshc_acpi_ids[] = {
 		.id = "MLNXBF30",
 		.driver_data = (kernel_ulong_t)&sdhci_dwcmshc_bf3_pdata,
 	},
+	{
+		.id = "SOPH0005",
+		.driver_data = (kernel_ulong_t)&sdhci_dwcmshc_sg2042_pdata,
+	},
 	{}
 };
 MODULE_DEVICE_TABLE(acpi, sdhci_dwcmshc_acpi_ids);
@@ -1441,7 +1445,11 @@ static int dwcmshc_probe(struct platform_device *pdev)
 		priv->bus_clk = devm_clk_get(dev, "bus");
 		if (!IS_ERR(priv->bus_clk))
 			clk_prepare_enable(priv->bus_clk);
+	} else {
+		if (device_property_read_u32(dev, "core-clk", &pltfm_host->clock) < 0)
+			goto free_pltfm;
 	}
+
 
 	err = mmc_of_parse(host->mmc);
 	if (err)

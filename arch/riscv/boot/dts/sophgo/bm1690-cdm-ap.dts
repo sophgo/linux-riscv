@@ -1,0 +1,160 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "bm1690-cpu-ap.dtsi"
+#include "bm1690-soc-tpu-card.dtsi"
+
+/ {
+	/delete-node/ memory@80200000;
+	memory@1ea0200000 {
+		device_type = "memory";
+		reg = <0x0000001e 0xa0200000 0x00000000 0x4fe00000>;
+	};
+
+	aliases {
+		serial0 = &uart0;
+		vtty0 = &vtty0;
+		vtty1 = &vtty1;
+		vtty2 = &vtty2;
+		vtty3 = &vtty3;
+		vtty4 = &vtty4;
+		vtty5 = &vtty5;
+		vtty6 = &vtty6;
+		vtty7 = &vtty7;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x1eab000000,64M maxcpus=4";
+		stdout-path = "serial0";
+	};
+
+	soc {
+		uart0: serial@7030000000 {
+			compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
+			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <500000000>;
+			current-speed = <115200>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		vtty0: vtty@bfff0000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fff1000 0x0 0x1000>,
+				<0x1f 0x1fff0000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x0CD00004 0x1>;
+			clr-irq = <0x6e 0x10000028 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <362 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty1: vtty@bfff2000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fff3000 0x0 0x1000>,
+				<0x1f 0x1fff2000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x1CD00004 0x1>;
+			clr-irq = <0x6e 0x1000002c 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <363 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty2: vtty@bfff4000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fff5000 0x0 0x1000>,
+				<0x1f 0x1fff4000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x2CD00004 0x1>;
+			clr-irq = <0x6e 0x10000030 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <364 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty3: vtty@bfff6000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fff7000 0x0 0x1000>,
+				<0x1f 0x1fff6000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x3CD00004 0x1>;
+			clr-irq = <0x6e 0x10000034 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <365 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty4: vtty@bfff8000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fff9000 0x0 0x1000>,
+				<0x1f 0x1fff8000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x4CD00004 0x1>;
+			clr-irq = <0x6e 0x10000038 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <366 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty5: vtty@bfffa000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fffb000 0x0 0x1000>,
+				<0x1f 0x1fffa000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x5CD00004 0x1>;
+			clr-irq = <0x6e 0x1000003c 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <367 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty6: vtty@bfffc000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fffd000 0x0 0x1000>,
+				<0x1f 0x1fffc000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x6CD00004 0x1>;
+			clr-irq = <0x6e 0x10000040 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <368 IRQ_TYPE_LEVEL_HIGH>;
+		};
+		vtty7: vtty@bfffe000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1ffff000 0x0 0x1000>,
+				<0x1f 0x1fffe000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x7CD00004 0x1>;
+			clr-irq = <0x6e 0x10000044 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <369 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		veth:  veth {
+			compatible = "sg2260, sgveth";
+			reg = <0x0000001e 0xfa100000 0x00000000 0x1000>,
+				<0x0000001e 0xfa110000 0x00000000 0x70000>,
+				<0x0000001e 0xfa180000 0x00000000 0x70000>,
+				<0x0000006d 0x50000000 0x00000000 0x1000>;
+			reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+			interrupt-parent = <&intc>;
+			interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "rx";
+			status = "okay";
+		};
+
+		tysys_err_intr: tysys_err_intr {
+			compatible = "sophgo,tpsys-err-intr";
+			interrupt-parent = <&intc>;
+			interrupts = <312 IRQ_TYPE_LEVEL_HIGH>, <313 IRQ_TYPE_LEVEL_HIGH>,
+						<314 IRQ_TYPE_LEVEL_HIGH>, <315 IRQ_TYPE_LEVEL_HIGH>,
+						<316 IRQ_TYPE_LEVEL_HIGH>, <317 IRQ_TYPE_LEVEL_HIGH>,
+						<318 IRQ_TYPE_LEVEL_HIGH>, <319 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "tpsys0_err",  "tpsys1_err",  "tpsys2_err",  "tpsys3_err",
+					  "tpsys4_err",  "tpsys5_err",  "tpsys6_err",  "tpsys7_err";
+		};
+	};
+};

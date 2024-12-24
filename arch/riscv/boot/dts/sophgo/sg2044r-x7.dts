@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/reset/sophgo,sg2044-reset.h>
+#include <dt-bindings/clock/sophgo,sg2044-clock.h>
+#include "bm1690-cpu-ap.dtsi"
+#include "sg2044r-clock.dtsi"
+#include "sg2044-peri-sys.dtsi"
+
+/delete-node/ &emmc;
+/delete-node/ &pwm;
+/delete-node/ &dma;
+/delete-node/ &watchdog;
+/delete-node/ &p2p;
+/delete-node/ &base;
+/delete-node/ &stmmac_axi_setup;
+/delete-node/ &mtl_rx_setup;
+/delete-node/ &mtl_tx_setup;
+/delete-node/ &ethernet;
+
+/ {
+	/delete-node/ memory@80200000;
+	memory@82400000 {
+		device_type = "memory";
+		reg = <0x00000000 0x82400000 0x00000000 0x7dc00000>;
+	};
+
+	rxu_cluster0@690a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x0a000000 0x00000000 0x2800000>,
+				<0x69 0x08050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <302 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "0";
+	};
+
+	rxu_cluster1@691a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x1a000000 0x00000000 0x2800000>,
+				<0x69 0x18050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <303 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "1";
+	};
+
+	rxu_cluster2@692a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x2a000000 0x00000000 0x2800000>,
+				<0x69 0x28050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <304 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "2";
+	};
+
+	rxu_cluster3@693a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x3a000000 0x00000000 0x2800000>,
+				<0x69 0x38050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <305 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "3";
+	};
+
+	rxu_cluster4@694a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x4a000000 0x00000000 0x2800000>,
+				<0x69 0x48050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <306 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "4";
+	};
+
+	rxu_cluster5@695a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x5a000000 0x00000000 0x2800000>,
+				<0x69 0x58050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <307 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "5";
+	};
+
+	rxu_cluster6@696a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x6a000000 0x00000000 0x2800000>,
+				<0x69 0x68050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <308 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "6";
+	};
+
+	rxu_cluster7@697a000000 {
+		compatible = "sophgo,rxu";
+		reg = <0x69 0x7a000000 0x00000000 0x2800000>,
+				<0x69 0x78050000 0x00000000 0x1000>;
+		interrupt-parent = <&intc>;
+		interrupts = <309 IRQ_TYPE_LEVEL_HIGH>;
+		cluster_offset = "7";
+	};
+
+
+	/delete-node/ aliases;
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xa0000000,32M maxcpus=4";
+		stdout-path = "serial0";
+	};
+};

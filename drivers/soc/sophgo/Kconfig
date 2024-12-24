@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-only
+menu "Sophgo Soc specific Drivers"
+
+source "drivers/soc/sophgo/ap_sgcard/Kconfig"
+source "drivers/soc/sophgo/pcie_ep/Kconfig"
+source "drivers/soc/sophgo/tp_driver/Kconfig"
+source "drivers/soc/sophgo/map_memory/Kconfig"
+source "drivers/soc/sophgo/veth/Kconfig"
+source "drivers/soc/sophgo/tpsys_err_intr/Kconfig"
+source "drivers/soc/sophgo/msg_intr/Kconfig"
+source "drivers/soc/sophgo/ras/Kconfig"
+
+endmenu

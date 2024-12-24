@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+
+/ {
+	model = "SOPHGO BM1690 TPU SCALAR";
+	compatible = "sophgo,sg2044";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	dma-noncoherent;
+
+	memory@a4000000 {
+		device_type = "memory";
+		reg = <0x1f 0x00200000 0x0 0x1fe00000>;
+	};
+
+	rsvm: reserved-memory {
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+		ranges;
+		vtty_reserved: vtty_mem {
+			reg = <0x1f 0x1fff0000 0x0 0x10000>;
+			no-map;
+		};
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <50000000>;
+		cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			status = "okay";
+			compatible = "riscv";
+			//riscv,isa = "rv64imafdc_sstc";
+			riscv,isa = "rv64imafdc_zicbom_zicbop_zicboz_zicond1p0_zihintntl0p2_zihintpause_zawrs_zfa0p1_zfbfmin0p8_zfh_zca_zcb_zcd_zba_zbb_zbc_zbs_zvfbfmin0p8_zvfbfwma0p8_zvfh0p1_sscofpmf_sstc_svinval_svnapot_svpbmt";
+			riscv,cbom-block-size = <64>;
+			riscv,cboz-block-size = <64>;
+			mmu-type = "riscv,sv48";
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	top_misc_ctrl@7050000000 {
+		compatible = "syscon";
+		reg = <0x70 0x50000000 0x00 0x8000>;
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+
+		//1cores PLIC1
+		intc: interrupt-controller@690c800000 {
+			#address-cells = <2>;
+			#interrupt-cells = <1>;
+			compatible = "riscv,plic0";
+			interrupt-controller;
+			interrupts-extended = <
+			&cpu0_intc 0xffffffff &cpu0_intc 9
+			>;
+			reg = <0x00000069 0x0c800000 0x00000000 0x400000>;
+			reg-names = "control";
+			riscv,max-priority = <7>;
+			riscv,ndev = <53>;
+		};
+
+		uart0: serial@7030002000 {
+			compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
+			reg = <0x00000070 0x30002000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <4>;
+			clock-frequency = <500000000>;
+			clock-names = "baudclk";
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+		msg_cmd_conflict_intr: msg_cmd_conflict_intr {
+			compatible = "sophgo,msg-cmd-conflict-intr";
+			interrupt-parent = <&intc>;
+			interrupts = <53>;
+		};
+
+		vtty0: vtty@bfff0000 {
+			compatible = "sophgo,vtty-tp";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1f 0x1fff0000 0x0 0x1000>,
+				<0x1f 0x1fff1000 0x0 0x1000>;
+			virtaul-msi = <0x6e 0x10000028 0x1>;
+			clr-irq = <0x69 0x0CD00004 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <38>;
+		};
+	};
+
+	aliases {
+		serial0 = &uart0;
+		vtty0 = &vtty0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x1f0b000000,64M";
+		stdout-path = "serial0";
+	};
+};

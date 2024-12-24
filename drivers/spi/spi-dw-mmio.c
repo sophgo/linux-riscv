@@ -344,7 +344,7 @@ static int dw_spi_mmio_probe(struct platform_device *pdev)
 	if (dws->irq < 0)
 		return dws->irq; /* -ENXIO */
 
-	dwsmmio->clk = devm_clk_get_enabled(&pdev->dev, NULL);
+	dwsmmio->clk = devm_clk_get_optional_enabled(&pdev->dev, NULL);
 	if (IS_ERR(dwsmmio->clk))
 		return PTR_ERR(dwsmmio->clk);
 
@@ -362,7 +362,10 @@ static int dw_spi_mmio_probe(struct platform_device *pdev)
 
 	dws->bus_num = pdev->id;
 
-	dws->max_freq = clk_get_rate(dwsmmio->clk);
+	if (pdev->dev.of_node)
+		dws->max_freq = clk_get_rate(dwsmmio->clk);
+	else
+		device_property_read_u32(&pdev->dev, "clock-frequency", &dws->max_freq);
 
 	if (device_property_read_u32(&pdev->dev, "reg-io-width",
 				     &dws->reg_io_width))

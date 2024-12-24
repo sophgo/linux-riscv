@@ -263,6 +263,14 @@ struct pwm_ops {
 		     const struct pwm_state *state);
 	int (*get_state)(struct pwm_chip *chip, struct pwm_device *pwm,
 			 struct pwm_state *state);
+		struct module *owner;
+	/* Only used by legacy drivers */
+	int (*config)(struct pwm_chip *chip, struct pwm_device *pwm,
+			int duty_ns, int period_ns);
+	int (*set_polarity)(struct pwm_chip *chip, struct pwm_device *pwm,
+			enum pwm_polarity polarity);
+	int (*enable)(struct pwm_chip *chip, struct pwm_device *pwm);
+	void (*disable)(struct pwm_chip *chip, struct pwm_device *pwm);
 };
 
 /**

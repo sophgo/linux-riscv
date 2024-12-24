@@ -14,6 +14,17 @@ config PCIE_DW_EP
 	bool
 	select PCIE_DW
 
+config PCIE_DW_SOPHGO
+	bool "DesignWare Sophgo PCIe Host controller"
+	depends on OF || ACPI
+	select IRQ_DOMAIN
+	select PCIE_DW
+	help
+	  Say Y here if you want to support the DesignWare PCIe controller in host mode
+	  for Sophgo SoCs. this PCIe controller is from DesignWare, integrated into the
+	  Sophgo SoCs. PCIe is one of subsystems, it is choisable, Don't be
+	  care of this if it is not used in your systems.
+
 config PCIE_AL
 	bool "Amazon Annapurna Labs PCIe controller"
 	depends on OF && (ARM64 || COMPILE_TEST)

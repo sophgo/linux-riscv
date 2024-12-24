@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/ {
+	bm1690_host_driver@0 {
+		compatible = "sophgo,bm1690_host_driver";
+		chip_type = <0x1690>;
+		interrupt-parent = <&intc>;
+		interrupts = <863 IRQ_TYPE_LEVEL_HIGH>;
+	};
+};

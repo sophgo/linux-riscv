@@ -1,0 +1,2 @@
+
+obj-$(CONFIG_SOPHGO_MAP_MEMORY)	+= bm1690_map.o

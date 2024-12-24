@@ -30,7 +30,7 @@ const guid_t pci_acpi_dsm_guid =
 	GUID_INIT(0xe5c937d0, 0x3553, 0x4d7a,
 		  0x91, 0x17, 0xea, 0x4d, 0x19, 0xc3, 0x43, 0x4d);
 
-#if defined(CONFIG_PCI_QUIRKS) && defined(CONFIG_ARM64)
+#if defined(CONFIG_PCI_QUIRKS) && (defined(CONFIG_ARM64) || defined(CONFIG_RISCV))
 static int acpi_get_rc_addr(struct acpi_device *adev, struct resource *res)
 {
 	struct device *dev = &adev->dev;
@@ -60,6 +60,41 @@ static int acpi_get_rc_addr(struct acpi_device *adev, struct resource *res)
 	acpi_dev_free_resource_list(&list);
 	return 0;
 }
+
+static int acpi_get_rc_addrs(struct acpi_device *adev, struct resource *res_array, int max_resources)
+{
+	struct device *dev = &adev->dev;
+	struct resource_entry *entry;
+	struct list_head list;
+	unsigned long flags;
+	int ret, count = 0;
+
+	INIT_LIST_HEAD(&list);
+	flags = IORESOURCE_MEM;
+	ret = acpi_dev_get_resources(adev, &list,
+				     acpi_dev_filter_resource_type_cb,
+				     (void *) flags);
+	if (ret < 0) {
+		dev_err(dev, "failed to parse _CRS method, error code %d\n", ret);
+		return ret;
+	}
+
+	if (ret == 0) {
+		dev_err(dev, "no IO and memory resources present in _CRS\n");
+		return -EINVAL;
+	}
+
+	list_for_each_entry(entry, &list, node) {
+		if (count >= max_resources)
+			break;
+		res_array[count++] = *entry->res;
+	}
+
+	acpi_dev_free_resource_list(&list);
+
+	return count;
+}
+
 
 static acpi_status acpi_match_rc(acpi_handle handle, u32 lvl, void *context,
 				 void **retval)
@@ -104,6 +139,35 @@ int acpi_get_rc_resources(struct device *dev, const char *hid, u16 segment,
 
 	return 0;
 }
+
+int acpi_get_rc_target_num_resources(struct device *dev, const char *hid, u16 segment,
+			  struct resource *res_array, int max_resources)
+{
+	struct acpi_device *adev;
+	acpi_status status;
+	acpi_handle handle;
+	int ret;
+
+	status = acpi_get_devices(hid, acpi_match_rc, &segment, &handle);
+	if (ACPI_FAILURE(status)) {
+		dev_err(dev, "can't find _HID %s device to locate resources\n",
+			hid);
+		return -ENODEV;
+	}
+
+	adev = acpi_fetch_acpi_dev(handle);
+	if (!adev)
+		return -ENODEV;
+
+	ret = acpi_get_rc_addrs(adev, res_array, max_resources);
+	if (ret < 0) {
+		dev_err(dev, "can't get resources from %s, error code %d\n", dev_name(&adev->dev), ret);
+		return ret;
+	}
+
+	return ret;
+}
+
 #endif
 
 phys_addr_t acpi_pci_root_get_mcfg_addr(acpi_handle handle)

@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config SOPHGO_TPSYS_ERR_IRQ
+	bool "sophgo tpsys err irq for ap"

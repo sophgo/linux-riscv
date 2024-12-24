@@ -852,4 +852,20 @@ config CRYPTO_DEV_SA2UL
 source "drivers/crypto/aspeed/Kconfig"
 source "drivers/crypto/starfive/Kconfig"
 
+config CRYPTO_DEV_DWC_PKA
+    bool "Synopsys DesignWare PKA"
+    default n
+    select CRYPTO_DEV_DWC
+    select CRYPTO_RSA
+    select CRYPTO_ECC
+    select CRYPTO_ECDH
+    select CRYPTO_ECDSA
+    help
+      DesignWare PKA -- Public Key Accelerator
+
+config CRYPTO_DEV_DWC
+    bool
+    default n
+    select CRYPTO_ENGINE
+
 endif # CRYPTO_HW

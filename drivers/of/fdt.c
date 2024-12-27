@@ -1214,9 +1214,11 @@ void __init unflatten_device_tree(void)
 {
 	void *fdt = initial_boot_params;
 
+#if (!defined(CONFIG_RISCV) && !defined(CONFIG_ARM64))
 	/* Don't use the bootloader provided DTB if ACPI is enabled */
 	if (!acpi_disabled)
 		fdt = NULL;
+#endif
 
 	/*
 	 * Populate an empty root node when ACPI is enabled or bootloader

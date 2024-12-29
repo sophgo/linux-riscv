@@ -400,7 +400,7 @@ static int cdns_pcie_msi_init(struct cdns_mango_pcie_rc *rc)
 	return 0;
 }
 
-static int cdns_pcie_host_init(struct device *dev, struct cdns_mango_pcie_rc *rc)
+static int __cdns_pcie_host_init(struct device *dev, struct cdns_mango_pcie_rc *rc)
 {
 	int err;
 
@@ -883,7 +883,7 @@ static int cdns_pcie_host_probe(struct platform_device *pdev)
 		goto err_get_sync;
 	}
 
-	ret = cdns_pcie_host_init(dev, rc);
+	ret = __cdns_pcie_host_init(dev, rc);
 	if (ret)
 		goto err_init;
 

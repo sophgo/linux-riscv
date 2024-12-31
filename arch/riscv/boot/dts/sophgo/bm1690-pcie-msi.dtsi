@@ -3,13 +3,11 @@
 	soc {
 		msi: msi-controller@6E10000000 {
 			compatible = "sophgo,sg2044-msi";
-			#interrupt-cells = <0x2>; // only applies to child node
 			reg = <0x0  0xFEE00060 0x0 0x8>,
 			      <0x6E 0x10000000 0x0 0x256>;
 			reg-names = "set", "clr";
 			reg-bitwidth = <32>;
-			interrupt-controller;
-			for-msi;
+			msi-controller;
 
 			interrupt-parent = <&intc>;
 			interrupts = <384 IRQ_TYPE_LEVEL_HIGH>, <385 IRQ_TYPE_LEVEL_HIGH>,

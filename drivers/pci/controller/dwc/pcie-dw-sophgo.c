@@ -867,6 +867,7 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 {
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
+	struct device *dev = pcie->dev;
 	u32 val = 0;
 	u32 ctrl = 0;
 	u32 num_ctrls = 0;
@@ -878,23 +879,26 @@ static int sophgo_dw_pcie_setup_rc(struct dw_pcie_rp *pp)
 	 */
 	sophgo_dw_pcie_dbi_ro_wr_en(pcie);
 
-	//sophgo_dw_pcie_setup(pcie);
+	if (pci_msi_enabled()) {
+		pp->has_msi_ctrl = !(of_property_read_bool(dev->of_node, "msi-parent"));
+		if (pp->has_msi_ctrl) {
+			num_ctrls = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
 
-	if (pp->has_msi_ctrl) {
-		num_ctrls = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
-
-		/* Initialize IRQ Status array */
-		for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
-			sophgo_dw_pcie_writel_dbi(pcie, PCIE_MSI_INTR0_MASK +
+			/* Initialize IRQ Status array */
+			for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
+				sophgo_dw_pcie_writel_dbi(pcie, PCIE_MSI_INTR0_MASK +
 					    (ctrl * MSI_REG_CTRL_BLOCK_SIZE),
 					    pp->irq_mask[ctrl]);
-			sophgo_dw_pcie_writel_dbi(pcie, PCIE_MSI_INTR0_ENABLE +
+				sophgo_dw_pcie_writel_dbi(pcie, PCIE_MSI_INTR0_ENABLE +
 					    (ctrl * MSI_REG_CTRL_BLOCK_SIZE),
 					    ~0);
+			}
 		}
 	}
 
-	sophgo_dw_pcie_msi_setup(pp);
+	ret = sophgo_dw_pcie_msi_setup(pp);
+	if (ret)
+		return ret;
 
 	/* Setup RC BARs */
 	//sophgo_dw_pcie_writel_dbi(pcie, PCI_BASE_ADDRESS_0, 0x00000004);

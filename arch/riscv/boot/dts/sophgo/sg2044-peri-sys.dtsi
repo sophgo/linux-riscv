@@ -347,15 +347,22 @@
 			status = "disable";
 		};
 
-		efuse: efuse@7040000000 {
+		efuse0: efuse@7040000000 {
 			compatible = "sg,efuse";
 			reg = <0x70 0x40000000 0x0 0x1000>;
 			clock-names = "base_clk", "apb_clk";
 			clocks = <&div_clk GATE_CLK_EFUSE>,
 				 <&div_clk GATE_CLK_APB_EFUSE>;
-			num_address_bits = <8>;
-			num_cells = <128>;
-			cell_width = <4>;
+			num_cells = <256>;
+		};
+
+		efuse1: efuse@7040001000 {
+			compatible = "sg,efuse";
+			reg = <0x70 0x40001000 0x0 0x1000>;
+			clock-names = "base_clk", "apb_clk";
+			clocks = <&div_clk GATE_CLK_EFUSE>,
+				 <&div_clk GATE_CLK_APB_EFUSE>;
+			num_cells = <256>;
 		};
 
 		base: base {

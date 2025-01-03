@@ -14,7 +14,7 @@
 #include "bm1690-tpu-sys.dtsi"
 #include "bm1690-video-sys-soc.dtsi"
 #include "sg2044-pcie-intc.dtsi"
-//#include "sg2044-pcie-5rc-rp.dtsi"
+//#include "sg2044-pcie-5rc.dtsi"
 
 / {
 	/delete-node/ bm-emmc@703000A000;
@@ -30,7 +30,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS1,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc0b000000,32M maxcpus=64 no5lvl";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xc0b000000,32M maxcpus=64 no5lvl";
 		stdout-path = "serial0";
 	};
 };
@@ -45,3 +45,8 @@
 		reg = <0x17>;
 	};
 };
+
+/delete-node/ &uart0;
+/delete-node/ &uart2;
+/delete-node/ &uart3;
+

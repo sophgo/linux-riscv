@@ -17,8 +17,12 @@
 / {
 	/delete-node/ memory@80200000;
 	/delete-node/ bm-emmc@703000A000;
-    /delete-node/ bm-sd@703000B000;
+	/delete-node/ bm-sd@703000B000;
 };
+
+/delete-node/ &uart1;
+/delete-node/ &uart2;
+/delete-node/ &uart3;
 
 / {
 	memory@80200000 {
@@ -78,7 +82,7 @@
 				compatible = "sophgo,sophgo-card";
 				reg =  <0x1e  0xf8000000 0x00000000 0x01400000>,
 					<0x70 0x101ff000 0x00000000 0x00001000>,
-                    <0x70 0x50000000 0x00000000 0x00001000>;
+					<0x70 0x50000000 0x00000000 0x00001000>;
 				reg-names = "share-memory", "config_file", "top-reg";
 
 				host-channel-num = <1>;

@@ -23,7 +23,7 @@
 / {
 	memory@80200000 {
 		device_type = "memory";
-		reg = <0x00000000 0x80200000 0x00000000 0x1fe00000>;
+		reg = <0x0000001e 0xa0200000 0x00000000 0x4fe00000>;
 	};
 
 	soc {
@@ -76,7 +76,7 @@
 
 			sophgo_card@0 {
 				compatible = "sophgo,sophgo-card";
-				reg = <0x1  0xa0000000 0x00000000 0x01400000>,
+				reg = <0x1e  0xf8000000 0x00000000 0x01400000>,
 				      <0x70 0x101ff000 0x00000000 0x00001000>,
 				      <0x70 0x50000000 0x00000000 0x00001000>;
 				reg-names = "share-memory", "config_file", "top-reg";
@@ -122,9 +122,9 @@
 
 		veth:  veth {
 			compatible = "sg2260, sgveth";
-			reg = <0x00000001 0xa1900000 0x00000000 0x1000>,
-			      <0x00000001 0xa1910000 0x00000000 0x70000>,
-			      <0x00000001 0xa1980000 0x00000000 0x70000>,
+			reg = <0x0000001e 0xfa100000 0x00000000 0x1000>,
+			      <0x0000001e 0xfa110000 0x00000000 0x70000>,
+			      <0x0000001e 0xfa180000 0x00000000 0x70000>,
 			      <0x0000006d 0x50000000 0x00000000 0x1000>;
 			reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
 			interrupt-parent = <&intc>;
@@ -139,7 +139,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,128M maxcpus=4 no5lvl";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x1eab000000,64M maxcpus=4 no5lvl";
 		stdout-path = "serial0";
 	};
 };

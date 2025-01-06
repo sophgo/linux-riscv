@@ -198,8 +198,10 @@ static int sophgo_dw_pcie_msi_setup(struct dw_pcie_rp *pp)
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
 	struct fwnode_handle *fwnode = of_node_to_fwnode(pcie->dev->of_node);
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled)
 		fwnode = acpi_fwnode_handle(to_acpi_device(pcie->dev));
+#endif
 
 	pp->msi_domain = pci_msi_create_irq_domain(fwnode,
 						   &sophgo_dw_pcie_msi_domain_info,
@@ -794,13 +796,14 @@ static int sophgo_dw_pcie_setup_inbound_atu(struct sophgo_dw_pcie *pcie,
 static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 {
 	struct sophgo_dw_pcie *pcie = to_sophgo_dw_pcie_from_pp(pp);
-	struct list_head resource_list, *list;
-	struct list_head resource_dma_list, *list_dma;
+	struct list_head *list, *list_dma;
 	int i, ret = 0;
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	if (!acpi_disabled) {
 		struct acpi_device *adev = to_acpi_device(pcie->dev);
 		unsigned long flags;
+		struct list_head resource_list;
 
 		INIT_LIST_HEAD(&resource_list);
 		flags = IORESOURCE_IO | IORESOURCE_MEM | IORESOURCE_BUS;
@@ -813,9 +816,12 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 			return -EINVAL;
 		}
 		list = &resource_list;
+
 	} else
 		list = &pp->bridge->windows;
-
+#else
+	list = &pp->bridge->windows;
+#endif
 	/* Note the very first outbound ATU is used for CFG IOs */
 	if (!pcie->num_ob_windows) {
 		dev_err(pcie->dev, "No outbound iATU found\n");
@@ -837,10 +843,12 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 	if (ret)
 		return ret;
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 	/* Setup inbound ATU */
 	if (!acpi_disabled) {
 		struct acpi_device *adev = to_acpi_device(pcie->dev);
 		unsigned long flags;
+		struct list_head resource_dma_list;
 
 		INIT_LIST_HEAD(&resource_dma_list);
 		flags = IORESOURCE_DMA;
@@ -856,6 +864,9 @@ static int sophgo_dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 		list_dma = &resource_dma_list;
 	} else
 		list_dma = &pp->bridge->dma_ranges;
+#else
+	list_dma = &pp->bridge->dma_ranges;
+#endif
 
 	ret = sophgo_dw_pcie_setup_inbound_atu(pcie, list_dma);
 	if (ret)

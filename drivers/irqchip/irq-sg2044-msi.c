@@ -30,23 +30,23 @@ struct irq_domain *sophgo_get_msi_irq_domain(void);
  */
 struct sg2044_msi_data {
 	struct platform_device *pdev;
-	int irq_num;
-	struct irq_domain *domain;
-	struct irq_chip *chip;
-	int reg_bitwidth;
+	struct irq_domain       *domain;
+	struct irq_chip         *chip;
+	u32                     num_irqs; /* The number of vectors for MSIs */
+	unsigned long	        *msi_map;
+	int                     reg_bitwidth;
 
-	DECLARE_BITMAP(irq_bitmap, MAX_IRQ_NUMBER);
-	spinlock_t lock;
+	spinlock_t              lock;
 
-	void __iomem *reg_set;
-	void __iomem *reg_clr;
+	void __iomem            *reg_set;
+	void __iomem            *reg_clr;
 
-	phys_addr_t reg_set_phys;
+	phys_addr_t             reg_set_phys;
 
 	irq_hw_number_t		plic_hwirqs[MAX_IRQ_NUMBER];
 	int			plic_irqs[MAX_IRQ_NUMBER];
+	int			msi_to_plic[MAX_IRQ_NUMBER]; /* mapping from msi hwirq to plic hwirq */
 	struct irq_data		*plic_irq_datas[MAX_IRQ_NUMBER];
-	int			msi_to_plic[MAX_IRQ_NUMBER]; // mapping from msi hwirq to plic hwirq
 };
 
 // workaround for using in other modules
@@ -69,7 +69,7 @@ static int sg2044_msi_domain_translate(struct irq_domain *d,
 
 	if (fwspec->param_count != 2)
 		return -EINVAL;
-	if (fwspec->param[1] >= data->irq_num)
+	if (fwspec->param[1] >= data->num_irqs)
 		return -EINVAL;
 
 	*hwirq = fwspec->param[0];
@@ -87,9 +87,9 @@ static int sg2044_msi_domain_alloc(struct irq_domain *domain,
 	int i, ret = -1;
 	struct sg2044_msi_data *data = domain->host_data;
 
-	// dynamically alloc hwirq
+	/* dynamically alloc hwirq */
 	spin_lock_irqsave(&data->lock, flags);
-	ret = bitmap_find_free_region(data->irq_bitmap, data->irq_num,
+	ret = bitmap_find_free_region(data->msi_map, data->num_irqs,
 				      order_base_2(nr_irqs));
 	spin_unlock_irqrestore(&data->lock, flags);
 
@@ -122,7 +122,7 @@ static void sg2044_msi_domain_free(struct irq_domain *domain,
 	pr_debug("%s hwirq %ld, irq %d, total %d\n", __func__, d->hwirq, virq, nr_irqs);
 
 	spin_lock_irqsave(&data->lock, flags);
-	bitmap_release_region(data->irq_bitmap, d->hwirq,
+	bitmap_release_region(data->msi_map, d->hwirq,
 				order_base_2(nr_irqs));
 	spin_unlock_irqrestore(&data->lock, flags);
 }
@@ -222,11 +222,11 @@ static void sg2044_msi_irq_handler(struct irq_desc *plic_desc)
 
 	chained_irq_enter(plic_chip, plic_desc);
 
-	for (i = 0; i < data->irq_num; i++) {
+	for (i = 0; i < data->num_irqs; i++) {
 		if (data->msi_to_plic[i] == plic_hwirq)
 			break;
 	}
-	if (i < data->irq_num) {
+	if (i < data->num_irqs) {
 		sg2044_msi_hwirq = i;
 		sg2044_msi_irq = irq_find_mapping(data->domain, sg2044_msi_hwirq);
 		pr_debug("%s plic hwirq %ld, msi hwirq %ld, msi irq %d\n", __func__,
@@ -236,7 +236,9 @@ static void sg2044_msi_irq_handler(struct irq_desc *plic_desc)
 		pr_debug("%s handled msi irq %d, %d\n", __func__, sg2044_msi_irq, ret);
 	} else {
 		pr_debug("%s not found msi hwirq for plic hwirq %ld\n", __func__, plic_hwirq);
-		// workaround, ack unexpected(unregistered) interrupt
+		/*
+		 * workaround, ack unexpected(unregistered) interrupt
+		 */
 		writel(1 << (plic_hwirq - data->plic_hwirqs[0]), data->reg_clr);
 	}
 
@@ -250,7 +252,7 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
 	int ret = 0, i;
 
-	// alloc private data
+	/* alloc private data */
 	data = kzalloc(sizeof(struct sg2044_msi_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
@@ -260,6 +262,9 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 
 	if (device_property_read_u32(&pdev->dev, "reg-bitwidth", &data->reg_bitwidth))
 		data->reg_bitwidth = 32;
+
+	if (device_property_read_u32(&pdev->dev, "sophgo,msi-num-vecs", &data->num_irqs))
+		data->num_irqs = MAX_IRQ_NUMBER;
 
 	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node)
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "set");
@@ -284,30 +289,28 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	// get irq numbers
-	for (i = 0; i < ARRAY_SIZE(data->plic_hwirqs); i++) {
-		char name[8];
+	for (i = 0; i < data->num_irqs; i++) {
 		int irq;
 
-		if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node) {
-			snprintf(name, ARRAY_SIZE(name), "msi%d", i);
-			irq = platform_get_irq_byname(pdev, name);
-		} else if (ACPI_COMPANION(&pdev->dev))
-			irq = platform_get_irq(pdev, i);
+		irq = platform_get_irq(pdev, i);
 		if (irq < 0)
 			break;
 
 		data->plic_irqs[i] = irq;
 		data->plic_irq_datas[i] = irq_get_irq_data(irq);
 		data->plic_hwirqs[i] = data->plic_irq_datas[i]->hwirq;
-		dev_dbg(&pdev->dev, "%s: plic hwirq %ld, plic irq %d\n", name,
+		dev_dbg(&pdev->dev, "msi%d: plic hwirq %ld, plic irq %d\n", i,
 				data->plic_hwirqs[i], data->plic_irqs[i]);
 	}
-	data->irq_num = i;
-	dev_dbg(&pdev->dev, "got %d plic irqs\n", data->irq_num);
 
-	// create IRQ domain
-	data->domain = irq_domain_create_linear(fwnode, data->irq_num,
+	dev_info(&pdev->dev, "map %d PLIC interrupts\n", data->num_irqs);
+
+	data->msi_map = bitmap_zalloc(data->num_irqs, GFP_KERNEL);
+	if (!data->msi_map)
+		return -ENOMEM;
+
+	/* create IRQ domain */
+	data->domain = irq_domain_create_linear(fwnode, data->num_irqs,
 						&sg2044_msi_domain_ops, data);
 	if (!data->domain) {
 		dev_err(&pdev->dev, "create linear irq doamin failed\n");
@@ -320,8 +323,7 @@ static int sg2044_msi_probe(struct platform_device *pdev)
 	 * workaround to deal with IRQ conflict with TPU driver,
 	 * skip the firt IRQ and mark it as used.
 	 */
-	//bitmap_allocate_region(data->irq_bitmap, 0, order_base_2(1));
-	for (i = 0; i < data->irq_num; i++)
+	for (i = 0; i < data->num_irqs; i++)
 		irq_set_chained_handler_and_data(data->plic_irqs[i],
 							sg2044_msi_irq_handler, data);
 

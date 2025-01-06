@@ -8,7 +8,7 @@
 			reg-names = "set", "clr";
 			reg-bitwidth = <32>;
 			msi-controller;
-
+                        sophgo,msi-num-vecs = <32>;
 			interrupt-parent = <&intc>;
 			interrupts = <384 IRQ_TYPE_LEVEL_HIGH>, <385 IRQ_TYPE_LEVEL_HIGH>,
 				     <386 IRQ_TYPE_LEVEL_HIGH>, <387 IRQ_TYPE_LEVEL_HIGH>,
@@ -26,14 +26,6 @@
 				     <410 IRQ_TYPE_LEVEL_HIGH>, <411 IRQ_TYPE_LEVEL_HIGH>,
 				     <412 IRQ_TYPE_LEVEL_HIGH>, <413 IRQ_TYPE_LEVEL_HIGH>,
 				     <414 IRQ_TYPE_LEVEL_HIGH>, <415 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "msi0",  "msi1",  "msi2",  "msi3",
-					  "msi4",  "msi5",  "msi6",  "msi7",
-					  "msi8",  "msi9",  "msi10", "msi11",
-					  "msi12", "msi13", "msi14", "msi15",
-					  "msi16", "msi17", "msi18", "msi19",
-					  "msi20", "msi21", "msi22", "msi23",
-					  "msi24", "msi25", "msi26", "msi27",
-					  "msi28", "msi29", "msi30", "msi31";
 		};
 	};
 };

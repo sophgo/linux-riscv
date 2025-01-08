@@ -9,8 +9,15 @@
 #include <linux/mod_devicetable.h>
 #include <linux/spinlock.h>
 #include <linux/of.h>
+#include <linux/uaccess.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
 #include "sophgo_veth.h"
+
+static struct proc_dir_entry *sgdrv_proc_dir;
+static const char debug_node_name[] = "sgdrv";
+static struct proc_dir_entry *sgdrv_vethip;
 
 // #define VETH_IRQ
 // #define USE_CDMA
@@ -539,6 +546,36 @@ static int sg_veth_get_resource(struct platform_device *pdev, struct veth_dev *v
 	return 0;
 }
 
+#define PDE_DATA(inode) ((inode)->i_private)
+static ssize_t proc_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+{
+	char value_str[16];
+	struct veth_dev *vdev = PDE_DATA(file_inode(file));
+    size_t len;
+	u32 ip = sg_read32(vdev->shm_mem, VETH_IPADDRESS_REG);
+
+	len = snprintf(value_str, sizeof(value_str), "0x%X\n", ip);
+
+    if (*ppos >= len)
+        return 0;
+
+    if (count > len - *ppos) {
+        count = len - *ppos;
+    }
+
+    if (copy_to_user(buf, value_str + *ppos, count)) {
+        return -EFAULT;
+    }
+
+    *ppos += count;
+
+    return count;
+}
+
+static const struct proc_ops sgdrv_vethip_file_ops = {
+	.proc_read = proc_read,
+};
+
 static int sg_veth_probe(struct platform_device *pdev)
 {
 	struct device *dev;
@@ -586,6 +623,16 @@ static int sg_veth_probe(struct platform_device *pdev)
 	if (err) {
 		pr_err("register net device failed!\n");
 		goto err_free_netdev;
+	}
+
+	sgdrv_proc_dir = proc_mkdir(debug_node_name, NULL);
+	if (!sgdrv_proc_dir)
+		return -ENOMEM;
+
+	sgdrv_vethip = proc_create_data("vethip", 0666, sgdrv_proc_dir, &sgdrv_vethip_file_ops, (void *)vdev);
+	if (!sgdrv_vethip) {
+		proc_remove(sgdrv_vethip);
+		return -ENOMEM;
 	}
 
 	pr_info("veth probe over!\n");

@@ -15,6 +15,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/pci.h>
+#include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/smp.h>
 #include <linux/string_choices.h>
@@ -174,3 +175,177 @@ static int __init thead_aclint_sswi_early_probe(struct device_node *node,
 	return thead_aclint_sswi_probe(&node->fwnode);
 }
 IRQCHIP_DECLARE(thead_aclint_sswi, "thead,c900-aclint-sswi", thead_aclint_sswi_early_probe);
+
+#ifdef CONFIG_ACPI
+
+static struct fwnode_handle *sswi_acpi_fwnode;
+
+static int __init sswi_get_parent_hartid(struct fwnode_handle *fwnode,
+					  u32 index, unsigned long *hartid)
+{
+	struct of_phandle_args parent;
+	int rc;
+
+	if (!is_of_node(fwnode)) {
+		if (hartid)
+			*hartid = acpi_rintc_index_to_hartid(index);
+
+		if (!hartid || (*hartid == INVALID_HARTID))
+			return -EINVAL;
+
+		return 0;
+	}
+
+	rc = of_irq_parse_one(to_of_node(fwnode), index, &parent);
+	if (rc)
+		return rc;
+
+	if (parent.args[0] != RV_IRQ_SOFT)
+		return -ENOTSUPP;
+
+	return riscv_of_parent_hartid(parent.np, hartid);
+}
+
+static int __init sswi_get_mmio_resource(struct fwnode_handle *fwnode,
+					  u32 index, struct resource *res)
+{
+	if (!is_of_node(fwnode))
+		return acpi_rintc_get_imsic_mmio_info(index, res);
+
+	return of_address_to_resource(to_of_node(fwnode), index, res);
+}
+
+static int __init sswi_early_probe(struct fwnode_handle *fwnode)
+{
+	struct irq_domain *domain;
+	int virq;
+
+	/* Find parent domain and register chained handler */
+	domain = irq_find_matching_fwnode(riscv_get_intc_hwnode(), DOMAIN_BUS_ANY);
+	if (!domain) {
+		pr_err("%pfwP: Failed to find INTC domain\n", fwnode);
+		return -ENOENT;
+	}
+
+	sswi_ipi_virq = irq_create_mapping(domain, RV_IRQ_SOFT);
+	if (!sswi_ipi_virq) {
+		pr_err("%pfwP: Failed to create ACLINT SSWI IRQ mapping\n", fwnode);
+		return -ENOENT;
+	}
+
+	/* Create IPI multiplexing */
+	virq = ipi_mux_create(BITS_PER_BYTE, thead_aclint_sswi_ipi_send);
+	if (virq <= 0)
+		return virq < 0 ? virq : -ENOMEM;
+
+	/* Set vIRQ range */
+	riscv_ipi_set_virq_range(virq, BITS_PER_BYTE);
+
+	/* Announce that SSWI is providing IPIs */
+	pr_info("%pfwP: providing IPIs\n", fwnode);
+
+	/* Setup chained handler to the parent domain interrupt */
+	irq_set_chained_handler(sswi_ipi_virq, thead_aclint_sswi_ipi_handle);
+
+	cpuhp_setup_state(CPUHP_AP_IRQ_THEAD_ACLINT_SSWI_STARTING,
+			  "irqchip/thead-aclint-sswi:starting",
+			  thead_aclint_sswi_starting_cpu,
+			  thead_aclint_sswi_dying_cpu);
+
+	return 0;
+}
+
+static int __init thead_aclint_sswi_early_acpi_init(union acpi_subtable_headers *header,
+					const unsigned long end)
+{
+	unsigned long hartid;
+	struct resource *res;
+	int rc, cpu;
+	u32 i, nr_parent_irqs;
+	void __iomem *reg;
+
+	nr_parent_irqs = 0;
+
+	/* If it is T-HEAD CPU, check whether SSWI is enabled */
+	if (riscv_cached_mvendorid(0) == THEAD_VENDOR_ID &&
+	    !(csr_read(THEAD_C9XX_CSR_SXSTATUS) & THEAD_C9XX_SXSTATUS_CLINTEE))
+		return -ENOTSUPP;
+
+	sswi_acpi_fwnode = irq_domain_alloc_named_fwnode("ACLINT-SSWI");
+	if (!sswi_acpi_fwnode) {
+		pr_err("unable to allocate SSWI FW node\n");
+		return -ENOMEM;
+	}
+
+	/* Find number of parent interrupts */
+	while (!sswi_get_parent_hartid(sswi_acpi_fwnode, nr_parent_irqs, &hartid))
+		(nr_parent_irqs)++;
+	if (!nr_parent_irqs) {
+		pr_err("%pfwP: no parent irqs available\n", sswi_acpi_fwnode);
+		return -EINVAL;
+	}
+
+	/* Allocate MMIO resource array */
+	res = kmalloc(sizeof(struct resource), GFP_KERNEL);
+	if (!res) {
+		pr_err("unable to allocate MMIO resource\n");
+		return -ENOMEM;
+	}
+
+	/* Find MMIO register base address */
+	rc = sswi_get_mmio_resource(sswi_acpi_fwnode, 0, res);
+	if (rc) {
+		pr_warn("%pfwP: hart ID for parent irq0 not found\n", sswi_acpi_fwnode);
+		return -EINVAL;
+	}
+
+	reg = ioremap(res->start, resource_size(res));
+	if (!reg) {
+		rc = -EBUSY;
+		pr_err("%pfwP: ioremap failed\n", sswi_acpi_fwnode);
+		goto ioremap_fail;
+	}
+
+	/* Configure handlers for target CPUs */
+	for (i = 0; i < nr_parent_irqs; i++) {
+		rc = sswi_get_parent_hartid(sswi_acpi_fwnode, i, &hartid);
+		if (rc) {
+			pr_warn("%pfwP: hart ID for parent irq%d not found\n", sswi_acpi_fwnode, i);
+			continue;
+		}
+
+		cpu = riscv_hartid_to_cpuid(hartid);
+		if (cpu < 0) {
+			pr_warn("%pfwP: invalid cpuid for parent irq%d\n", sswi_acpi_fwnode, i);
+			continue;
+		}
+
+		per_cpu(sswi_cpu_regs, cpu) = reg + i * THEAD_ACLINT_xSWI_REGISTER_SIZE;
+	}
+
+	/* If mulitple SSWI devices are present, do not register irq again */
+	if (sswi_ipi_virq)
+		return 0;
+
+	/* Do early setup of IPIs */
+	rc = sswi_early_probe(sswi_acpi_fwnode);
+	if (rc) {
+		irq_domain_free_fwnode(sswi_acpi_fwnode);
+		sswi_acpi_fwnode = NULL;
+		goto probe_fail;
+	}
+
+	return 0;
+
+probe_fail:
+	iounmap(reg);
+	irq_domain_free_fwnode(sswi_acpi_fwnode);
+	sswi_acpi_fwnode = NULL;
+ioremap_fail:
+	kfree(res);
+	return rc;
+}
+
+IRQCHIP_ACPI_DECLARE(thead_aclint_sswi, ACPI_MADT_TYPE_IMSIC, NULL,
+		1, thead_aclint_sswi_early_acpi_init);
+#endif

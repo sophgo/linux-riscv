@@ -30,6 +30,14 @@
 			debounce-interval = <100>;
 		};
 	};
+
+	ethernet@7040026000 {
+		status = "disabled";
+	};
+
+	ethernet@f040026000 {
+		status = "disabled";
+	};
 };
 
 &port0a {

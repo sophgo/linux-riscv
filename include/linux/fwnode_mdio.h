@@ -32,4 +32,6 @@ static inline int fwnode_mdiobus_register_phy(struct mii_bus *bus,
 }
 #endif
 
+bool fwnode_phy_is_fixed_link(struct fwnode_handle *fwnode);
+
 #endif /* __LINUX_FWNODE_MDIO_H */

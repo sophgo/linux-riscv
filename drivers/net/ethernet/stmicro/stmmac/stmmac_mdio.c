@@ -19,6 +19,8 @@
 #include <linux/phy.h>
 #include <linux/property.h>
 #include <linux/slab.h>
+#include <linux/acpi.h>
+#include <linux/acpi_mdio.h>
 
 #include "dwxgmac2.h"
 #include "stmmac.h"
@@ -555,7 +557,8 @@ int stmmac_mdio_register(struct net_device *ndev)
 	struct mii_bus *new_bus;
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	struct stmmac_mdio_bus_data *mdio_bus_data = priv->plat->mdio_bus_data;
-	struct device_node *mdio_node = priv->plat->mdio_node;
+	// struct device_node *mdio_node = priv->plat->mdio_node;
+	struct fwnode_handle *mdio_node = priv->plat->mdio_node;
 	struct device *dev = ndev->dev.parent;
 	struct fwnode_handle *fixed_node;
 	struct fwnode_handle *fwnode;
@@ -611,7 +614,10 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->phy_mask = mdio_bus_data->phy_mask | mdio_bus_data->pcs_mask;
 	new_bus->parent = priv->device;
 
-	err = of_mdiobus_register(new_bus, mdio_node);
+	if (is_of_node(mdio_node))
+		err = of_mdiobus_register(new_bus, to_of_node(mdio_node));
+	else
+		err = acpi_mdiobus_register(new_bus, mdio_node);
 	if (err == -ENODEV) {
 		err = 0;
 		dev_info(dev, "MDIO bus is disabled\n");

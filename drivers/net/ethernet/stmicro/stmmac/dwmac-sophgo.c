@@ -21,9 +21,11 @@
 #include <linux/of_net.h>
 #include <linux/of_gpio.h>
 #include <linux/io.h>
+#include <linux/acpi.h>
+#include <linux/gpio/consumer.h>
 
 #include "stmmac_platform.h"
-
+#include "../../../../gpio/gpiolib-acpi.h"
 struct sg_mac {
 	struct device *dev;
 	struct reset_control *rst;
@@ -39,19 +41,33 @@ static u64 sg_dma_mask = DMA_BIT_MASK(40);
 
 static int sg_eth_reset_phy(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
+	struct gpio_desc *desc;
 	int phy_reset_gpio;
 
-	if (!np)
-		return 0;
+	if (is_of_node(fwnode)) {
+		phy_reset_gpio = of_get_named_gpio(pdev->dev.of_node, "phy-reset-gpios", 0);
+	} else if (is_acpi_node(fwnode)) {
+		desc = gpiod_get_index(&pdev->dev, "phy-reset", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(desc)) {
+			dev_warn(&pdev->dev, "Cannot find phy reset gpio desc!\n");
+			return PTR_ERR(desc);
+		}
+		phy_reset_gpio = desc_to_gpio(desc);
+	}
 
-	phy_reset_gpio = of_get_named_gpio(np, "phy-reset-gpios", 0);
+	if (phy_reset_gpio < 0) {
+		dev_warn(&pdev->dev, "Cannot find phy reset gpio!\n");
+		return 0;
+	}
 
 	if (phy_reset_gpio < 0)
 		return 0;
 
-	if (gpio_request(phy_reset_gpio, "eth-phy-reset"))
-		return 0;
+	if (is_of_node(fwnode)) {
+		if (gpio_request(phy_reset_gpio, "eth-phy-reset"))
+			return 0;
+	}
 
 	/* RESET_PU */
 	gpio_direction_output(phy_reset_gpio, 0);
@@ -92,10 +108,22 @@ static void sg_mac_fix_speed(void *priv, unsigned int speed, unsigned int mode)
 	}
 
 	if (needs_calibration) {
-		err = clk_set_rate(bsp_priv->clk_tx, rate);
-		if (err < 0)
-			dev_err(bsp_priv->dev, "failed to set TX rate: %d\n"
-					, err);
+		if (!bsp_priv->clk_tx){
+			acpi_handle handle;
+			acpi_status status;
+			union acpi_object target_clk;
+			target_clk.type = ACPI_TYPE_INTEGER;
+			target_clk.integer.value = rate;
+			handle = ACPI_HANDLE(bsp_priv->dev);
+			struct acpi_object_list args = { 1, &target_clk };
+			status = acpi_evaluate_object(handle, "SCLK", &args, NULL);
+			if (ACPI_FAILURE(status))
+				dev_err(bsp_priv->dev, "ACPI method _CLK failed to set TX rate: %d\n",err);
+		} else {
+			err = clk_set_rate(bsp_priv->clk_tx, rate);
+			if (err < 0)
+				dev_err(bsp_priv->dev, "failed to set TX rate: %d\n",err);
+		}
 	}
 }
 
@@ -168,38 +196,37 @@ static int sophgo_get_platform_resources(struct platform_device *pdev,
 
 static void sg_dwmac_probe_config_dt(struct platform_device *pdev, struct plat_stmmacenet_data *plat)
 {
-	struct device_node *np = pdev->dev.of_node;
 	void __iomem *top_addr;
 	unsigned int val;
 	bool tso_en;
 
-	of_property_read_u32(np, "snps,multicast-filter-bins", &plat->multicast_filter_bins);
-	of_property_read_u32(np, "snps,perfect-filter-entries", &plat->unicast_filter_entries);
+	device_property_read_u32(&pdev->dev, "snps,multicast-filter-bins", &plat->multicast_filter_bins);
+	device_property_read_u32(&pdev->dev, "snps,perfect-filter-entries", &plat->unicast_filter_entries);
 	plat->unicast_filter_entries = sg_validate_ucast_entries(&pdev->dev,
 								 plat->unicast_filter_entries);
 	plat->multicast_filter_bins = sg_validate_mcast_bins(&pdev->dev,
 							     plat->multicast_filter_bins);
 	plat->flags |= (STMMAC_FLAG_SPH_DISABLE);
 
-	if (of_find_property(np, "sophgo,gmac-no-rxdelay", NULL)) {
+	if (device_property_read_bool(&pdev->dev, "sophgo,gmac-no-rxdelay")) {
 		top_addr = devm_platform_ioremap_resource(pdev, 1);
 		val = readl(top_addr + 0x8);
 		writel(val | (1 << 16), top_addr + 0x8);
 		pr_info("sophgo gmac disable rx delay\n");
 	}
 
-	if (of_find_property(np, "sophgo,gmac", NULL)) {
+	if (device_property_read_bool(&pdev->dev, "sophgo,gmac")) {
 		plat->has_gmac4 = 1;
 		plat->has_gmac = 0;
 		plat->pmt = 1;
-		tso_en = of_property_read_bool(np, "snps,tso");
+		tso_en = device_property_read_bool(&pdev->dev, "snps,tso");
 		plat->flags |= (tso_en ? STMMAC_FLAG_TSO_EN : 0);
-	} else if (of_find_property(np, "sophgo,xlgmac", NULL)) {
+	} else if (device_property_read_bool(&pdev->dev, "sophgo,xlgmac")) {
 		plat->has_gmac4 = 0;
 		plat->has_gmac = 0;
 		plat->has_xgmac = 1;
 		plat->pmt = 1;
-		tso_en = of_property_read_bool(np, "snps,tso");
+		tso_en = device_property_read_bool(&pdev->dev, "snps,tso");
 		plat->flags |= (tso_en ? STMMAC_FLAG_TSO_EN : 0);
 	}
 }
@@ -209,7 +236,7 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 	struct plat_stmmacenet_data *plat_dat;
 	struct stmmac_resources stmmac_res;
 	struct sg_mac *bsp_priv = NULL;
-	struct device_node *np = pdev->dev.of_node;
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
 	bool multi_msi_en;
 	int ret;
 
@@ -226,7 +253,7 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 	if (IS_ERR(plat_dat))
 		return PTR_ERR(plat_dat);
 
-	multi_msi_en = of_property_read_bool(np, "snps,multi_msi_en");
+	multi_msi_en = device_property_read_bool(&pdev->dev, "snps,multi_msi_en");
 	if (multi_msi_en) {
 		plat_dat->flags |= STMMAC_FLAG_MULTI_MSI_EN;
 		ret = sophgo_get_platform_resources(pdev, &stmmac_res);
@@ -245,39 +272,43 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 
 	bsp_priv->dev = &pdev->dev;
 
-	/* clock setup */
-	if (of_find_property(np, "sophgo,gmac", NULL)) {
-		bsp_priv->clk_tx = devm_clk_get(&pdev->dev,
-					"clk_tx");
-		if (IS_ERR(bsp_priv->clk_tx))
-			dev_warn(&pdev->dev, "Cannot get mac tx clock!\n");
-		else
-			plat_dat->fix_mac_speed = sg_mac_fix_speed;
+	if (is_of_node(fwnode)) {
+		struct device_node *np = pdev->dev.of_node;
+		/* clock setup */
+		if (of_find_property(np, "sophgo,gmac", NULL)) {
+			bsp_priv->clk_tx = devm_clk_get(&pdev->dev,
+						"clk_tx");
+			if (IS_ERR(bsp_priv->clk_tx))
+				dev_warn(&pdev->dev, "Cannot get mac tx clock!\n");
+			else
+				plat_dat->fix_mac_speed = sg_mac_fix_speed;
 
-		bsp_priv->gate_clk_tx = devm_clk_get(&pdev->dev, "gate_clk_tx");
-		if (IS_ERR(bsp_priv->gate_clk_tx))
-			dev_warn(&pdev->dev, "Cannot get mac tx gating clock!\n");
-		else
-			clk_prepare_enable(bsp_priv->gate_clk_tx);
+			bsp_priv->gate_clk_tx = devm_clk_get(&pdev->dev, "gate_clk_tx");
+			if (IS_ERR(bsp_priv->gate_clk_tx))
+				dev_warn(&pdev->dev, "Cannot get mac tx gating clock!\n");
+			else
+				clk_prepare_enable(bsp_priv->gate_clk_tx);
 
-		bsp_priv->gate_clk_ref = devm_clk_get(&pdev->dev, "gate_clk_ref");
-		if (IS_ERR(bsp_priv->gate_clk_ref))
-			dev_warn(&pdev->dev, "Cannot get mac ref gating clock!\n");
-		else
-			clk_prepare_enable(bsp_priv->gate_clk_ref);
-	} else if (of_find_property(np, "sophgo,xlgmac", NULL)) {
-		bsp_priv->gate_clk_cxp_mac = devm_clk_get(&pdev->dev, "clk_gate_cxp_mac");
-		if (IS_ERR(bsp_priv->gate_clk_cxp_mac))
-			dev_warn(&pdev->dev, "Cannot get cxp mac gating clock!\n");
-		else
-			clk_prepare_enable(bsp_priv->gate_clk_cxp_mac);
+			bsp_priv->gate_clk_ref = devm_clk_get(&pdev->dev, "gate_clk_ref");
+			if (IS_ERR(bsp_priv->gate_clk_ref))
+				dev_warn(&pdev->dev, "Cannot get mac ref gating clock!\n");
+			else
+				clk_prepare_enable(bsp_priv->gate_clk_ref);
+		} else if (of_find_property(np, "sophgo,xlgmac", NULL)) {
+			bsp_priv->gate_clk_cxp_mac = devm_clk_get(&pdev->dev, "clk_gate_cxp_mac");
+			if (IS_ERR(bsp_priv->gate_clk_cxp_mac))
+				dev_warn(&pdev->dev, "Cannot get cxp mac gating clock!\n");
+			else
+				clk_prepare_enable(bsp_priv->gate_clk_cxp_mac);
 
-		bsp_priv->gate_clk_cxp_cfg = devm_clk_get(&pdev->dev, "clk_gate_cxp_cfg");
-		if (IS_ERR(bsp_priv->gate_clk_cxp_cfg))
-			dev_warn(&pdev->dev, "Cannot get cxp cfg gating clock!\n");
-		else
-			clk_prepare_enable(bsp_priv->gate_clk_cxp_cfg);
-	}
+			bsp_priv->gate_clk_cxp_cfg = devm_clk_get(&pdev->dev, "clk_gate_cxp_cfg");
+			if (IS_ERR(bsp_priv->gate_clk_cxp_cfg))
+				dev_warn(&pdev->dev, "Cannot get cxp cfg gating clock!\n");
+			else
+				clk_prepare_enable(bsp_priv->gate_clk_cxp_cfg);
+		}
+	} else
+		plat_dat->fix_mac_speed = sg_mac_fix_speed;
 
 	plat_dat->bsp_priv = bsp_priv;
 	plat_dat->exit = sg_dwmac_exit;
@@ -319,6 +350,14 @@ static const struct of_device_id sg_dwmac_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sg_dwmac_match);
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sg_dwmac_acpi_match[] = {
+	{ "SOPH0006", 0 },
+	{}
+};
+#endif
+MODULE_DEVICE_TABLE(acpi, sg_dwmac_acpi_match);
+
 static struct platform_driver sg_dwmac_driver = {
 	.probe  = sg_dwmac_probe,
 	.remove_new = stmmac_pltfr_remove,
@@ -326,6 +365,7 @@ static struct platform_driver sg_dwmac_driver = {
 		.name           = "sg-dwmac",
 		.pm		= &stmmac_pltfr_pm_ops,
 		.of_match_table = sg_dwmac_match,
+		.acpi_match_table = ACPI_PTR(sg_dwmac_acpi_match),
 	},
 };
 module_platform_driver(sg_dwmac_driver);

@@ -16,11 +16,12 @@
 #include <linux/of.h>
 #include <linux/of_net.h>
 #include <linux/of_mdio.h>
-
+#include <linux/fwnode_mdio.h>
+#include <linux/property.h>
 #include "stmmac.h"
 #include "stmmac_platform.h"
 
-#ifdef CONFIG_OF
+#if defined(CONFIG_ACPI) || defined(CONFIG_OF)
 
 /**
  * dwmac1000_validate_mcast_bins - validates the number of Multicast filter bins
@@ -85,7 +86,7 @@ static int dwmac1000_validate_ucast_entries(struct device *dev,
 }
 
 /**
- * stmmac_axi_setup - parse DT parameters for programming the AXI register
+ * stmmac_axi_setup - parse DT ACPI object parameters for programming the AXI register
  * @pdev: platform device
  * Description:
  * if required, from device-tree the AXI internal register can be tuned
@@ -93,47 +94,51 @@ static int dwmac1000_validate_ucast_entries(struct device *dev,
  */
 static struct stmmac_axi *stmmac_axi_setup(struct platform_device *pdev)
 {
-	struct device_node *np;
+	// struct device_node *np;
+	struct fwnode_handle *fwnode;
 	struct stmmac_axi *axi;
 
-	np = of_parse_phandle(pdev->dev.of_node, "snps,axi-config", 0);
-	if (!np)
+	fwnode = fwnode_find_reference(dev_fwnode(&pdev->dev), "snps,axi-config", 0);
+	if (IS_ERR(fwnode)) {
+		dev_err(&pdev->dev, "No matching axi-config!\n");
 		return NULL;
+	}
 
 	axi = devm_kzalloc(&pdev->dev, sizeof(*axi), GFP_KERNEL);
 	if (!axi) {
-		of_node_put(np);
+		fwnode_handle_put(fwnode);
 		return ERR_PTR(-ENOMEM);
 	}
 
-	axi->axi_lpi_en = of_property_read_bool(np, "snps,lpi_en");
-	axi->axi_xit_frm = of_property_read_bool(np, "snps,xit_frm");
-	axi->axi_kbbe = of_property_read_bool(np, "snps,kbbe");
-	axi->axi_fb = of_property_read_bool(np, "snps,fb");
-	axi->axi_mb = of_property_read_bool(np, "snps,mb");
-	axi->axi_rb =  of_property_read_bool(np, "snps,rb");
+	axi->axi_lpi_en = fwnode_property_read_bool(fwnode, "snps,lpi_en");
+	axi->axi_xit_frm = fwnode_property_read_bool(fwnode, "snps,xit_frm");
+	axi->axi_kbbe = fwnode_property_read_bool(fwnode, "snps,kbbe");
+	axi->axi_fb = fwnode_property_read_bool(fwnode, "snps,fb");
+	axi->axi_mb = fwnode_property_read_bool(fwnode, "snps,mb");
+	axi->axi_rb = fwnode_property_read_bool(fwnode, "snps,rb");
 
-	if (of_property_read_u32(np, "snps,wr_osr_lmt", &axi->axi_wr_osr_lmt))
+	if (fwnode_property_read_u32(fwnode, "snps,wr_osr_lmt", &axi->axi_wr_osr_lmt))
 		axi->axi_wr_osr_lmt = 1;
-	if (of_property_read_u32(np, "snps,rd_osr_lmt", &axi->axi_rd_osr_lmt))
+	if (fwnode_property_read_u32(fwnode, "snps,rd_osr_lmt", &axi->axi_rd_osr_lmt))
 		axi->axi_rd_osr_lmt = 1;
-	of_property_read_u32_array(np, "snps,blen", axi->axi_blen, AXI_BLEN);
-	of_node_put(np);
+	fwnode_property_read_u32_array(fwnode, "snps,blen", axi->axi_blen, AXI_BLEN);
+	fwnode_handle_put(fwnode);
 
 	return axi;
 }
 
 /**
- * stmmac_mtl_setup - parse DT parameters for multiple queues configuration
+ * stmmac_mtl_setup - parse DT or ACPI object parameters for multiple queues configuration
  * @pdev: platform device
  * @plat: enet data
  */
 static int stmmac_mtl_setup(struct platform_device *pdev,
 			    struct plat_stmmacenet_data *plat)
 {
-	struct device_node *q_node;
-	struct device_node *rx_node;
-	struct device_node *tx_node;
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
+	struct fwnode_handle *q_node;
+	struct fwnode_handle *rx_node;
+	struct fwnode_handle *tx_node;
 	u8 queue = 0;
 	int ret = 0;
 
@@ -151,46 +156,49 @@ static int stmmac_mtl_setup(struct platform_device *pdev,
 	plat->rx_queues_cfg[0].mode_to_use = MTL_QUEUE_DCB;
 	plat->tx_queues_cfg[0].mode_to_use = MTL_QUEUE_DCB;
 
-	rx_node = of_parse_phandle(pdev->dev.of_node, "snps,mtl-rx-config", 0);
-	if (!rx_node)
+	rx_node = fwnode_find_reference(fwnode, "snps,mtl-rx-config", 0);
+	if (IS_ERR(rx_node)) {
+		dev_err(&pdev->dev, "Not find mtl-rx-config!\n");
 		return ret;
+	}
 
-	tx_node = of_parse_phandle(pdev->dev.of_node, "snps,mtl-tx-config", 0);
-	if (!tx_node) {
-		of_node_put(rx_node);
+	tx_node = fwnode_find_reference(fwnode, "snps,mtl-tx-config", 0);
+	if (IS_ERR(tx_node)) {
+		dev_err(&pdev->dev, "Not find mtl-rx-config!\n");
+		fwnode_handle_put(rx_node);
 		return ret;
 	}
 
 	/* Processing RX queues common config */
-	if (of_property_read_u32(rx_node, "snps,rx-queues-to-use",
+	if (fwnode_property_read_u32(rx_node, "snps,rx-queues-to-use",
 				 &plat->rx_queues_to_use))
 		plat->rx_queues_to_use = 1;
 
-	if (of_property_read_bool(rx_node, "snps,rx-sched-sp"))
+	if (fwnode_property_read_bool(rx_node, "snps,rx-sched-sp"))
 		plat->rx_sched_algorithm = MTL_RX_ALGORITHM_SP;
-	else if (of_property_read_bool(rx_node, "snps,rx-sched-wsp"))
+	else if (fwnode_property_read_bool(rx_node, "snps,rx-sched-wsp"))
 		plat->rx_sched_algorithm = MTL_RX_ALGORITHM_WSP;
 	else
 		plat->rx_sched_algorithm = MTL_RX_ALGORITHM_SP;
 
 	/* Processing individual RX queue config */
-	for_each_child_of_node(rx_node, q_node) {
+	fwnode_for_each_child_node(rx_node, q_node) {
 		if (queue >= plat->rx_queues_to_use)
 			break;
 
-		if (of_property_read_bool(q_node, "snps,dcb-algorithm"))
+		if (fwnode_property_read_bool(q_node, "snps,dcb-algorithm"))
 			plat->rx_queues_cfg[queue].mode_to_use = MTL_QUEUE_DCB;
-		else if (of_property_read_bool(q_node, "snps,avb-algorithm"))
+		else if (fwnode_property_read_bool(q_node, "snps,avb-algorithm"))
 			plat->rx_queues_cfg[queue].mode_to_use = MTL_QUEUE_AVB;
 		else
 			plat->rx_queues_cfg[queue].mode_to_use = MTL_QUEUE_DCB;
 
-		if (of_property_read_u32(q_node, "snps,map-to-dma-channel",
+		if (fwnode_property_read_u32(q_node, "snps,map-to-dma-channel",
 					 &plat->rx_queues_cfg[queue].chan))
 			plat->rx_queues_cfg[queue].chan = queue;
 		/* TODO: Dynamic mapping to be included in the future */
 
-		if (of_property_read_u32(q_node, "snps,priority",
+		if (fwnode_property_read_u32(q_node, "snps,priority",
 					&plat->rx_queues_cfg[queue].prio)) {
 			plat->rx_queues_cfg[queue].prio = 0;
 			plat->rx_queues_cfg[queue].use_prio = false;
@@ -199,15 +207,15 @@ static int stmmac_mtl_setup(struct platform_device *pdev,
 		}
 
 		/* RX queue specific packet type routing */
-		if (of_property_read_bool(q_node, "snps,route-avcp"))
+		if (fwnode_property_read_bool(q_node, "snps,route-avcp"))
 			plat->rx_queues_cfg[queue].pkt_route = PACKET_AVCPQ;
-		else if (of_property_read_bool(q_node, "snps,route-ptp"))
+		else if (fwnode_property_read_bool(q_node, "snps,route-ptp"))
 			plat->rx_queues_cfg[queue].pkt_route = PACKET_PTPQ;
-		else if (of_property_read_bool(q_node, "snps,route-dcbcp"))
+		else if (fwnode_property_read_bool(q_node, "snps,route-dcbcp"))
 			plat->rx_queues_cfg[queue].pkt_route = PACKET_DCBCPQ;
-		else if (of_property_read_bool(q_node, "snps,route-up"))
+		else if (fwnode_property_read_bool(q_node, "snps,route-up"))
 			plat->rx_queues_cfg[queue].pkt_route = PACKET_UPQ;
-		else if (of_property_read_bool(q_node, "snps,route-multi-broad"))
+		else if (fwnode_property_read_bool(q_node, "snps,route-multi-broad"))
 			plat->rx_queues_cfg[queue].pkt_route = PACKET_MCBCQ;
 		else
 			plat->rx_queues_cfg[queue].pkt_route = 0x0;
@@ -221,15 +229,15 @@ static int stmmac_mtl_setup(struct platform_device *pdev,
 	}
 
 	/* Processing TX queues common config */
-	if (of_property_read_u32(tx_node, "snps,tx-queues-to-use",
+	if (fwnode_property_read_u32(tx_node, "snps,tx-queues-to-use",
 				 &plat->tx_queues_to_use))
 		plat->tx_queues_to_use = 1;
 
-	if (of_property_read_bool(tx_node, "snps,tx-sched-wrr"))
+	if (fwnode_property_read_bool(tx_node, "snps,tx-sched-wrr"))
 		plat->tx_sched_algorithm = MTL_TX_ALGORITHM_WRR;
-	else if (of_property_read_bool(tx_node, "snps,tx-sched-wfq"))
+	else if (fwnode_property_read_bool(tx_node, "snps,tx-sched-wfq"))
 		plat->tx_sched_algorithm = MTL_TX_ALGORITHM_WFQ;
-	else if (of_property_read_bool(tx_node, "snps,tx-sched-dwrr"))
+	else if (fwnode_property_read_bool(tx_node, "snps,tx-sched-dwrr"))
 		plat->tx_sched_algorithm = MTL_TX_ALGORITHM_DWRR;
 	else
 		plat->tx_sched_algorithm = MTL_TX_ALGORITHM_SP;
@@ -237,38 +245,38 @@ static int stmmac_mtl_setup(struct platform_device *pdev,
 	queue = 0;
 
 	/* Processing individual TX queue config */
-	for_each_child_of_node(tx_node, q_node) {
+	fwnode_for_each_child_node(tx_node, q_node) {
 		if (queue >= plat->tx_queues_to_use)
 			break;
 
-		if (of_property_read_u32(q_node, "snps,weight",
+		if (fwnode_property_read_u32(q_node, "snps,weight",
 					 &plat->tx_queues_cfg[queue].weight))
 			plat->tx_queues_cfg[queue].weight = 0x10 + queue;
 
-		if (of_property_read_bool(q_node, "snps,dcb-algorithm")) {
+		if (fwnode_property_read_bool(q_node, "snps,dcb-algorithm")) {
 			plat->tx_queues_cfg[queue].mode_to_use = MTL_QUEUE_DCB;
-		} else if (of_property_read_bool(q_node,
+		} else if (fwnode_property_read_bool(q_node,
 						 "snps,avb-algorithm")) {
 			plat->tx_queues_cfg[queue].mode_to_use = MTL_QUEUE_AVB;
 
 			/* Credit Base Shaper parameters used by AVB */
-			if (of_property_read_u32(q_node, "snps,send_slope",
+			if (fwnode_property_read_u32(q_node, "snps,send_slope",
 				&plat->tx_queues_cfg[queue].send_slope))
 				plat->tx_queues_cfg[queue].send_slope = 0x0;
-			if (of_property_read_u32(q_node, "snps,idle_slope",
+			if (fwnode_property_read_u32(q_node, "snps,idle_slope",
 				&plat->tx_queues_cfg[queue].idle_slope))
 				plat->tx_queues_cfg[queue].idle_slope = 0x0;
-			if (of_property_read_u32(q_node, "snps,high_credit",
+			if (fwnode_property_read_u32(q_node, "snps,high_credit",
 				&plat->tx_queues_cfg[queue].high_credit))
 				plat->tx_queues_cfg[queue].high_credit = 0x0;
-			if (of_property_read_u32(q_node, "snps,low_credit",
+			if (fwnode_property_read_u32(q_node, "snps,low_credit",
 				&plat->tx_queues_cfg[queue].low_credit))
 				plat->tx_queues_cfg[queue].low_credit = 0x0;
 		} else {
 			plat->tx_queues_cfg[queue].mode_to_use = MTL_QUEUE_DCB;
 		}
 
-		if (of_property_read_u32(q_node, "snps,priority",
+		if (fwnode_property_read_u32(q_node, "snps,priority",
 					&plat->tx_queues_cfg[queue].prio)) {
 			plat->tx_queues_cfg[queue].prio = 0;
 			plat->tx_queues_cfg[queue].use_prio = false;
@@ -277,7 +285,7 @@ static int stmmac_mtl_setup(struct platform_device *pdev,
 		}
 
 		plat->tx_queues_cfg[queue].coe_unsupported =
-			of_property_read_bool(q_node, "snps,coe-unsupported");
+			fwnode_property_read_bool(q_node, "snps,coe-unsupported");
 
 		queue++;
 	}
@@ -288,16 +296,15 @@ static int stmmac_mtl_setup(struct platform_device *pdev,
 	}
 
 out:
-	of_node_put(rx_node);
-	of_node_put(tx_node);
-	of_node_put(q_node);
+	fwnode_handle_put(rx_node);
+	fwnode_handle_put(tx_node);
+	fwnode_handle_put(q_node);
 
 	return ret;
 }
 
 /**
- * stmmac_of_get_mdio() - Gets the MDIO bus from the devicetree.
- * @np: devicetree node
+ * stmmac_get_mdio() - Gets the MDIO bus.
  *
  * The MDIO bus will be searched for in the following ways:
  * 1. The compatible is "snps,dwc-qos-ethernet-4.10" && a "mdio" named
@@ -306,23 +313,21 @@ out:
  *
  * Return: The MDIO node if present otherwise NULL
  */
-static struct device_node *stmmac_of_get_mdio(struct device_node *np)
+static struct fwnode_handle *stmmac_get_mdio(struct plat_stmmacenet_data *plat,
+			 struct device *dev)
 {
-	static const struct of_device_id need_mdio_ids[] = {
-		{ .compatible = "snps,dwc-qos-ethernet-4.10" },
-		{},
-	};
-	struct device_node *mdio_node = NULL;
+	struct fwnode_handle *fwnode = dev_fwnode(dev);
+	struct fwnode_handle *mdio_node = NULL;
 
-	if (of_match_node(need_mdio_ids, np)) {
-		mdio_node = of_get_child_by_name(np, "mdio");
+	if (fwnode_device_is_compatible(fwnode, "snps,dwc-qos-ethernet-4.10")) {
+		mdio_node = fwnode_get_named_child_node(fwnode, "mdio");
 	} else {
 		/**
 		 * If snps,dwmac-mdio is passed from DT, always register
 		 * the MDIO
 		 */
-		for_each_child_of_node(np, mdio_node) {
-			if (of_device_is_compatible(mdio_node,
+		fwnode_for_each_child_node(fwnode, mdio_node) {
+			if (fwnode_device_is_compatible(mdio_node,
 						    "snps,dwmac-mdio"))
 				break;
 		}
@@ -348,21 +353,21 @@ static struct device_node *stmmac_of_get_mdio(struct device_node *np)
  *
  * Return: 0 on success, errno otherwise.
  */
-static int stmmac_mdio_setup(struct plat_stmmacenet_data *plat,
-			     struct device_node *np, struct device *dev)
+static int stmmac_mdio_setup(struct plat_stmmacenet_data *plat, struct device *dev)
 {
 	bool legacy_mdio;
+	struct fwnode_handle *fwnode = dev_fwnode(dev);
 
-	plat->mdio_node = stmmac_of_get_mdio(np);
+	plat->mdio_node = stmmac_get_mdio(plat, dev);
 	if (plat->mdio_node)
-		dev_dbg(dev, "Found MDIO subnode\n");
+		dev_info(dev, "Found MDIO subnode\n");
 
 	/* Legacy devicetrees allowed for no MDIO bus description and expect
 	 * the bus to be scanned for devices. If there's no phy or fixed-link
 	 * described assume this is the case since there must be something
 	 * connected to the MAC.
 	 */
-	legacy_mdio = !of_phy_is_fixed_link(np) && !plat->phy_node;
+	legacy_mdio = !fwnode_phy_is_fixed_link(fwnode) && !plat->phy_node;
 	if (legacy_mdio)
 		dev_info(dev, "Deprecated MDIO bus assumption used\n");
 
@@ -380,7 +385,7 @@ static int stmmac_mdio_setup(struct plat_stmmacenet_data *plat,
 }
 
 /**
- * stmmac_of_get_mac_mode - retrieves the interface of the MAC
+ * stmmac_get_mac_mode - retrieves the interface of the MAC
  * @np: - device-tree node
  * Description:
  * Similar to `of_get_phy_mode()`, this function will retrieve (from
@@ -388,12 +393,12 @@ static int stmmac_mdio_setup(struct plat_stmmacenet_data *plat,
  * that there is mode converter in-between the MAC & PHY
  * (e.g. GMII-to-RGMII).
  */
-static int stmmac_of_get_mac_mode(struct device_node *np)
+static int stmmac_get_mac_mode(struct fwnode_handle *fwnode)
 {
 	const char *pm;
 	int err, i;
 
-	err = of_property_read_string(np, "mac-mode", &pm);
+	err = fwnode_property_read_string(fwnode, "mac-mode", &pm);
 	if (err < 0)
 		return err;
 
@@ -416,7 +421,7 @@ static int stmmac_of_get_mac_mode(struct device_node *np)
 struct plat_stmmacenet_data *
 stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 {
-	struct device_node *np = pdev->dev.of_node;
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
 	struct plat_stmmacenet_data *plat;
 	struct stmmac_dma_cfg *dma_cfg;
 	static int bus_id = -ENODEV;
@@ -428,7 +433,7 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 	if (!plat)
 		return ERR_PTR(-ENOMEM);
 
-	rc = of_get_mac_address(np, mac);
+	rc = fwnode_get_mac_address(fwnode, mac);
 	if (rc) {
 		if (rc == -EPROBE_DEFER)
 			return ERR_PTR(rc);
@@ -441,20 +446,26 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 		return ERR_PTR(phy_mode);
 
 	plat->phy_interface = phy_mode;
-	rc = stmmac_of_get_mac_mode(np);
+	rc = stmmac_get_mac_mode(fwnode);
 	plat->mac_interface = rc < 0 ? plat->phy_interface : rc;
 
 	/* Some wrapper drivers still rely on phy_node. Let's save it while
 	 * they are not converted to phylink. */
-	plat->phy_node = of_parse_phandle(np, "phy-handle", 0);
+	plat->phy_node = fwnode_find_reference(fwnode, "phy-handle", 0);
+	if (IS_ERR(plat->phy_node)) {
+		dev_err(&pdev->dev, "Not find phy-handle!\n");
+		return ret;
+	}
 
 	/* PHYLINK automatically parses the phy-handle property */
-	plat->port_node = of_fwnode_handle(np);
+	plat->port_node = fwnode;
 
 	/* Get max speed of operation from device tree */
-	of_property_read_u32(np, "max-speed", &plat->max_speed);
+	fwnode_property_read_u32(fwnode, "max-speed", &plat->max_speed);
 
-	plat->bus_id = of_alias_get_id(np, "ethernet");
+	if (fwnode_property_read_u32(fwnode, "bus_id", &plat->bus_id)!=0 &&
+				     is_of_node(fwnode))
+		plat->bus_id = of_alias_get_id(to_of_node(fwnode), "ethernet");
 	if (plat->bus_id < 0) {
 		if (bus_id < 0)
 			bus_id = of_alias_get_highest_id("ethernet");
@@ -471,29 +482,27 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 	 * or get clk_csr from device tree.
 	 */
 	plat->clk_csr = -1;
-	if (of_property_read_u32(np, "snps,clk-csr", &plat->clk_csr))
-		of_property_read_u32(np, "clk_csr", &plat->clk_csr);
+	if (fwnode_property_read_u32(fwnode, "snps,clk-csr", &plat->clk_csr))
+		fwnode_property_read_u32(fwnode, "clk_csr", &plat->clk_csr);
 
 	/* "snps,phy-addr" is not a standard property. Mark it as deprecated
 	 * and warn of its use. Remove this when phy node support is added.
 	 */
-	if (of_property_read_u32(np, "snps,phy-addr", &plat->phy_addr) == 0)
+	if (fwnode_property_read_u32(fwnode, "snps,phy-addr", &plat->phy_addr) == 0)
 		dev_warn(&pdev->dev, "snps,phy-addr property is deprecated\n");
 
-	rc = stmmac_mdio_setup(plat, np, &pdev->dev);
-	if (rc) {
-		ret = ERR_PTR(rc);
-		goto error_put_phy;
-	}
+	rc = stmmac_mdio_setup(plat, &pdev->dev);
+	if (rc)
+		return ERR_PTR(rc);
 
-	of_property_read_u32(np, "tx-fifo-depth", &plat->tx_fifo_size);
+	fwnode_property_read_u32(fwnode, "tx-fifo-depth", &plat->tx_fifo_size);
 
-	of_property_read_u32(np, "rx-fifo-depth", &plat->rx_fifo_size);
+	fwnode_property_read_u32(fwnode, "rx-fifo-depth", &plat->rx_fifo_size);
 
 	plat->force_sf_dma_mode =
-		of_property_read_bool(np, "snps,force_sf_dma_mode");
+		fwnode_property_read_bool(fwnode, "snps,force_sf_dma_mode");
 
-	if (of_property_read_bool(np, "snps,en-tx-lpi-clockgating"))
+	if (fwnode_property_read_bool(fwnode, "snps,en-tx-lpi-clockgating"))
 		plat->flags |= STMMAC_FLAG_EN_TX_LPI_CLOCKGATING;
 
 	/* Set the maxmtu to a default of JUMBO_LEN in case the
@@ -512,10 +521,10 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 	 * are provided. All other properties should be added
 	 * once needed on other platforms.
 	 */
-	if (of_device_is_compatible(np, "st,spear600-gmac") ||
-		of_device_is_compatible(np, "snps,dwmac-3.50a") ||
-		of_device_is_compatible(np, "snps,dwmac-3.70a") ||
-		of_device_is_compatible(np, "snps,dwmac")) {
+	if (device_is_compatible(&pdev->dev, "st,spear600-gmac") ||
+		device_is_compatible(&pdev->dev, "snps,dwmac-3.50a") ||
+		device_is_compatible(&pdev->dev, "snps,dwmac-3.70a") ||
+		device_is_compatible(&pdev->dev, "snps,dwmac")) {
 		/* Note that the max-frame-size parameter as defined in the
 		 * ePAPR v1.1 spec is defined as max-frame-size, it's
 		 * actually used as the IEEE definition of MAC Client
@@ -523,10 +532,10 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 		 * the definition is max-frame-size, but usage examples
 		 * are clearly MTUs
 		 */
-		of_property_read_u32(np, "max-frame-size", &plat->maxmtu);
-		of_property_read_u32(np, "snps,multicast-filter-bins",
+		fwnode_property_read_u32(fwnode, "max-frame-size", &plat->maxmtu);
+		fwnode_property_read_u32(fwnode, "snps,multicast-filter-bins",
 				     &plat->multicast_filter_bins);
-		of_property_read_u32(np, "snps,perfect-filter-entries",
+		fwnode_property_read_u32(fwnode, "snps,perfect-filter-entries",
 				     &plat->unicast_filter_entries);
 		plat->unicast_filter_entries = dwmac1000_validate_ucast_entries(
 				&pdev->dev, plat->unicast_filter_entries);
@@ -536,7 +545,7 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 		plat->pmt = 1;
 	}
 
-	if (of_device_is_compatible(np, "snps,dwmac-3.40a")) {
+	if (device_is_compatible(&pdev->dev, "snps,dwmac-3.40a")) {
 		plat->has_gmac = 1;
 		plat->enh_desc = 1;
 		plat->tx_coe = 1;
@@ -544,77 +553,79 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 		plat->pmt = 1;
 	}
 
-	if (of_device_is_compatible(np, "snps,dwmac-4.00") ||
-	    of_device_is_compatible(np, "snps,dwmac-4.10a") ||
-	    of_device_is_compatible(np, "snps,dwmac-4.20a") ||
-	    of_device_is_compatible(np, "snps,dwmac-5.10a") ||
-	    of_device_is_compatible(np, "snps,dwmac-5.20")) {
+	if (device_is_compatible(&pdev->dev, "snps,dwmac-4.00") ||
+	    device_is_compatible(&pdev->dev, "snps,dwmac-4.10a") ||
+	    device_is_compatible(&pdev->dev, "snps,dwmac-4.20a") ||
+	    device_is_compatible(&pdev->dev, "snps,dwmac-5.10a") ||
+	    device_is_compatible(&pdev->dev, "snps,dwmac-5.20")) {
 		plat->has_gmac4 = 1;
 		plat->has_gmac = 0;
 		plat->pmt = 1;
-		if (of_property_read_bool(np, "snps,tso"))
+		if (fwnode_property_read_bool(fwnode, "snps,tso"))
 			plat->flags |= STMMAC_FLAG_TSO_EN;
 	}
 
-	if (of_device_is_compatible(np, "snps,dwmac-3.610") ||
-		of_device_is_compatible(np, "snps,dwmac-3.710")) {
+	if (device_is_compatible(&pdev->dev, "snps,dwmac-3.610") ||
+		device_is_compatible(&pdev->dev, "snps,dwmac-3.710")) {
 		plat->enh_desc = 1;
 		plat->bugged_jumbo = 1;
 		plat->force_sf_dma_mode = 1;
 	}
 
-	if (of_device_is_compatible(np, "snps,dwxgmac")) {
+	if (device_is_compatible(&pdev->dev, "snps,dwxgmac")) {
 		plat->has_xgmac = 1;
 		plat->pmt = 1;
-		if (of_property_read_bool(np, "snps,tso"))
+		if (fwnode_property_read_bool(fwnode, "snps,tso"))
 			plat->flags |= STMMAC_FLAG_TSO_EN;
 	}
 
 	dma_cfg = devm_kzalloc(&pdev->dev, sizeof(*dma_cfg),
 			       GFP_KERNEL);
 	if (!dma_cfg) {
-		ret = ERR_PTR(-ENOMEM);
-		goto error_put_mdio;
+		stmmac_remove_config_dt(pdev, plat);
+		return ERR_PTR(-ENOMEM);
 	}
 	plat->dma_cfg = dma_cfg;
 
-	of_property_read_u32(np, "snps,pbl", &dma_cfg->pbl);
+	fwnode_property_read_u32(fwnode, "snps,pbl", &dma_cfg->pbl);
 	if (!dma_cfg->pbl)
 		dma_cfg->pbl = DEFAULT_DMA_PBL;
-	of_property_read_u32(np, "snps,txpbl", &dma_cfg->txpbl);
-	of_property_read_u32(np, "snps,rxpbl", &dma_cfg->rxpbl);
-	dma_cfg->pblx8 = !of_property_read_bool(np, "snps,no-pbl-x8");
+	fwnode_property_read_u32(fwnode, "snps,txpbl", &dma_cfg->txpbl);
+	fwnode_property_read_u32(fwnode, "snps,rxpbl", &dma_cfg->rxpbl);
+	dma_cfg->pblx8 = !fwnode_property_read_bool(fwnode, "snps,no-pbl-x8");
 
-	dma_cfg->aal = of_property_read_bool(np, "snps,aal");
-	dma_cfg->fixed_burst = of_property_read_bool(np, "snps,fixed-burst");
-	dma_cfg->mixed_burst = of_property_read_bool(np, "snps,mixed-burst");
+	dma_cfg->aal = fwnode_property_read_bool(fwnode, "snps,aal");
+	dma_cfg->fixed_burst = fwnode_property_read_bool(fwnode, "snps,fixed-burst");
+	dma_cfg->mixed_burst = fwnode_property_read_bool(fwnode, "snps,mixed-burst");
 
-	plat->force_thresh_dma_mode = of_property_read_bool(np, "snps,force_thresh_dma_mode");
+	plat->force_thresh_dma_mode = fwnode_property_read_bool(fwnode, "snps,force_thresh_dma_mode");
 	if (plat->force_thresh_dma_mode && plat->force_sf_dma_mode) {
 		plat->force_sf_dma_mode = 0;
 		dev_warn(&pdev->dev,
 			 "force_sf_dma_mode is ignored if force_thresh_dma_mode is set.\n");
 	}
 
-	of_property_read_u32(np, "snps,ps-speed", &plat->mac_port_sel_speed);
+	fwnode_property_read_u32(fwnode, "snps,ps-speed", &plat->mac_port_sel_speed);
 
 	plat->axi = stmmac_axi_setup(pdev);
 
 	rc = stmmac_mtl_setup(pdev, plat);
 	if (rc) {
-		ret = ERR_PTR(rc);
-		goto error_put_mdio;
+		stmmac_remove_config_dt(pdev, plat);
+		return ERR_PTR(rc);
 	}
 
 	/* clock setup */
-	if (!of_device_is_compatible(np, "snps,dwc-qos-ethernet-4.10")) {
-		plat->stmmac_clk = devm_clk_get(&pdev->dev,
-						STMMAC_RESOURCE_NAME);
-		if (IS_ERR(plat->stmmac_clk)) {
-			dev_warn(&pdev->dev, "Cannot get CSR clock\n");
-			plat->stmmac_clk = NULL;
+	if (!device_is_compatible(&pdev->dev, "snps,dwc-qos-ethernet-4.10")) {
+		if (is_of_node(fwnode)){
+			plat->stmmac_clk = devm_clk_get(&pdev->dev,
+							STMMAC_RESOURCE_NAME);
+			if (IS_ERR(plat->stmmac_clk)) {
+				dev_warn(&pdev->dev, "Cannot get CSR clock\n");
+				plat->stmmac_clk = NULL;
+			}
+			clk_prepare_enable(plat->stmmac_clk);
 		}
-		clk_prepare_enable(plat->stmmac_clk);
 	}
 
 	plat->pclk = devm_clk_get_optional(&pdev->dev, "pclk");
@@ -625,15 +636,22 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 	clk_prepare_enable(plat->pclk);
 
 	/* Fall-back to main clock in case of no PTP ref is passed */
-	plat->clk_ptp_ref = devm_clk_get(&pdev->dev, "ptp_ref");
-	if (IS_ERR(plat->clk_ptp_ref)) {
-		plat->clk_ptp_rate = clk_get_rate(plat->stmmac_clk);
-		plat->clk_ptp_ref = NULL;
-		dev_info(&pdev->dev, "PTP uses main clock\n");
+	if (is_of_node(fwnode)) {
+		plat->clk_ptp_ref = devm_clk_get(&pdev->dev, "ptp_ref");
+		if (IS_ERR(plat->clk_ptp_ref)) {
+			plat->clk_ptp_rate = clk_get_rate(plat->stmmac_clk);
+			dev_info(&pdev->dev, "PTP rate %d\n", plat->clk_ptp_rate);
+			plat->clk_ptp_ref = NULL;
+			dev_info(&pdev->dev, "PTP uses main clock\n");
+		} else {
+			plat->clk_ptp_rate = clk_get_rate(plat->clk_ptp_ref);
+			dev_dbg(&pdev->dev, "PTP rate %d\n", plat->clk_ptp_rate);
+		}
 	} else {
-		plat->clk_ptp_rate = clk_get_rate(plat->clk_ptp_ref);
-		dev_dbg(&pdev->dev, "PTP rate %d\n", plat->clk_ptp_rate);
+		plat->clk_ptp_rate = 50000000;
+		dev_info(&pdev->dev, "PTP rate %d\n", plat->clk_ptp_rate);
 	}
+
 
 	plat->stmmac_rst = devm_reset_control_get_optional(&pdev->dev,
 							   STMMAC_RESOURCE_NAME);
@@ -655,10 +673,6 @@ error_hw_init:
 	clk_disable_unprepare(plat->pclk);
 error_pclk_get:
 	clk_disable_unprepare(plat->stmmac_clk);
-error_put_mdio:
-	of_node_put(plat->mdio_node);
-error_put_phy:
-	of_node_put(plat->phy_node);
 
 	return ret;
 }
@@ -667,17 +681,16 @@ static void devm_stmmac_remove_config_dt(void *data)
 {
 	struct plat_stmmacenet_data *plat = data;
 
-	clk_disable_unprepare(plat->stmmac_clk);
-	clk_disable_unprepare(plat->pclk);
-	of_node_put(plat->mdio_node);
-	of_node_put(plat->phy_node);
+	/* Platform data argument is unused */
+	stmmac_remove_config_dt(NULL, plat);
 }
 
 /**
  * devm_stmmac_probe_config_dt
  * @pdev: platform_device structure
  * @mac: MAC address to use
- * Description: Devres variant of stmmac_probe_config_dt().
+ * Description: Devres variant of stmmac_probe_config_dt(). Does not require
+ * the user to call stmmac_remove_config_dt() at driver detach.
  */
 struct plat_stmmacenet_data *
 devm_stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
@@ -709,8 +722,8 @@ void stmmac_remove_config_dt(struct platform_device *pdev,
 {
 	clk_disable_unprepare(plat->stmmac_clk);
 	clk_disable_unprepare(plat->pclk);
-	of_node_put(plat->phy_node);
-	of_node_put(plat->mdio_node);
+	fwnode_handle_put(plat->phy_node);
+	fwnode_handle_put(plat->mdio_node);
 }
 #else
 struct plat_stmmacenet_data *

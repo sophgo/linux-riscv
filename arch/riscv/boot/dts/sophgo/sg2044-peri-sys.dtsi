@@ -392,10 +392,6 @@
 			queue1 {snps,rx-sched-wsp;};
 			queue2 {snps,rx-sched-wsp;};
 			queue3 {snps,rx-sched-wsp;};
-			queue4 {snps,rx-sched-wsp;};
-			queue5 {snps,rx-sched-wsp;};
-			queue6 {snps,rx-sched-wsp;};
-			queue7 {snps,rx-sched-wsp;};
 		};
 
 		mtl_tx_setup: tx-queues-config {
@@ -404,10 +400,6 @@
 			queue1 {};
 			queue2 {};
 			queue3 {};
-			queue4 {};
-			queue5 {};
-			queue6 {};
-			queue7 {};
 		};
 
 		ethernet: ethernet@7030006000 {

@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/phy.h>
 #include <linux/pse-pd/pse.h>
+#include <linux/property.h>
 
 MODULE_AUTHOR("Calvin Johnson <calvin.johnson@oss.nxp.com>");
 MODULE_LICENSE("GPL");
@@ -190,3 +191,26 @@ clean_pse:
 	return rc;
 }
 EXPORT_SYMBOL(fwnode_mdiobus_register_phy);
+
+bool fwnode_phy_is_fixed_link(struct fwnode_handle *fwnode)
+{
+	struct fwnode_handle *dn;
+	int err;
+	const char *managed;
+	/* New binding: 'fixed-link' is a sub-node of the Ethernet device. */
+	dn = fwnode_get_named_child_node(fwnode, "fixed-link");
+	if (dn) {
+		fwnode_handle_put(dn);
+		return true;
+	}
+	err = fwnode_property_read_string(fwnode, "managed", &managed);
+	if (err == 0 && strcmp(managed, "auto") != 0)
+		return true;
+	/* Old binding: 'fixed-link' was a property with 5 cells encoding
+	 * various information about the fixed PHY.
+	 */
+	if (fwnode_property_count_u32(fwnode, "fixed-link") == 5)
+		return true;
+	return false;
+}
+EXPORT_SYMBOL(fwnode_phy_is_fixed_link);

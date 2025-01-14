@@ -4,12 +4,7 @@
  */
 
 / {
-	soc: soc {
-		compatible = "simple-bus";
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
+	soc {
 		top_misc: top_misc_ctrl@7050000000 {
 			compatible = "syscon";
 			reg = <0x70 0x50000000 0x0 0x8000>;

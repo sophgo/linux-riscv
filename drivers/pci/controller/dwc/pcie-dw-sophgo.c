@@ -565,10 +565,11 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 	}
 
 	if (!pcie->ctrl_reg_base) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl");
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl_base");
 		pcie->ctrl_reg_base = devm_pci_remap_cfg_resource(pcie->dev, res);
 		if (IS_ERR(pcie->ctrl_reg_base))
 			return PTR_ERR(pcie->ctrl_reg_base);
+		pcie->ctrl_reg_base += 0xc00;
 	}
 
 	/* For non-unrolled iATU/eDMA platforms this range will be ignored */
@@ -611,14 +612,8 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		dw_pcie_cap_set(pcie, CDM_CHECK);
 
 	if (pcie->pcie_card) {
-		if (!pcie->sii_reg_base) {
-			res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl");
-			pcie->sii_reg_base = devm_pci_remap_cfg_resource(pcie->dev, res);
-			if (IS_ERR(pcie->sii_reg_base))
-				return PTR_ERR(pcie->sii_reg_base);
-			pcie->sii_reg_base += 0x400;
-			pcie->ctrl_reg_base = pcie->sii_reg_base + 0x800;
-		}
+		if (!pcie->sii_reg_base)
+			pcie->sii_reg_base = pcie->ctrl_reg_base - 0x800;
 
 		if (!pcie->c2c_top) {
 			ret = of_property_read_u64_index(np, "c2c_top", 0, &start_addr);

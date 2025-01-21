@@ -203,6 +203,11 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	RISCV_ECAM_MCFG("2044    ", 2),
 	RISCV_ECAM_MCFG("2044    ", 3),
 	RISCV_ECAM_MCFG("2044    ", 4),
+	RISCV_ECAM_MCFG("2044    ", 5),
+	RISCV_ECAM_MCFG("2044    ", 6),
+	RISCV_ECAM_MCFG("2044    ", 7),
+	RISCV_ECAM_MCFG("2044    ", 8),
+	RISCV_ECAM_MCFG("2044    ", 9),
 #endif /* RISCV */
 
 };

@@ -187,7 +187,7 @@
 		};
 	};
 
-	pcie@6c08000000 {
+	pcie@6c08400000 {
 		compatible = "sophgo,sg2044-pcie-host";
 		device_type = "pci";
 		#address-cells = <3>;

@@ -1809,11 +1809,31 @@ static DEVICE_ATTR_RW(recorded_response);
 static ssize_t tpurt_config_proc_read(struct file *fp, char __user *user_buf, size_t count, loff_t *ppos)
 {
 	struct sg_card *card = get_card();
-	int ret;
+	void *config_addr;
+	int len;
 
-	ret = clear_user(user_buf, count);
+	config_addr = kmalloc(0x1000, GFP_KERNEL);
+	if (config_addr == NULL) {
+		pr_err("failed to alloc config addr\n");
+		return -1;
+	}
 
-	return simple_read_from_buffer(user_buf, count, ppos, card->config_file, 0x1000);
+	memcpy_fromio(config_addr, card->config_file, 0x1000);
+	len = strlen(config_addr);
+	if (*ppos >= len)
+		return 0;
+
+	if (count > len - *ppos)
+		count = len - *ppos;
+
+	if (copy_to_user(user_buf, config_addr, count)) {
+		pr_err("failed copy config to user buf\n");
+		return -EFAULT;
+	}
+
+	*ppos += count;
+
+	return count;
 }
 
 static struct proc_ops tpurt_config_fops = {

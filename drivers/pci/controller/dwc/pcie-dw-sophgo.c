@@ -689,6 +689,7 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 static int sophgo_dw_pcie_get_resources_acpi(struct sophgo_dw_pcie *pcie, struct resource *res)
 {
 	struct device_node *np = dev_of_node(pcie->dev);
@@ -717,6 +718,7 @@ static int sophgo_dw_pcie_get_resources_acpi(struct sophgo_dw_pcie *pcie, struct
 
 	return 0;
 }
+#endif
 
 static int sophgo_dw_pcie_setup_outbound_atu(struct sophgo_dw_pcie *pcie,
 						struct list_head *list)

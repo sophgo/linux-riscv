@@ -306,7 +306,7 @@ static int __pll_get_postdiv_1_2(unsigned long rate, unsigned long prate,
 /**
  * __set_pll_vcosel() - select vco configuration for pll
  * bit[17:16] 2'd2 --> 1.6GHz - 2.4GHz
- * 			  2'd3 --> 2.4GHz - 3.2GHz
+ * 		2'd3 --> 2.4GHz - 3.2GHz
  * @sg2044_pll: sg2044 pll control struct
  * @foutvco: target foutvco value
  */
@@ -398,7 +398,6 @@ static long sg2044_clk_pll_round_rate(struct clk_hw *hw,
 	 * then combine with prate, and req_rate to
 	 * get postdiv1 and postdiv2
 	 */
-	sg2044_pll_read(sg2044_pll->syscon_top, sg2044_pll->id, &value);
 	__get_pll_ctl_setting(&pctrl_table, req_rate, *prate);
 	if (!pctrl_table.freq) {
 		proper_rate = 0;
@@ -440,7 +439,6 @@ static int sg2044_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		goto out;
 	}
 
-	sg2044_pll_read(sg2044_pll->syscon_top, sg2044_pll->id, &value);
 	__get_pll_ctl_setting(&pctrl_table, rate, parent_rate);
 	if (!pctrl_table.freq) {
 		pr_warn("%s: Can't find a proper pll setting\n", sg2044_pll->name);

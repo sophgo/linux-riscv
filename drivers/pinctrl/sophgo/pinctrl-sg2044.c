@@ -291,7 +291,7 @@ static const struct of_device_id sg2044_pinctrl_of_table[] = {
 
 static const struct acpi_device_id pinctrl_acpi_match[] = {
 	{
-		.id = "SGPH0021",
+		.id = "SOPH0010",
 		.driver_data = (kernel_ulong_t)&sg2044_pinctrl_data,
 	},
 	{},

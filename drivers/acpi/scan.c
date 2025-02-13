@@ -861,7 +861,7 @@ static const char * const acpi_honor_dep_ids[] = {
 	"RSCV0001", /* RISC-V PLIC */
 	"RSCV0002", /* RISC-V APLIC */
 	"PNP0C0F",  /* PCI Link Device */
-	"SGPH0002", /* Sophgo MSI-controller*/
+	"SOPH0001", /* SOPHGO MSI-controller*/
 	NULL
 };
 

@@ -358,7 +358,7 @@ static const struct of_device_id sg2044_msi_of_match[] = {
 
 #ifdef CONFIG_ACPI
 static const struct acpi_device_id sg2044_msi_acpi_match[] = {
-	{ "SGPH0002", 0 },
+	{ "SOPH0001", 0 },
 	{}
 };
 #endif

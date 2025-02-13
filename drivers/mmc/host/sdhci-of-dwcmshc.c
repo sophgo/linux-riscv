@@ -1351,7 +1351,7 @@ static const struct acpi_device_id sdhci_dwcmshc_acpi_ids[] = {
 		.driver_data = (kernel_ulong_t)&sdhci_dwcmshc_bf3_pdata,
 	},
 	{
-		.id = "SGPH0016",
+		.id = "SOPH0005",
 		.driver_data = (kernel_ulong_t)&sdhci_dwcmshc_sg2042_pdata,
 	},
 	{}

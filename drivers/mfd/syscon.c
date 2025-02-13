@@ -406,7 +406,7 @@ static const struct platform_device_id syscon_ids[] = {
 };
 
 static const struct acpi_device_id syscon_acpi_match[] = {
-	{ "SGPH0020", },
+	{ "SOPH0011", },
     {}
 };
 

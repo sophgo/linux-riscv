@@ -279,7 +279,7 @@ MODULE_DEVICE_TABLE(of, sophgo_pwm_match);
 #ifdef CONFIG_ACPI
 static const struct acpi_device_id pwm_sophgo_acpi_ids[] = {
 	{
-		.id = "SGPH0005",
+		.id = "SOPH0007",
 		.driver_data = (kernel_ulong_t)&pwm_sophgo_ops
 	},
 	{},

@@ -344,7 +344,7 @@ static int dw_spi_mmio_probe(struct platform_device *pdev)
 	if (dws->irq < 0)
 		return dws->irq; /* -ENXIO */
 
-	dwsmmio->clk = devm_clk_get_optional_enabled(&pdev->dev, NULL);
+	dwsmmio->clk = devm_clk_get_enabled(&pdev->dev, NULL);
 	if (IS_ERR(dwsmmio->clk))
 		return PTR_ERR(dwsmmio->clk);
 
@@ -362,10 +362,7 @@ static int dw_spi_mmio_probe(struct platform_device *pdev)
 
 	dws->bus_num = pdev->id;
 
-	if (pdev->dev.of_node)
-		dws->max_freq = clk_get_rate(dwsmmio->clk);
-	else
-		device_property_read_u32(&pdev->dev, "clock-frequency", &dws->max_freq);
+	dws->max_freq = clk_get_rate(dwsmmio->clk);
 
 	if (device_property_read_u32(&pdev->dev, "reg-io-width",
 				     &dws->reg_io_width))
@@ -429,6 +426,7 @@ MODULE_DEVICE_TABLE(of, dw_spi_mmio_of_match);
 #ifdef CONFIG_ACPI
 static const struct acpi_device_id dw_spi_mmio_acpi_match[] = {
 	{"HISI0173", (kernel_ulong_t)dw_spi_pssi_init},
+	{"SOPH0004", (kernel_ulong_t)dw_spi_pssi_init},
 	{},
 };
 MODULE_DEVICE_TABLE(acpi, dw_spi_mmio_acpi_match);

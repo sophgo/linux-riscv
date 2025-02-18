@@ -75,6 +75,7 @@ struct net {
 	spinlock_t		nsid_lock;
 	atomic_t		fnhe_genid;
 
+	KABI_FILL_HOLE(struct llist_node defer_free_list)
 	struct list_head	list;		/* list of network namespaces */
 	struct list_head	exit_list;	/* To linked to call pernet exit
 						 * methods on dead net (

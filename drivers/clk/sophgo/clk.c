@@ -389,7 +389,6 @@ static long sg2044_clk_pll_round_rate(struct clk_hw *hw,
 {
 	unsigned int value;
 	struct sg2044_pll_ctrl pctrl_table;
-	struct sg2044_pll_clock *sg2044_pll = to_sg2044_pll_clk(hw);
 	long proper_rate;
 
 	memset(&pctrl_table, 0, sizeof(struct sg2044_pll_ctrl));

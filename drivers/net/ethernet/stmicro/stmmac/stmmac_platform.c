@@ -452,10 +452,6 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
 	/* Some wrapper drivers still rely on phy_node. Let's save it while
 	 * they are not converted to phylink. */
 	plat->phy_node = fwnode_find_reference(fwnode, "phy-handle", 0);
-	if (IS_ERR(plat->phy_node)) {
-		dev_err(&pdev->dev, "Not find phy-handle!\n");
-		return ret;
-	}
 
 	/* PHYLINK automatically parses the phy-handle property */
 	plat->port_node = fwnode;

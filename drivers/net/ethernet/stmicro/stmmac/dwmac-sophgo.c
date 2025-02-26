@@ -174,21 +174,35 @@ static int sg_validate_mcast_bins(struct device *dev, int mcast_bins)
 static int sophgo_get_platform_resources(struct platform_device *pdev,
 				  struct stmmac_resources *stmmac_res)
 {
-	char *tx_ch = "tx_ch";
-	char *rx_ch = "rx_ch";
-	char int_name[8];
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
 
-	for (int i = 0; i < 8; i++) {
-		sprintf(int_name, "%s%d", tx_ch, i);
-		stmmac_res->tx_irq[i] = platform_get_irq_byname(pdev, int_name);
-		if (stmmac_res->tx_irq[i] < 0)
-			return stmmac_res->tx_irq[i];
-	}
-	for (int i = 0; i < 8; i++) {
-		sprintf(int_name, "%s%d", rx_ch, i);
-		stmmac_res->rx_irq[i] = platform_get_irq_byname(pdev, int_name);
-		if (stmmac_res->rx_irq[i] < 0)
-			return stmmac_res->rx_irq[i];
+	if (is_of_node(fwnode)) {
+		char *tx_ch = "tx_ch";
+		char *rx_ch = "rx_ch";
+		char int_name[8];
+
+		for (int i = 0; i < 8; i++) {
+			sprintf(int_name, "%s%d", tx_ch, i);
+			stmmac_res->tx_irq[i] = platform_get_irq_byname(pdev, int_name);
+			if (stmmac_res->tx_irq[i] < 0)
+				return stmmac_res->tx_irq[i];
+		}
+		for (int i = 0; i < 8; i++) {
+			sprintf(int_name, "%s%d", rx_ch, i);
+			stmmac_res->rx_irq[i] = platform_get_irq_byname(pdev, int_name);
+			if (stmmac_res->rx_irq[i] < 0)
+				return stmmac_res->rx_irq[i];
+		}
+	} else {
+		for (int i = 0; i < 8; i++) {
+			stmmac_res->tx_irq[i] = platform_get_irq(pdev, i + 1);
+			if (stmmac_res->tx_irq[i] < 0)
+				return stmmac_res->tx_irq[i];
+
+			stmmac_res->rx_irq[i] = platform_get_irq(pdev, i + 9);
+			if (stmmac_res->rx_irq[i] < 0)
+				return stmmac_res->rx_irq[i];
+		}
 	}
 
 	return 0;
@@ -307,8 +321,10 @@ static int sg_dwmac_probe(struct platform_device *pdev)
 			else
 				clk_prepare_enable(bsp_priv->gate_clk_cxp_cfg);
 		}
-	} else
-		plat_dat->fix_mac_speed = sg_mac_fix_speed;
+	} else {
+		if (device_property_read_bool(&pdev->dev, "sophgo,gmac"))
+			plat_dat->fix_mac_speed = sg_mac_fix_speed;
+	}
 
 	plat_dat->bsp_priv = bsp_priv;
 	plat_dat->exit = sg_dwmac_exit;

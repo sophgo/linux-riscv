@@ -781,7 +781,10 @@ static int phylink_parse_fixedlink(struct phylink *pl,
 	u32 speed;
 	int ret;
 
-	fixed_node = fwnode_get_named_child_node(fwnode, "fixed-link");
+	if (is_of_node(fwnode))
+		fixed_node = fwnode_get_named_child_node(fwnode, "fixed-link");
+	else
+		fixed_node = fwnode_find_reference(fwnode, "fixed-link", 0);
 	if (fixed_node) {
 		ret = fwnode_property_read_u32(fixed_node, "speed", &speed);
 

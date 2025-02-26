@@ -637,7 +637,13 @@ int stmmac_mdio_register(struct net_device *ndev)
 		fwnode = dev_fwnode(priv->device);
 
 	if (fwnode) {
-		fixed_node = fwnode_get_named_child_node(fwnode, "fixed-link");
+		if (is_of_node(fwnode))
+			fixed_node = fwnode_get_named_child_node(fwnode, "fixed-link");
+		else {
+			fixed_node = fwnode_find_reference(fwnode, "fixed-link", 0);
+			if (IS_ERR(fixed_node))
+				fixed_node = NULL;
+		}
 		if (fixed_node) {
 			fwnode_handle_put(fixed_node);
 			goto bus_register_done;

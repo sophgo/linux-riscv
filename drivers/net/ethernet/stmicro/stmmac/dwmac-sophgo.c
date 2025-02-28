@@ -116,7 +116,7 @@ static void sg_mac_fix_speed(void *priv, unsigned int speed, unsigned int mode)
 			target_clk.integer.value = rate;
 			handle = ACPI_HANDLE(bsp_priv->dev);
 			struct acpi_object_list args = { 1, &target_clk };
-			status = acpi_evaluate_object(handle, "_CLK", &args, NULL);
+			status = acpi_evaluate_object(handle, "SCLK", &args, NULL);
 			if (ACPI_FAILURE(status))
 				dev_err(bsp_priv->dev, "ACPI method _CLK failed to set TX rate: %d\n",err);
 		} else {

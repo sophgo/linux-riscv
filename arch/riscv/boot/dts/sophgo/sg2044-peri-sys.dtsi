@@ -302,40 +302,6 @@
 			status = "disable";
 		};
 
-		spifmc0: flash-controller@7001000000 {
-			compatible = "sophgo,spifmc";
-			reg = <0x70 0x01000000 0x0 0x4000000>;
-			reg-names = "memory";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			interrupt-parent = <&intc>;
-			interrupts = <37 IRQ_TYPE_LEVEL_HIGH>;
-			clock-frequency = <100000000>;
-			clocks = <&div_clk GATE_CLK_AHB_SF>;
-			status = "disable";
-			flash@0 {
-				reg = <0>;
-				compatible = "jedec,spi-nor";
-			};
-		};
-
-		spifmc1: flash-controller@7005000000 {
-			compatible = "sophgo,spifmc";
-			reg = <0x70 0x05000000 0x0 0x4000000>;
-			reg-names = "memory";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			interrupt-parent = <&intc>;
-			interrupts = <38 IRQ_TYPE_LEVEL_HIGH>;
-			clock-frequency = <100000000>;
-			clocks = <&div_clk GATE_CLK_AHB_SF>;
-			status = "disable";
-			flash@0 {
-				reg = <0>;
-				compatible = "jedec,spi-nor";
-			};
-		};
-
 		watchdog: wdt@7040004000 {
 			compatible = "snps,dw-wdt";
 			reg = <0x70 0x40004000 0x0 0x1000>;

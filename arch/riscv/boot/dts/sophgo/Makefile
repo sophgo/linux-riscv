@@ -12,3 +12,4 @@ dtb-$(CONFIG_ARCH_SOPHGO) += sg2042-milkv-pioneer.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2044-evb.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2044r-evb.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2044r-x7.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-cdm-ap.dtb

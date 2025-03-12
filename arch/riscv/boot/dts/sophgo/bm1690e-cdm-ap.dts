@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "bm1690-cpu-ap.dtsi"
+
+/ {
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=4";
+		stdout-path = "serial0";
+	};
+
+	soc {
+		uart0: serial@7030000000 {
+			compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
+			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
+			interrupt-parent = <&intc>;
+			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <153600>;
+			current-speed = <9600>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+		};
+
+	};
+};

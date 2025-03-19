@@ -20,7 +20,7 @@
 	/delete-node/ memory@80200000;
 	memory@1ea0200000 {
 		device_type = "memory";
-		reg = <0x0000001e 0xa0200000 0x00000000 0x4fe00000>;
+		reg = <0x0000001e 0x60200000 0x00000000 0x8fe00000>;
 	};
 
 	aliases {

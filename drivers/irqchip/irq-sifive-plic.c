@@ -726,7 +726,17 @@ static struct platform_driver plic_driver = {
 	},
 	.probe = plic_platform_probe,
 };
-builtin_platform_driver(plic_driver);
+
+static int __init plic_init(void)
+{
+	return platform_driver_register(&plic_driver);
+}
+arch_initcall(plic_init);
+
+static void __exit plic_exit(void)
+{
+	return platform_driver_unregister(&plic_driver);
+}
 
 static int __init plic_early_probe(struct device_node *node,
 				   struct device_node *parent)

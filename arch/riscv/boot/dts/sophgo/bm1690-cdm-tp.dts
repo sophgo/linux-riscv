@@ -92,6 +92,12 @@
 			interrupts = <53>;
 		};
 
+		cpu_idle_intr: cpu_idle_intr {
+			compatible = "sophgo,cpu-idle-intr";
+			interrupt-parent = <&intc>;
+			interrupts = <39>;
+		};
+
 		vtty0: vtty@bfff0000 {
 			compatible = "sophgo,vtty-tp";
 			#size-cells = <0x2>;

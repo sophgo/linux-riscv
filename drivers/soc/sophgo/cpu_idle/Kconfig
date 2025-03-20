@@ -1,0 +1,6 @@
+config CPU_IDLE_DRIVER
+    bool "Cpu Idle Driver (Built-in)"
+    default no
+    help
+      This is a cpu idle interrupt driver.
+      Trigger a wake-up interrupt to bring the CPU out of WFI state

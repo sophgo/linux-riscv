@@ -10,3 +10,4 @@ obj-$(CONFIG_ARCH_SOPHGO)		+= rxu/rxu.o
 obj-$(CONFIG_ARCH_SOPHGO)		+= tpsys_err_intr/
 obj-$(CONFIG_ARCH_SOPHGO)		+= msg_intr/
 obj-$(CONFIG_ARCH_SOPHGO)		+= ras/
+obj-$(CONFIG_ARCH_SOPHGO)		+= cpu_idle/

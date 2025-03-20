@@ -9,5 +9,6 @@ source "drivers/soc/sophgo/veth/Kconfig"
 source "drivers/soc/sophgo/tpsys_err_intr/Kconfig"
 source "drivers/soc/sophgo/msg_intr/Kconfig"
 source "drivers/soc/sophgo/ras/Kconfig"
+source "drivers/soc/sophgo/cpu_idle/Kconfig"
 
 endmenu

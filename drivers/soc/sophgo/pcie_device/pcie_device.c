@@ -68,7 +68,7 @@ static u32 top_reg_read(struct p_dev *hdev, u32 reg_offset)
 {
 	return ioread32(hdev->top_bar_vaddr + reg_offset);
 }
-//comment for compile unused warning 
+//comment for compile unused warning
 #if 0
 static void top_reg_write(struct p_dev *hdev, u32 reg_offset, u32 val)
 {

@@ -1377,14 +1377,14 @@ static void pcie_config_cascade_rc_atu(struct sophgo_dw_pcie *pcie)
 	writel(0x2000, (atu_base+ 0x1200));
 	writel(0x80000000, (atu_base+ 0x1204));
 
-	writel(0xa0000000, (atu_base+ 0x1408));  //src
-	writel((up_start_addr >> 32), (atu_base+ 0x140c));
-	writel(0xa0ffffff, (atu_base+ 0x1410)); //size 16M
-	writel((up_start_addr >> 32), (atu_base+ 0x1420));  //size 16M
-	writel(0x00000000, (atu_base+ 0x1414)); //target
-	writel(0x52, (atu_base+ 0x1418));
-	writel(0x2000, (atu_base+ 0x1400));
-	writel(0x80000000, (atu_base+ 0x1404));
+	//writel(0xa0000000, (atu_base+ 0x1408));  //src
+	//writel((up_start_addr >> 32), (atu_base+ 0x140c));
+	//writel(0xa0ffffff, (atu_base+ 0x1410)); //size 16M
+	//writel((up_start_addr >> 32), (atu_base+ 0x1420));  //size 16M
+	//writel(0x00000000, (atu_base+ 0x1414)); //target
+	//writel(0x52, (atu_base+ 0x1418));
+	//writel(0x2000, (atu_base+ 0x1400));
+	//writel(0x80000000, (atu_base+ 0x1404));
 }
 
 static void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)

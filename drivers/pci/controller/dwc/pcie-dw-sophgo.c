@@ -674,6 +674,9 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 			pr_err("cdma reg not found\n");
 			return -1;
 		}
+
+		of_property_read_u32_index(np, "dst-chip", 0, &pcie->dst_chipid);
+
 		pcie->cdma_reg_base = devm_ioremap(dev, pcie->cdma_pa_start, pcie->cdma_size);
 		if (!pcie->cdma_reg_base) {
 			dev_err(dev, "failed to map cdma reg\n");
@@ -683,6 +686,19 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		if (of_device_is_compatible(np, "sophgo,bm1690-c2c-pcie-host")) {
 			pcie->c2c_pcie_rc = 1;
 			dev_err(dev, "probe c2c pcie host\n");
+		} else if (of_device_is_compatible(np, "sophgo,bm1690-pcie-host")) {
+			pcie->c2c_pcie_rc = 0;
+			pcie->chip_type = CHIP_BM1690;
+			pcie->dst_chipid_shift = 57;
+			pcie->func_num_shift = 54;
+		} else if (of_device_is_compatible(np, "sophgo,bm1690e-pcie-host")) {
+			pcie->c2c_pcie_rc = 0;
+			pcie->chip_type = CHIP_BM1690E;
+			pcie->dst_chipid_shift = 49;
+			pcie->func_num_shift = 46;
+		} else {
+			pr_err("error compatible\n");
+			return -1;
 		}
 	}
 
@@ -1353,39 +1369,6 @@ static void pcie_config_port_code(struct sophgo_dw_pcie *pcie)
 	writel(val, pcie->c2c_top);
 }
 
-static void pcie_config_cascade_rc_atu(struct sophgo_dw_pcie *pcie)
-{
-	uint64_t up_start_addr = 0;
-	void __iomem *atu_base = pcie->atu_base;
-
-	up_start_addr = pcie->up_start_addr;
-	writel(0x0, (atu_base+ 0x1008));  //src
-	writel((up_start_addr >> 32), (atu_base+ 0x100c));
-	writel(0x3fffff, (atu_base+ 0x1010)); //size 4M
-	writel((up_start_addr >> 32), (atu_base+ 0x1020));  //size 4M
-	writel(0x24800000, (atu_base+ 0x1014)); //target
-	writel(0x0, (atu_base+ 0x1018));
-	writel(0x2000, (atu_base+ 0x1000));
-	writel(0x80000000, (atu_base+ 0x1004));
-
-	writel(0x400000, (atu_base+ 0x1208));  //src
-	writel((up_start_addr >> 32), (atu_base+ 0x120c));
-	writel(0x7fffff, (atu_base+ 0x1210)); //size 4M
-	writel((up_start_addr >> 32), (atu_base+ 0x1220));  //size 4M
-	writel(0x24c00000, (atu_base+ 0x1214)); //target
-	writel(0x0, (atu_base+ 0x1218));
-	writel(0x2000, (atu_base+ 0x1200));
-	writel(0x80000000, (atu_base+ 0x1204));
-
-	//writel(0xa0000000, (atu_base+ 0x1408));  //src
-	//writel((up_start_addr >> 32), (atu_base+ 0x140c));
-	//writel(0xa0ffffff, (atu_base+ 0x1410)); //size 16M
-	//writel((up_start_addr >> 32), (atu_base+ 0x1420));  //size 16M
-	//writel(0x00000000, (atu_base+ 0x1414)); //target
-	//writel(0x52, (atu_base+ 0x1418));
-	//writel(0x2000, (atu_base+ 0x1400));
-	//writel(0x80000000, (atu_base+ 0x1404));
-}
 
 static void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)
 {
@@ -1395,7 +1378,6 @@ static void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)
 	pcie_config_mrrs(pcie);
 
 	pcie_config_port_code(pcie);
-	pcie_config_cascade_rc_atu(pcie);
 }
 
 static void pcie_config_axi_route(struct sophgo_dw_pcie *pcie)
@@ -1507,6 +1489,89 @@ static int sophgo_pcie_config_cdma_route(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
+static int find_available_ob_atu(struct sophgo_dw_pcie *pcie)
+{
+	for (int i = 0; i < pcie->num_ob_windows; i++) {
+		uint32_t val = sophgo_dw_pcie_readl_atu_ob(pcie, i, PCIE_ATU_REGION_CTRL2);
+		if (!(val & PCIE_ATU_ENABLE))
+			return i;
+	}
+
+	return -1;
+}
+
+static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *bridge)
+{
+	struct pci_bus *bus = bridge->bus;
+	struct list_head *child_pci_bus;
+	struct pci_bus *child_bus;
+	struct list_head *dev_list;
+	struct pci_dev *dev;
+	struct resource_entry *window;
+	uint64_t cpu_addr;
+	uint64_t pcie_addr;
+	uint64_t atu_cpu_addr;
+	uint64_t dst_chipid = pcie->dst_chipid;
+	int bar_num[4] = {0, 1, 2, 4};
+	uint64_t bar2addr[4] = {0x5, 0x6, 0x7, 0x0};
+	int i = 0;
+	uint64_t offset;
+	int ret;
+	int index;
+
+	dev_err(bus->bridge, "bridge bus number:0x%x\n", bus->number);
+
+	list_for_each(child_pci_bus, &bus->children) {
+		child_bus = container_of(child_pci_bus, struct pci_bus, node);
+		dev_err(child_bus->bridge, "child pci bus number:0x%x\n", child_bus->number);
+
+		list_for_each(dev_list, &child_bus->devices) {
+			dev = container_of(dev_list, struct pci_dev, bus_list);
+			dev_err(&dev->dev, "devfn:0x%x, class:0x%x\n", dev->devfn, dev->class);
+
+			for (i = 0; i < 4; i++) {
+				cpu_addr = pci_resource_start(dev, bar_num[i]);
+				dev_err(&dev->dev, "bar%d addr:0x%llx\n", bar_num[i], cpu_addr);
+
+				resource_list_for_each_entry(window, &bridge->windows) {
+					dev_dbg(&dev->dev, "windown start:0x%llx, end:0x%llx, offset:0x%llx\n", window->res->start,
+							window->res->end, window->offset);
+					if (window->res->start <= cpu_addr && ( window->res->end >= cpu_addr)) {
+						offset = window->offset;
+						dev_err(&dev->dev, "bar%d match window\n", bar_num[i]);
+						break;
+					}
+				}
+				pcie_addr = cpu_addr - offset;
+
+				atu_cpu_addr = (dst_chipid << pcie->dst_chipid_shift) | (bar2addr[i] << pcie->func_num_shift);
+
+				if (bar_num[i] == 2 || bar_num[i] == 4)
+					continue;
+
+				index = find_available_ob_atu(pcie);
+				if (index < 0) {
+					dev_err(pcie->dev, "No available OB ATU\n");
+					return -1;
+				}
+				ret = sophgo_dw_pcie_prog_outbound_atu(pcie, index, PCIE_ATU_TYPE_MEM,
+						atu_cpu_addr, pcie_addr, pci_resource_len(dev, bar_num[i]));
+				if (ret) {
+					dev_err(pcie->dev, "failed to set ob atu 0x%llx\n", atu_cpu_addr);
+					return ret;
+				}
+
+				dev_err(pcie->dev, "iATU%d: cpu 0x%llx -> PCIe 0x%llx, size 0x%llx\n",
+						index, atu_cpu_addr, pcie_addr, pci_resource_len(dev, bar_num[i]));
+			}
+
+			dst_chipid++;
+		}
+	}
+
+	return 0;
+}
+
 int sophgo_dw_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1594,6 +1659,10 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	ret = pci_host_probe(bridge);
 	if (ret)
 		return ret;
+
+	if (pcie->pcie_card && pcie->c2c_pcie_rc == 0) {
+		config_rc_atu(pcie, bridge);
+	}
 
 	return 0;
 }

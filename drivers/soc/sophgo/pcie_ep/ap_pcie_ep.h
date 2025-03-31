@@ -20,6 +20,7 @@
 enum {
 	CHIP_BM1684X = 0,
 	CHIP_BM1690,
+	CHIP_BM1690E,
 };
 
 struct pcie_info {
@@ -95,6 +96,8 @@ struct sophgo_pcie_ep {
 	struct sophgo_pcie_vfun vfun[PCIE_VFUN_MAX];
 	int (*set_vector)(struct sophgo_pcie_ep *ep);
 	int (*reset_vector)(struct sophgo_pcie_ep *ep);
+	int (*set_iatu)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_c2c_atu)(struct sophgo_pcie_ep *sg_ep);
 };
 
 
@@ -114,7 +117,7 @@ enum soc_work_mode {
 
 struct vector_info *sophgo_ep_alloc_vector(int pcie_id, int vector_id);
 int bm1684x_ep_int(struct platform_device *pdev);
-int bm1690_ep_int(struct platform_device *pdev);
+int bm1690_ep_init(struct platform_device *pdev);
 void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep);
 int sophgo_pcie_ep_config_cdma_route(struct sophgo_pcie_ep *pcie);
 

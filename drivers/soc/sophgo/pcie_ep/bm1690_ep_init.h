@@ -86,4 +86,41 @@ enum {
 #define PCIE_DATA_LINK_PCIE	0
 #define PCIE_DATA_LINK_C2C	1
 
+#define PCIE_ATU_REGION_CTRL1		0x000
+
+#define PCIE_ATU_REGION_CTRL2		0x004
+#define PCIE_ATU_ENABLE			BIT(31)
+#define PCIE_ATU_BAR_MODE_ENABLE	BIT(30)
+#define PCIE_ATU_INHIBIT_PAYLOAD	BIT(22)
+#define PCIE_ATU_FUNC_NUM_MATCH_EN      BIT(19)
+
+#define PCIE_ATU_LOWER_BASE		0x008
+#define PCIE_ATU_UPPER_BASE		0x00C
+#define PCIE_ATU_LIMIT			0x010
+#define PCIE_ATU_LOWER_TARGET		0x014
+#define PCIE_ATU_UPPER_TARGET		0x018
+#define PCIE_ATU_UPPER_LIMIT		0x020
+
+#define PCIE_ATU_INCREASE_REGION_SIZE	BIT(13)
+
+#define PCIE_ATU_FUNC_NUM(pf)           ((pf) << 20)
+
+#define ATU_IB	1
+#define ATU_OB	0
+
+#define PCIE_ATU_BASE(dir, index) (((index) << 9) | (dir << 8))
+
+#define ADDRES_MATCH	0
+#define BAR_MATCH	1
+struct iatu {
+	int match_type;
+	int index;
+	int type;
+	uint64_t cpu_addr;
+	uint64_t pci_addr;
+	uint64_t size;
+	uint32_t func;
+	uint32_t bar;
+};
+
 #endif

@@ -56,6 +56,8 @@ static int sophgo_pcie_link_probe(struct platform_device *pdev)
 	pr_err("[pcie ep] pcie link probe\n");
 
 	sg_ep->set_vector(sg_ep);
+	sg_ep->set_iatu(sg_ep);
+	sg_ep->set_c2c_atu(sg_ep);
 
 	res = kzalloc(sizeof(struct resource) * 32, GFP_KERNEL);
 	if (!res)
@@ -259,8 +261,11 @@ static int sophgo_pcie_ep_get_dtbif(struct platform_device *pdev, uint64_t link_
 		dev_info(dev, "found bm1684x pcie ep\n");
 	} else if (strcmp(chip_type, "bm1690") == 0) {
 		sg_ep->chip_type = CHIP_BM1690;
-		bm1690_ep_int(pdev);
+		bm1690_ep_init(pdev);
 		dev_info(dev, "found bm1690 pcie ep\n");
+	} else if (strcmp(chip_type, "bm1690e") == 0) {
+		sg_ep->chip_type = CHIP_BM1690E;
+		bm1690_ep_init(pdev);
 	} else {
 		pr_err("unknown chip type %s\n", chip_type);
 		return -EINVAL;

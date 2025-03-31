@@ -84,6 +84,9 @@
 #define PCIE_SII_GENERAL_CTRL1_DEVICE_TYPE_MASK             GENMASK_32(12, 9)
 #define PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_MULTI_MSI_MASK   GENMASK_32(3, 1)
 
+#define CHIP_BM1690 0x1690
+#define CHIP_BM1690E 0x169e
+
 enum pcie_rst_status {
 	PCIE_RST_ASSERT = 0,
 	PCIE_RST_DE_ASSERT,
@@ -129,9 +132,14 @@ struct sophgo_dw_pcie {
 	uint64_t		cdma_pa_start;
 	uint64_t		cdma_size;
 	uint32_t		c2c_pcie_rc;
+	uint32_t		chip_type;
 	size_t			atu_size;
 	uint32_t		pcie_card;
 	uint32_t		pcie_route_config;
+	uint32_t		dst_boardid_shift;
+	uint32_t 		dst_chipid;
+	uint32_t		dst_chipid_shift;
+	uint32_t		func_num_shift;
 	u32			num_ib_windows;
 	u32			num_ob_windows;
 	u32			region_align;

@@ -24,6 +24,7 @@
 #include <linux/delay.h>
 #include <linux/phy/phy.h>
 #include <linux/of_gpio.h>
+#include <linux/wordpart.h>
 #include "ap_pcie_ep.h"
 #include "bm1690_ep_init.h"
 
@@ -686,7 +687,145 @@ static int bm1690_reset_vector(struct sophgo_pcie_ep *sg_ep)
 	return 0;
 }
 
-int bm1690_ep_int(struct platform_device *pdev)
+static inline void sg_pcie_writel_atu(struct sophgo_pcie_ep *sg_ep, uint32_t dir,
+					uint32_t index, uint32_t reg, uint32_t val)
+{
+	void __iomem *base = sg_ep->atu_base + PCIE_ATU_BASE(dir, index);
+
+	writel(val, base + reg);
+}
+
+static int prog_inbound_iatu(struct sophgo_pcie_ep *sg_ep, struct iatu *atu)
+{
+	uint64_t pci_addr = atu->pci_addr;
+	uint64_t limit_addr = atu->pci_addr + atu->size - 1;
+	uint64_t cpu_addr = atu->cpu_addr;
+	uint32_t val = atu->type;
+	uint32_t index = atu->index;
+
+	if (atu->match_type == ADDRES_MATCH) {
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_LOWER_BASE,
+					lower_32_bits(pci_addr));
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_UPPER_BASE,
+					upper_32_bits(pci_addr));
+
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_LIMIT,
+					lower_32_bits(limit_addr));
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_UPPER_LIMIT,
+					upper_32_bits(limit_addr));
+
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_LOWER_TARGET,
+					lower_32_bits(cpu_addr));
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_UPPER_TARGET,
+					upper_32_bits(cpu_addr));
+
+		if (upper_32_bits(limit_addr) > upper_32_bits(pci_addr))
+		val |= PCIE_ATU_INCREASE_REGION_SIZE;
+
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_REGION_CTRL1, val);
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_REGION_CTRL2, PCIE_ATU_ENABLE);
+	} else if (atu->match_type == BAR_MATCH) {
+		dev_err(sg_ep->dev, "prg inbound iatu %u, func%d bar%d -> 0x%llx\n", index, atu->func,
+			atu->bar, cpu_addr);
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_LOWER_TARGET,
+			lower_32_bits(cpu_addr));
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_UPPER_TARGET,
+			upper_32_bits(cpu_addr));
+
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_REGION_CTRL1, val |
+			PCIE_ATU_FUNC_NUM(atu->func));
+		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_REGION_CTRL2,
+			PCIE_ATU_ENABLE | PCIE_ATU_FUNC_NUM_MATCH_EN |
+			PCIE_ATU_BAR_MODE_ENABLE | (atu->bar << 8));
+	} else {
+		pr_err("error atu match type:0x%x\n", atu->match_type);
+	}
+
+	return 0;
+}
+
+static int bm1690ep_set_iatu(struct sophgo_pcie_ep *sg_ep)
+{
+	int base_index = 32 - (sg_ep->func_num - 1) * 4 - 1;
+	int bm1690_dst_chipid_shift = 57;
+	int bm1690_funcnum_shift = 54;
+	int bar_num = 4;
+	uint64_t bar_list[4] = {0, 1, 2, 4};
+	uint64_t bar2addr[4] = {0x5, 0x6, 0x7, 0x0};
+	uint64_t dst_chip = 2;
+	struct iatu atu;
+	int i;
+	int j;
+
+	atu.match_type = BAR_MATCH;
+
+	for (i = 0; i < sg_ep->func_num; i++) {
+		atu.func = i;
+
+		if (i == 0) {
+			if (sg_ep->func_num != 1) {
+				atu.bar = 4;
+				atu.cpu_addr = 0;
+				atu.index = base_index;
+
+				prog_inbound_iatu(sg_ep, &atu);
+				base_index++;
+			}
+		} else {
+			for (j = 0; j < bar_num; j++) {
+				atu.bar = bar_list[j];
+				atu.cpu_addr = (dst_chip << bm1690_dst_chipid_shift) |
+							(bar2addr[j] << bm1690_funcnum_shift);
+				atu.index = base_index;
+
+				prog_inbound_iatu(sg_ep, &atu);
+				base_index++;
+			}
+
+			dst_chip++;
+		}
+	}
+
+	return 0;
+}
+
+static int bm1690ep_set_c2c_atu(struct sophgo_pcie_ep *sg_ep)
+{
+
+	return 0;
+}
+
+static int bm1690e_set_vector(struct sophgo_pcie_ep *sg_ep)
+{
+#ifndef CONFIG_SOPHGO_TX_MSIX_USED
+	setup_msi_gen(sg_ep);
+#else
+	setup_msix_gen(sg_ep);
+#endif
+	setup_msi_info(sg_ep);
+
+	return 0;
+}
+
+static int bm1690e_reset_vector(struct sophgo_pcie_ep *sg_ep)
+{
+
+	return 0;
+}
+
+static int bm1690eep_set_iatu(struct sophgo_pcie_ep *sg_ep)
+{
+
+	return 0;
+}
+
+static int bm1690eep_set_c2c_atu(struct sophgo_pcie_ep *sg_ep)
+{
+
+	return 0;
+}
+
+int bm1690_ep_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sophgo_pcie_ep *sg_ep = dev_get_drvdata(dev);
@@ -829,8 +968,17 @@ int bm1690_ep_int(struct platform_device *pdev)
 
 	}
 
-	sg_ep->set_vector = bm1690_set_vector;
-	sg_ep->reset_vector = bm1690_reset_vector;
+	if (sg_ep->chip_type == CHIP_BM1690) {
+		sg_ep->set_iatu = bm1690ep_set_iatu;
+		sg_ep->set_c2c_atu = bm1690ep_set_c2c_atu;
+		sg_ep->set_vector = bm1690_set_vector;
+		sg_ep->reset_vector = bm1690_reset_vector;
+	} else if (sg_ep->chip_type == CHIP_BM1690E) {
+		sg_ep->set_iatu = bm1690eep_set_iatu;
+		sg_ep->set_c2c_atu = bm1690eep_set_c2c_atu;
+		sg_ep->set_vector = bm1690e_set_vector;
+		sg_ep->reset_vector = bm1690e_reset_vector;
+	}
 
 	return 0;
 unmap_c2c_top:
@@ -845,4 +993,4 @@ unmap_config:
 failed:
 	return -1;
 }
-EXPORT_SYMBOL_GPL(bm1690_ep_int);
+EXPORT_SYMBOL_GPL(bm1690_ep_init);

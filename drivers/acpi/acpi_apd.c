@@ -40,8 +40,9 @@ struct apd_private_data {
 	const struct apd_device_desc *dev_desc;
 };
 
-#if defined(CONFIG_X86_AMD_PLATFORM_DEVICE) || \
-defined(CONFIG_ARM64) || defined(CONFIG_SW64)
+#if defined(CONFIG_X86_AMD_PLATFORM_DEVICE) || defined(CONFIG_ARM64) || \
+    defined(CONFIG_SW64) || defined(CONFIG_RISCV)
+
 #define APD_ADDR(desc)	((unsigned long)&desc)
 
 static int acpi_apd_setup(struct apd_private_data *pdata)
@@ -205,6 +206,18 @@ static int sw64_acpi_apd_setup(struct apd_private_data *pdata)
 }
 #endif /* CONFIG_SW64 */
 
+#ifdef CONFIG_RISCV
+static const struct apd_device_desc sophgo_i2c_desc = {
+	.setup = acpi_apd_setup,
+	.fixed_clk_rate = 100000000,
+};
+
+static const struct apd_device_desc sophgo_spi_desc = {
+	.setup = acpi_apd_setup,
+	.fixed_clk_rate = 250000000,
+};
+#endif
+
 #endif
 
 /*
@@ -277,6 +290,10 @@ static const struct acpi_device_id acpi_apd_device_ids[] = {
 #ifdef CONFIG_SW64
 	{ "SUNW0005", APD_ADDR(sunway_i2c_desc) },
 	{ "SUNW0008", APD_ADDR(sunway_spi_desc) },
+#endif
+#ifdef CONFIG_RISCV
+	{ "SOPH0003", APD_ADDR(sophgo_i2c_desc) },
+	{ "SOPH0004", APD_ADDR(sophgo_spi_desc) },
 #endif
 	{ }
 };

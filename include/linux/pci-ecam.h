@@ -89,6 +89,7 @@ extern const struct pci_ecam_ops al_pcie_ops;	/* Amazon Annapurna Labs PCIe */
 extern const struct pci_ecam_ops tegra194_pcie_ops; /* Tegra194 PCIe */
 extern const struct pci_ecam_ops loongson_pci_ecam_ops; /* Loongson PCIe */
 extern const struct pci_ecam_ops sunway_pci_ecam_ops;	/* Sunway PCIe */
+extern const struct pci_ecam_ops sophgo_pci_ecam_ops; /* Sophgo PCIe */
 #endif
 
 #if IS_ENABLED(CONFIG_PCI_HOST_COMMON)

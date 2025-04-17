@@ -225,6 +225,22 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	SW64_ECAM_QUIRK("SUNWAY  ", 1, 0x06, &sunway_pci_ecam_ops),
 	SW64_ECAM_QUIRK("SUNWAY  ", 1, 0x07, &sunway_pci_ecam_ops),
 #endif /* SW64 */
+
+#ifdef CONFIG_RISCV
+#define RISCV_ECAM_MCFG(table_id, seg) \
+    { "SOPHGO", table_id, 1, seg, MCFG_BUS_ANY, &sophgo_pci_ecam_ops }
+	RISCV_ECAM_MCFG("2044    ", 0),
+	RISCV_ECAM_MCFG("2044    ", 1),
+	RISCV_ECAM_MCFG("2044    ", 2),
+	RISCV_ECAM_MCFG("2044    ", 3),
+	RISCV_ECAM_MCFG("2044    ", 4),
+	RISCV_ECAM_MCFG("2044    ", 5),
+	RISCV_ECAM_MCFG("2044    ", 6),
+	RISCV_ECAM_MCFG("2044    ", 7),
+	RISCV_ECAM_MCFG("2044    ", 8),
+	RISCV_ECAM_MCFG("2044    ", 9),
+#endif /* RISCV */
+
 };
 
 static char mcfg_oem_id[ACPI_OEM_ID_SIZE];

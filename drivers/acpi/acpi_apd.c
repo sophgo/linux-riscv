@@ -211,6 +211,11 @@ static const struct apd_device_desc sophgo_i2c_desc = {
 	.setup = acpi_apd_setup,
 	.fixed_clk_rate = 100000000,
 };
+
+static const struct apd_device_desc sophgo_spi_desc = {
+	.setup = acpi_apd_setup,
+	.fixed_clk_rate = 250000000,
+};
 #endif
 
 #endif
@@ -288,6 +293,7 @@ static const struct acpi_device_id acpi_apd_device_ids[] = {
 #endif
 #ifdef CONFIG_RISCV
 	{ "SOPH0003", APD_ADDR(sophgo_i2c_desc) },
+	{ "SOPH0004", APD_ADDR(sophgo_spi_desc) },
 #endif
 	{ }
 };

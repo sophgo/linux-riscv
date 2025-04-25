@@ -695,6 +695,14 @@ static inline void sg_pcie_writel_atu(struct sophgo_pcie_ep *sg_ep, uint32_t dir
 	writel(val, base + reg);
 }
 
+static inline uint32_t sg_pcie_readl_atu(struct sophgo_pcie_ep *sg_ep, uint32_t dir,
+					uint32_t index, uint32_t reg)
+{
+	void __iomem *base = sg_ep->atu_base + PCIE_ATU_BASE(dir, index);
+
+	return readl(base + reg);
+}
+
 static int prog_inbound_iatu(struct sophgo_pcie_ep *sg_ep, struct iatu *atu)
 {
 	uint64_t pci_addr = atu->pci_addr;
@@ -725,7 +733,7 @@ static int prog_inbound_iatu(struct sophgo_pcie_ep *sg_ep, struct iatu *atu)
 		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_REGION_CTRL1, val);
 		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_REGION_CTRL2, PCIE_ATU_ENABLE);
 	} else if (atu->match_type == BAR_MATCH) {
-		dev_err(sg_ep->dev, "prg inbound iatu %u, func%d bar%d -> 0x%llx\n", index, atu->func,
+		dev_err(sg_ep->dev, "prg ib iatu%2u, func%d bar%d -> 0x%llx\n", index, atu->func,
 			atu->bar, cpu_addr);
 		sg_pcie_writel_atu(sg_ep, ATU_IB, index, PCIE_ATU_LOWER_TARGET,
 			lower_32_bits(cpu_addr));
@@ -744,7 +752,62 @@ static int prog_inbound_iatu(struct sophgo_pcie_ep *sg_ep, struct iatu *atu)
 	return 0;
 }
 
-static int bm1690ep_set_iatu(struct sophgo_pcie_ep *sg_ep)
+static int find_available_ob_atu(struct sophgo_pcie_ep *sg_ep)
+{
+	for (int i = 0; i < 32; i++) {
+		uint32_t val = sg_pcie_readl_atu(sg_ep, ATU_OB, i, PCIE_ATU_REGION_CTRL2);
+		if (!(val & PCIE_ATU_ENABLE))
+			return i;
+	}
+
+	return -1;
+}
+
+static inline void sg_pcie_writel_ob_atu(struct sophgo_pcie_ep *sg_ep, u32 index, u32 reg,
+	u32 val)
+{
+	sg_pcie_writel_atu(sg_ep, ATU_OB, index, reg, val);
+}
+
+static int prog_outbound_iatu(struct sophgo_pcie_ep *sg_ep, int index, uint32_t func, uint64_t cpu_addr,
+	uint64_t pci_addr, uint64_t size)
+{
+	uint32_t val = 0;
+	uint64_t limit_addr = 0;
+	uint32_t type = PCIE_ATU_TYPE_MEM;
+
+	pr_err("ep config ob %2datu:0x%llx -> 0x%llx, [0x%llx]\n", index, cpu_addr,
+		pci_addr, size);
+
+	limit_addr = cpu_addr + size - 1;
+
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_LOWER_BASE,
+	lower_32_bits(cpu_addr));
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_UPPER_BASE,
+	upper_32_bits(cpu_addr));
+
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_LIMIT,
+	lower_32_bits(limit_addr));
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_UPPER_LIMIT,
+	upper_32_bits(limit_addr));
+
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_LOWER_TARGET,
+	lower_32_bits(pci_addr));
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_UPPER_TARGET,
+	upper_32_bits(pci_addr));
+
+	val = type | PCIE_ATU_FUNC_NUM(func);
+	if (upper_32_bits(limit_addr) > upper_32_bits(cpu_addr))
+		val |= PCIE_ATU_INCREASE_REGION_SIZE;
+
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_REGION_CTRL1, val);
+
+	sg_pcie_writel_ob_atu(sg_ep, index, PCIE_ATU_REGION_CTRL2, PCIE_ATU_ENABLE);
+
+	return 0;
+}
+
+static int bm1690ep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 {
 	int base_index = 32 - (sg_ep->func_num - 1) * 4 - 1;
 	int bm1690_dst_chipid_shift = 57;
@@ -789,6 +852,52 @@ static int bm1690ep_set_iatu(struct sophgo_pcie_ep *sg_ep)
 	return 0;
 }
 
+static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
+{
+	struct iatu ob_atu[2] = {
+		[0] = {
+			.pci_addr = 0x0,
+			.size = 0x1ffffffffffff,
+			.cpu_addr = 0x600000000000000,
+			.type = PCIE_ATU_TYPE_MEM,
+			.func = 0,
+		},
+		[1] = {
+			.pci_addr = 0x0,
+			.size = 0x1ffffffffffff,
+			.cpu_addr = 0xe00000000000000,
+			.type = PCIE_ATU_TYPE_MEM,
+			.func = 1,
+		},
+	};
+
+	return 0;
+
+	if (ep->ep_info.socket_id == 0) {
+		for (int i = 0; i < sizeof(ob_atu) / sizeof(struct iatu); i++) {
+			ob_atu[i].index = find_available_ob_atu(ep);
+			if (ob_atu[i].index < 0) {
+				pr_err("index%d no available ob iatu\n", i);
+				return -1;
+			}
+			prog_outbound_iatu(ep, ob_atu[i].index, ob_atu[i].func,
+					ob_atu[i].cpu_addr, ob_atu[i].pci_addr,
+					ob_atu[i].size);
+		}
+	}
+
+
+	return 0;
+}
+
+static int bm1690ep_set_iatu(struct sophgo_pcie_ep *sg_ep)
+{
+	bm1690ep_set_ib_iatu(sg_ep);
+	bm1690ep_set_ob_iatu(sg_ep);
+
+	return 0;
+}
+
 static int bm1690ep_set_c2c_atu(struct sophgo_pcie_ep *sg_ep)
 {
 
@@ -813,14 +922,462 @@ static int bm1690e_reset_vector(struct sophgo_pcie_ep *sg_ep)
 	return 0;
 }
 
+static int bm1690eep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
+{
+	int base_index = 32 - (sg_ep->func_num * 4);
+	uint64_t bar_list[4] = {0, 1, 4};
+	struct iatu atu;
+	uint64_t barid = 0;
+	uint64_t chipid;
+	int func;
+	int j;
+
+	atu.match_type = BAR_MATCH;
+
+	for (func = 0; func < sg_ep->func_num; func++) {
+		atu.func = func;
+
+		for (j = 0; j < sizeof(bar_list) / sizeof(uint64_t); j++) {
+			if ((func == 0 && bar_list[j] == 0) || (func == 0 && bar_list[j] == 1)) {
+				base_index++;
+				barid++;
+				continue;
+			}
+
+			atu.bar = bar_list[j];
+			chipid = func + 1;
+			atu.cpu_addr = BM1690E_PCIE_FMT_BOARDID(sg_ep->board_id) |
+					BM1690E_PCIE_FMT_CHIPID(chipid) |
+					BM1690E_PCIE_FMT_BARID(barid);
+			atu.index = base_index;
+
+			prog_inbound_iatu(sg_ep, &atu);
+			base_index++;
+			barid++;
+		}
+
+	}
+
+	return 0;
+}
+
 static int bm1690eep_set_iatu(struct sophgo_pcie_ep *sg_ep)
 {
+	bm1690eep_set_ib_iatu(sg_ep);
+
+	return 0;
+}
+
+static inline void *get_c2c_ibatu(struct sophgo_pcie_ep *sg_ep, uint32_t index)
+{
+	return sg_ep->c2c_top_base + C2C_IBATU(index);
+}
+
+static void prog_c2c_ibatu(struct sophgo_pcie_ep *sg_ep, uint32_t index,
+		uint64_t match_addr, uint64_t out_addr, uint64_t ib_size)
+{
+	void *ib_atu = get_c2c_ibatu(sg_ep, index);
+	uint32_t boardid = BM1690E_PCIE_FMT_GET_BOARDID(out_addr);
+	uint32_t chipid = BM1690E_PCIE_FMT_GET_CHIPID(out_addr);
+	uint32_t func = BM1690E_PCIE_FMT_GET_FUNC(out_addr);
+	uint32_t msi = BM1690E_PCIE_FMT_GET_MSI(out_addr);
+	uint32_t atu_ctrl = 0;
+
+	writel(lower_32_bits(match_addr), ib_atu + C2C_IBATU_LOWER_BASE);
+	writel(upper_32_bits(match_addr), ib_atu + C2C_IBATU_UPPER_BASE);
+
+	atu_ctrl = C2C_IBATU_CTRL_SELX8(1) |
+		C2C_IBATU_CTRL_BOARDID(boardid) |
+		C2C_IBATU_CTRL_CHIPID(chipid) |
+		C2C_IBATU_CTRL_FUNC(func) |
+		C2C_IBATU_CTRL_MSI(msi) |
+		C2C_IBATU_CTRL_IBSIZE(ib_size) |
+		C2C_IBATU_CTRL_ENABLE;
+	writel(atu_ctrl, ib_atu + C2C_IBATU_CTRL);
+
+	pr_err("c2c ibatu %d:0x%llx -> 0x%llx, ctrl:0x%x\n", index, match_addr,
+		out_addr, atu_ctrl);
+}
+
+static int bm1690eep_set_c2c_ib_atu(struct sophgo_pcie_ep *sg_ep)
+{
+	uint64_t bar_list[4] = {0, 1, 4};
+	uint64_t barid = 0;
+	uint64_t c2c_iatu_index = 0;
+	uint64_t addr;
+	uint64_t chipid;
+	int func;
+	int j;
+
+	for (func = 0; func < sg_ep->func_num; func++) {
+		for (j = 0; j < sizeof(bar_list) / sizeof(uint64_t); j++) {
+			if (bar_list[j] == 4) {
+				chipid = func + 1;
+				addr = BM1690E_PCIE_FMT_BOARDID(sg_ep->board_id) |
+					BM1690E_PCIE_FMT_CHIPID(chipid) |
+					BM1690E_PCIE_FMT_BARID(barid);
+				prog_c2c_ibatu(sg_ep, c2c_iatu_index, addr, addr, 36);
+			}
+
+			barid++;
+			c2c_iatu_index++;
+		}
+	}
+
+	return 0;
+}
+
+static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
+{
+
 
 	return 0;
 }
 
 static int bm1690eep_set_c2c_atu(struct sophgo_pcie_ep *sg_ep)
 {
+	if (sg_ep->ep_info.socket_id != 0) {
+		pr_err("only socket0 need config c2c atu, now socket id is 0x%llx\n",
+			sg_ep->ep_info.socket_id);
+		return 0;
+	}
+
+	bm1690eep_set_c2c_ib_atu(sg_ep);
+	bm1690eep_set_c2c_ob_atu(sg_ep);
+
+	return 0;
+}
+
+static inline void *get_recoder_addr(struct sophgo_pcie_ep *sg_ep, uint32_t dir, uint32_t index)
+{
+	if (dir == OB_RECODER)
+		return sg_ep->c2c_top_base + OB_RECODER_ADDR(index);
+	else if (dir == IB_RECODER)
+		return sg_ep->c2c_top_base + IB_RECODER_ADDR(index);
+	else
+		return NULL;
+}
+
+static inline void *get_recoder_en(struct sophgo_pcie_ep *sg_ep, uint32_t dir)
+{
+	if (dir == OB_RECODER)
+		return sg_ep->c2c_top_base + 0x1100;
+	else if (dir == IB_RECODER)
+		return sg_ep->c2c_top_base + 0x1104;
+	else
+		return NULL;
+}
+
+static int find_availeble_recoder(struct sophgo_pcie_ep *sg_ep, uint32_t dir)
+{
+	uint32_t recoder_en_val = readl(get_recoder_en(sg_ep, dir));
+
+	for (int i = 0; i < 32; i++) {
+		if (!(recoder_en_val & (1 << i)))
+			return i;
+	}
+
+	return -1;
+}
+
+static int prog_recoder(struct sophgo_pcie_ep *sg_ep, uint32_t dir, uint32_t index,
+		uint64_t match_addr, uint64_t out_addr, uint64_t size)
+{
+	void *recoder = get_recoder_addr(sg_ep, dir, index);
+	void *recoder_en = get_recoder_en(sg_ep, dir);
+	uint32_t mask_size = lower_32_bits(((size - 1) >> 12));
+	uint32_t recoder_en_val = readl(recoder_en);
+	uint64_t addr;
+	uint32_t barid;
+	uint32_t st_addr;
+	uint32_t recode_addr;
+
+	barid = BM1690E_PCIE_FMT_BARID(match_addr);
+	addr = PCIE_FMT_TO_RECODER_ADDR(match_addr);
+	st_addr = RECODER_FMT_CFG(barid, addr);
+
+	barid = BM1690E_PCIE_FMT_BARID(out_addr);
+	addr = PCIE_FMT_TO_RECODER_ADDR(out_addr);
+	recode_addr = RECODER_FMT_CFG(barid, addr);
+
+	writel(st_addr, recoder + IB_RECODER_ST_ADDR);
+	writel(recode_addr, recoder + IB_RECODER_RECODE_ADDR);
+	writel(mask_size, recoder + IB_RECODER_RECODE_ADDR);
+
+
+	recoder_en_val |= (1 << index);
+	writel(recoder_en_val, recoder_en);
+	pr_err("ib recoder %d:0x%x -> 0x%x, mask_size:0x%x\n", index, st_addr,
+		recode_addr, mask_size);
+
+	return 0;
+}
+
+
+static int bm1690eep_set_ib_recoder(struct sophgo_pcie_ep *sg_ep)
+{
+	uint64_t bar_list[4] = {0, 1, 4};
+	uint64_t barid = 0;
+	uint64_t recoder_index;
+	uint64_t addr;
+	uint64_t chipid;
+	int func;
+	int j;
+	struct recoder_addr recoder_addr[3] = {
+		[0] = {
+			.match_addr = 0x0000000000,
+			.out_addr = BM1690E_L2M_BASE_ADDR,
+			.mask_size = 4000000,
+		},
+		[1] = {
+			.match_addr = 0x0004000000,
+			.out_addr = BM1690E_MSG_BASE_ADDR,
+			.mask_size = 4000000,
+		},
+		[2] = {
+			.match_addr = 0x0008000000,
+			.out_addr = BM1690E_MTLI_BASE_ADDR,
+			.mask_size = 4000000,
+		},
+	};
+
+	for (func = 0; func < sg_ep->func_num; func++) {
+		for (j = 0; j < sizeof(bar_list) / sizeof(uint64_t); j++) {
+			if (bar_list[j] == 4) {
+				chipid = func + 1;
+				addr = BM1690E_PCIE_FMT_BOARDID(sg_ep->board_id) |
+					BM1690E_PCIE_FMT_CHIPID(chipid) |
+					BM1690E_PCIE_FMT_BARID(barid);
+				for (int i = 0; i < sizeof(recoder_addr) / sizeof(struct recoder_addr); i++) {
+					recoder_index = find_availeble_recoder(sg_ep, IB_RECODER);
+					if (recoder_index < 0) {
+						pr_err("func%d no available recoder\n", func);
+						return -1;
+					}
+
+					prog_recoder(sg_ep, IB_RECODER, recoder_index,
+						addr | recoder_addr[i].match_addr,
+						addr | recoder_addr[i].out_addr,
+						recoder_addr[i].mask_size);
+				}
+			}
+
+			barid++;
+		}
+	}
+
+	return 0;
+}
+
+static int bm1690eep_set_ob_recoder(struct sophgo_pcie_ep *sg_ep)
+{
+	uint64_t barid;
+	uint64_t addr;
+	int recoder_index;
+
+	struct recoder_addr recoder_addr[3] = {
+		[0] = {
+			.match_addr = BM1690E_L2M_BASE_ADDR,
+			.out_addr = 0x0000000000,
+			.mask_size = 4000000,
+		},
+		[1] = {
+			.match_addr = BM1690E_MSG_BASE_ADDR,
+			.out_addr = 0x0004000000,
+			.mask_size = 4000000,
+		},
+		[2] = {
+			.match_addr = BM1690E_MTLI_BASE_ADDR,
+			.out_addr = 0x0008000000,
+			.mask_size = 4000000,
+		},
+	};
+
+	// for upstream, all chip pcie fmt address [func_num = 0, msi = 0], so barid = 0
+	// board_id, chipid are not matched by recoder module, so we dont care board_id and chipid
+	barid = 0;
+	addr = BM1690E_PCIE_FMT_BARID(barid);
+
+	for (int i = 0; i < sizeof(recoder_addr) / sizeof(struct recoder_addr); i++) {
+		recoder_index = find_availeble_recoder(sg_ep, OB_RECODER);
+		if (recoder_index < 0) {
+			pr_err("no available ob recoder\n");
+			return -1;
+		}
+
+		prog_recoder(sg_ep, OB_RECODER, recoder_index,
+			addr | recoder_addr[i].match_addr,
+			addr | recoder_addr[i].out_addr,
+			recoder_addr[i].mask_size);
+	}
+
+	return 0;
+}
+
+static int bm1690eep_set_recoder(struct sophgo_pcie_ep *sg_ep)
+{
+	if (sg_ep->ep_info.socket_id != 0) {
+		pr_err("only socket0 need config recoder, now socket id is 0x%llx\n",
+			sg_ep->ep_info.socket_id);
+		return 0;
+	}
+
+	bm1690eep_set_ib_recoder(sg_ep);
+	bm1690eep_set_ob_recoder(sg_ep);
+
+	return 0;
+}
+
+static inline void *get_portcode_addr(struct sophgo_pcie_ep *sg_ep)
+{
+	return sg_ep->c2c_top_base;
+}
+
+static int bm1690eep_set_portcode(struct sophgo_pcie_ep *sg_ep)
+{
+	void *portcode = get_portcode_addr(sg_ep);
+	uint32_t portcode_val = 0;
+	uint32_t portcode_route_bits[4] = {
+		0x5ddd0,
+		0x51105,
+		0x5d055,
+		0x50555,
+	};
+
+	portcode_val = ((sg_ep->board_size << PORTCODE_BOARDSIZE_SHIFT) |
+			(sg_ep->board_id << PORTCODE_BOARDID_SHIFT) |
+			portcode_route_bits[sg_ep->ep_info.socket_id]);
+
+	writel(portcode_val, portcode);
+
+	return 0;
+}
+
+static inline void *get_wr_order_addr(struct sophgo_pcie_ep *sg_ep, uint32_t index)
+{
+	return sg_ep->c2c_top_base + 0x1120 + (index * 0x10);
+}
+
+static inline void *get_wr_order_en_addr(struct sophgo_pcie_ep *sg_ep)
+{
+	return sg_ep->c2c_top_base + 0x1320;
+}
+
+static inline void *get_wr_order_mode_addr(struct sophgo_pcie_ep *sg_ep)
+{
+	return sg_ep->c2c_top_base + 0x1324;
+}
+
+static inline int find_avaliable_wr_order(struct sophgo_pcie_ep *sg_ep)
+{
+	uint32_t wr_order_en_val = readl(get_wr_order_en_addr(sg_ep));
+
+	for (int i = 0; i < 32; i++) {
+		if (!(wr_order_en_val & (1 << i)))
+			return i;
+	}
+
+	return -1;
+}
+
+static inline void enable_wr_order(struct sophgo_pcie_ep *sg_ep, uint32_t index)
+{
+	uint32_t wr_order_en_val = readl(get_wr_order_en_addr(sg_ep));
+
+	wr_order_en_val |= (1 << index);
+	writel(wr_order_en_val, get_wr_order_en_addr(sg_ep));
+}
+
+static inline void set_wr_order_mode(struct sophgo_pcie_ep *sg_ep, uint32_t index, uint32_t mode)
+{
+	void *wr_order_mode_addr = get_wr_order_mode_addr(sg_ep);
+	uint32_t wr_order_mode_val;
+	uint32_t atu_index = index % 16;
+
+	wr_order_mode_addr = index < 16 ?  wr_order_mode_addr + 0x0 : wr_order_mode_addr + 0x4;
+	wr_order_mode_val = readl(wr_order_mode_addr);
+	wr_order_mode_val &= ~(0x3 << (atu_index * 2));
+	wr_order_mode_val |= (mode << (atu_index * 2));
+	writel(wr_order_mode_val, wr_order_mode_addr);
+}
+
+static int prog_wr_order(struct sophgo_pcie_ep *sg_ep, uint32_t index, uint32_t mode,
+	uint64_t barid, uint64_t start_addr, uint64_t size)
+{
+	void *wr_order = get_wr_order_addr(sg_ep, index);
+	uint64_t end_addr;
+
+	if (mode == WR_ORDER_CHIP_MODE)
+		start_addr |= (barid << 40);
+
+	end_addr = start_addr + size - 1;
+
+	writel(lower_32_bits(start_addr), wr_order + WR_ORDER_START_LOWER);
+	writel(upper_32_bits(start_addr), wr_order + WR_ORDER_START_UPPER);
+	writel(lower_32_bits(end_addr), wr_order + WR_ORDER_END_LOWER);
+	writel(upper_32_bits(end_addr), wr_order + WR_ORDER_END_UPPER);
+
+	set_wr_order_mode(sg_ep, index, mode);
+	enable_wr_order(sg_ep, index);
+
+	pr_err("wr_order %d:0x%llx -> 0x%llx, mode:0x%x\n", index, start_addr,
+		end_addr, mode);
+
+	return 0;
+}
+
+static int set_bar4_wr_order(struct sophgo_pcie_ep *sg_ep, uint32_t barid)
+{
+	int wr_order_index;
+
+	struct wr_order_list wr_order[] = {
+		[0] = {
+			.start_addr = 0x6c00000000,
+			.size = 0x1000000,
+		},
+		[1] = {
+			.start_addr = 0x6e00000000,
+			.size = 0x1000000,
+		},
+	};
+
+	for (int i = 0; i < sizeof(wr_order) / sizeof(struct wr_order_list); i++) {
+		wr_order_index = find_avaliable_wr_order(sg_ep);
+		if (wr_order_index < 0) {
+			pr_err("barid%d no available wr order\n", barid);
+			return -1;
+		}
+		prog_wr_order(sg_ep, wr_order_index, WR_ORDER_CHIP_MODE,
+			barid, wr_order[i].start_addr, wr_order[i].size);
+	}
+
+	return 0;
+}
+
+static int bm1690eep_set_wr_order(struct sophgo_pcie_ep *sg_ep)
+{
+	int wr_order_index;
+	int barid = sg_ep->ep_info.socket_id * 3 + 2;
+
+	for (int i = 0; i < sg_ep->func_num; i++) {
+		if (i == 0) {
+			wr_order_index = find_avaliable_wr_order(sg_ep);
+			prog_wr_order(sg_ep, wr_order_index, WR_ORDER_ALL_ADDR_MODE, 0, DBI_AXI_ADDR, 0x200000);
+
+			wr_order_index = find_avaliable_wr_order(sg_ep);
+			prog_wr_order(sg_ep, wr_order_index, WR_ORDER_CHIP_MODE, 0, SOC_CONFIG_ADDR, SOC_CONFIG_SIZE);
+
+			set_bar4_wr_order(sg_ep, barid++);
+		} else {
+			wr_order_index = find_avaliable_wr_order(sg_ep);
+			prog_wr_order(sg_ep, wr_order_index, WR_ORDER_CHIP_MODE, barid++, 0x0, BAR0_SIZE);
+
+			wr_order_index = find_avaliable_wr_order(sg_ep);
+			prog_wr_order(sg_ep, wr_order_index, WR_ORDER_CHIP_MODE, barid++, 0x0, BAR1_SIZE);
+
+			set_bar4_wr_order(sg_ep, barid++);
+		}
+	}
 
 	return 0;
 }
@@ -856,6 +1413,17 @@ int bm1690_ep_init(struct platform_device *pdev)
 	ret = of_property_read_u64(dev_node, "func_num", &sg_ep->func_num);
 	if (ret)
 		return pr_err("failed get func_num\n");
+
+	ret = of_property_read_u64(dev_node, "global_chipid", &sg_ep->global_chipid);
+	if (ret)
+		return pr_err("failed get board_id\n");
+
+	ret = of_property_read_u64(dev_node, "board_size", &sg_ep->board_size);
+	if (ret)
+		return pr_err("failed get board_size\n");
+
+	if (sg_ep->board_size != 0)
+		sg_ep->board_id = sg_ep->global_chipid / sg_ep->board_size;
 
 	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ctrl");
 	if (!regs)
@@ -976,6 +1544,9 @@ int bm1690_ep_init(struct platform_device *pdev)
 	} else if (sg_ep->chip_type == CHIP_BM1690E) {
 		sg_ep->set_iatu = bm1690eep_set_iatu;
 		sg_ep->set_c2c_atu = bm1690eep_set_c2c_atu;
+		sg_ep->set_recoder = bm1690eep_set_recoder;
+		sg_ep->set_portcode = bm1690eep_set_portcode;
+		sg_ep->set_wr_order = bm1690eep_set_wr_order;
 		sg_ep->set_vector = bm1690e_set_vector;
 		sg_ep->reset_vector = bm1690e_reset_vector;
 	}

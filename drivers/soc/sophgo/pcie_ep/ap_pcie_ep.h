@@ -83,6 +83,9 @@ struct sophgo_pcie_ep {
 	uint64_t c2c_config_base;
 	uint64_t c2c_config_size;
 	uint32_t pcie_route_config;
+	uint64_t global_chipid;
+	uint64_t board_size;
+	uint64_t board_id;
 	char name[32];
 	struct gpio_desc *perst_gpio;
 	int perst_irqnr;
@@ -98,6 +101,9 @@ struct sophgo_pcie_ep {
 	int (*reset_vector)(struct sophgo_pcie_ep *ep);
 	int (*set_iatu)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_c2c_atu)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_recoder)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_portcode)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_wr_order)(struct sophgo_pcie_ep *sg_ep);
 };
 
 

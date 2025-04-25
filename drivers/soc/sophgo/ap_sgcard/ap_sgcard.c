@@ -424,6 +424,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 	int i = 0;
 	uint64_t head;
 	uint64_t tail;
+	int fifo_empty_cnt = 0;
 
 	DBG_MSG("enter host int:0x%llx\n", host_int_cnt++);
 
@@ -434,11 +435,18 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
 		DBG_MSG("host int [ch:0x%llx] head:0x%llx, tail:0x%llx\n", channel->channel_index, head, tail);
 		c = CIRC_CNT(head, tail, card->pool_size);
-		if (c == 0)
+
+		if (c == 0 && fifo_empty_cnt != 6) {
+			fifo_empty_cnt++;
+			continue;
+		} else if (c == 0 && fifo_empty_cnt == 6) {
 			break;
+		}
+
+		fifo_empty_cnt = 0;
 
 		if (c < sizeof(request_action)) {
-			DBG_MSG("warning error host requestion action len\n");
+			pr_err("warning error host requestion action len\n");
 			break;
 		}
 		DBG_MSG("int rcv %d bytes\n", c);
@@ -499,12 +507,12 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
 			c = CIRC_CNT(head, tail, card->pool_size);
 			if (c < length + sizeof(request_action)) {
-				DBG_MSG("warning, task size is not match\n");
-				DBG_MSG("request id:0x%llx, type:0x%x, bring bufer size:0x%x but want size:0x%lx\n",
+				pr_err("warning, task size is not match\n");
+				pr_err("request id:0x%llx, type:0x%x, bring bufer size:0x%x but want size:0x%lx\n",
 					request_action.request_id, request_action.type, c,
 					length + sizeof(request_action));
-				DBG_MSG("host rx buf head:0x%llx, tail:0x%llx\n", head, tail);
-				DBG_MSG("port rx buf head:0x%x, tail:0x%x\n", port_rx_buf->head, port_rx_buf->tail);
+				pr_err("host rx buf head:0x%llx, tail:0x%llx\n", head, tail);
+				pr_err("port rx buf head:0x%x, tail:0x%x\n", port_rx_buf->head, port_rx_buf->tail);
 				break;
 			}
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);

@@ -155,7 +155,7 @@ static int get_dtb_info(struct platform_device *pdev, struct sophgo_card_ras_sta
 	return 0;
 }
 
-void ap_kernel_kick_wdt_work_func(struct work_struct *p_work)
+static void ap_kernel_kick_wdt_work_func(struct work_struct *p_work)
 {
 	struct sophgo_card_ras_status *ras = container_of(p_work, struct sophgo_card_ras_status,
 							ras_delayed_work.work);

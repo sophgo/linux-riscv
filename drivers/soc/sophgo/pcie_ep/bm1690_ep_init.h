@@ -105,6 +105,8 @@ enum {
 
 #define PCIE_ATU_FUNC_NUM(pf)           ((pf) << 20)
 
+#define PCIE_ATU_TYPE_MEM		0x0
+
 #define ATU_IB	1
 #define ATU_OB	0
 
@@ -122,5 +124,79 @@ struct iatu {
 	uint32_t func;
 	uint32_t bar;
 };
+
+#define BM1690E_PCIE_FMT_BOARDID(id) ((id) << 52)
+#define BM1690E_PCIE_FMT_CHIPID(id) ((id) << 49)
+#define BM1690E_PCIE_FMT_BARID(id) ((id) << 45)
+
+#define BM1690E_PCIE_FMT_GET_BOARDID(addr)	(((addr) & GENMASK(58, 52)) >> 52)
+#define BM1690E_PCIE_FMT_GET_CHIPID(addr)	(((addr) & GENMASK(51, 49)) >> 49)
+#define BM1690E_PCIE_FMT_GET_FUNC(addr)		(((addr) & GENMASK(48, 46)) >> 46)
+#define BM1690E_PCIE_FMT_GET_MSI(addr)		(((addr) & GENMASK(45, 45)) >> 45)
+#define BM1690E_PCIE_FMT_GET_BARID(addr)	(((addr) & GENMASK(48, 45)) >> 45)
+
+#define C2C_IBATU(index) (0xc00 + ((index) * 0x10))
+
+#define C2C_IBATU_UPPER_BASE	0x0
+#define C2C_IBATU_LOWER_BASE	0x4
+#define C2C_IBATU_CTRL		0x8
+#define C2C_IBATU_DST_ADDR	0xC
+
+#define C2C_IBATU_CTRL_ENABLE	BIT(31)
+#define C2C_IBATU_CTRL_CHIPID(id) ((id) << 16)
+#define C2C_IBATU_CTRL_BOARDID(id) ((id) << 19)
+#define C2C_IBATU_CTRL_MSI(id) ((id) << 26)
+#define C2C_IBATU_CTRL_FUNC(id) ((((id) & 0x3) << 29) | (((id) >> 2) << 27))
+#define C2C_IBATU_CTRL_SELX8(id) ((id) << 28)
+#define C2C_IBATU_CTRL_IBSIZE(id) ((id) << 0)
+
+#define OB_RECODER	0x0
+#define IB_RECODER	0x1
+
+#define OB_RECODER_ADDR(index)	(0xd00 + ((index) * 0x10))
+#define IB_RECODER_ADDR(index)	(0xf00 + ((index) * 0x10))
+
+#define IB_RECODER_ST_ADDR	0x0
+#define IB_RECODER_MASK_ADDR	0x4
+#define IB_RECODER_RECODE_ADDR	0x8
+
+struct recoder_addr {
+	uint64_t match_addr;
+	uint64_t out_addr;
+	uint64_t mask_size;
+};
+
+#define BM1690E_L2M_BASE_ADDR	0x6980000000
+#define BM1690E_MSG_BASE_ADDR	0x6c00000000
+#define BM1690E_MTLI_BASE_ADDR	0x6e10000000
+
+#define RECODER_FMT_CFG(barid, addr) (((barid) << 28) | ((addr) << 0))
+#define PCIE_FMT_TO_RECODER_ADDR(addr) (((addr) & GENMASK(39, 0)) >> 12)
+
+#define PORTCODE_BOARDSIZE_SHIFT	(27)
+#define PORTCODE_BOARDID_SHIFT		(20)
+
+#define WR_ORDER_START_LOWER	(0x0)
+#define WR_ORDER_START_UPPER	(0x4)
+#define WR_ORDER_END_LOWER	(0x8)
+#define WR_ORDER_END_UPPER	(0xc)
+
+#define WR_ORDER_PC_MODE	(0x1)
+#define WR_ORDER_CHIP_MODE	(0x2)
+#define WR_ORDER_ALL_ADDR_MODE	(0x0)
+
+#define DBI_AXI_ADDR	(0x1000000000000000)
+
+#define SOC_CONFIG_ADDR	(0x6c00000000)
+#define SOC_CONFIG_SIZE	(0x460400000)
+
+struct wr_order_list {
+	uint64_t start_addr;
+	uint64_t size;
+};
+
+#define BAR0_SIZE	(0x400000)
+#define BAR1_SIZE	(0x400000)
+
 
 #endif

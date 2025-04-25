@@ -140,6 +140,11 @@ struct sophgo_dw_pcie {
 	uint32_t 		dst_chipid;
 	uint32_t		dst_chipid_shift;
 	uint32_t		func_num_shift;
+	uint64_t		global_chipid;
+	uint64_t		board_size;
+	uint64_t		board_id;
+	uint64_t		board_id_shift;
+	uint64_t		socket_id;
 	u32			num_ib_windows;
 	u32			num_ob_windows;
 	u32			region_align;
@@ -271,6 +276,24 @@ struct sophgo_dw_pcie {
 
 };
 #endif
+
+#define PORTCODE_BOARDSIZE_SHIFT	(27)
+#define PORTCODE_BOARDID_SHIFT		(20)
+
+#define WR_ORDER_START_LOWER	(0x0)
+#define WR_ORDER_START_UPPER	(0x4)
+#define WR_ORDER_END_LOWER	(0x8)
+#define WR_ORDER_END_UPPER	(0xc)
+
+#define WR_ORDER_PC_MODE	(0x1)
+#define WR_ORDER_CHIP_MODE	(0x2)
+#define WR_ORDER_ALL_ADDR_MODE	(0x0)
+
+struct wr_order_list {
+	uint64_t start_addr;
+	uint64_t size;
+};
+
 
 #endif
 

@@ -677,6 +677,29 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 
 		of_property_read_u32_index(np, "dst-chip", 0, &pcie->dst_chipid);
 
+		ret = of_property_read_u64_index(np, "global_chipip", 0, &pcie->global_chipid);
+		if (ret < 0)
+			dev_err(dev, "cannot get global chipid from dtb\n");
+
+		ret = of_property_read_u64_index(np, "board_size", 0, &pcie->board_size);
+		if (ret < 0 || pcie->board_size == 0) {
+			dev_err(dev, "error board size:0x%llx\n", pcie->board_size);
+			return -1;
+		}
+
+		ret = of_property_read_u64_index(np, "socket_id", 0, &pcie->socket_id);
+		if (ret < 0)
+			dev_err(dev, "cannot get socket id from dtb\n");
+
+		pcie->board_id = pcie->global_chipid / pcie->board_size;
+		if (pcie->socket_id != pcie->global_chipid % pcie->board_size) {
+			dev_err(dev, "socket id error\n");
+			return -1;
+		}
+
+		dev_err(dev, "board id:0x%llx, chip id:0x%llx, board size:0x%llx\n", pcie->board_id,
+			 pcie->socket_id, pcie->board_size);
+
 		pcie->cdma_reg_base = devm_ioremap(dev, pcie->cdma_pa_start, pcie->cdma_size);
 		if (!pcie->cdma_reg_base) {
 			dev_err(dev, "failed to map cdma reg\n");
@@ -694,8 +717,9 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		} else if (of_device_is_compatible(np, "sophgo,bm1690e-pcie-host")) {
 			pcie->c2c_pcie_rc = 0;
 			pcie->chip_type = CHIP_BM1690E;
+			pcie->board_id_shift = 52;
 			pcie->dst_chipid_shift = 49;
-			pcie->func_num_shift = 46;
+			pcie->func_num_shift = 45;
 		} else {
 			pr_err("error compatible\n");
 			return -1;
@@ -1354,30 +1378,12 @@ static void pcie_config_mrrs(struct sophgo_dw_pcie *pcie)
 	writel(val, (base_addr + 0x78));
 }
 
-
-static void pcie_config_port_code(struct sophgo_dw_pcie *pcie)
-{
-	uint32_t val = 0;
-	int c2c_id = 1;
-
-	//config port code
-	if (c2c_id == 0)
-		val = (0xf) | (0x0 << 4) | (0xf << 8) | (0xf << 12) | (0xf << 16);
-	else if (c2c_id == 1)
-		val = (0x0) | (0x5 << 4) | (0xf << 8) | (0xf << 12) | (0x7 << 16);
-
-	writel(val, pcie->c2c_top);
-}
-
-
 static void bm1690_pcie_init_route(struct sophgo_dw_pcie *pcie)
 {
 	pcie_clear_slv_mapping(pcie);
 	pcie_config_slv_mapping(pcie);
 	pcie_config_mps(pcie);
 	pcie_config_mrrs(pcie);
-
-	pcie_config_port_code(pcie);
 }
 
 static void pcie_config_axi_route(struct sophgo_dw_pcie *pcie)
@@ -1500,6 +1506,24 @@ static int find_available_ob_atu(struct sophgo_dw_pcie *pcie)
 	return -1;
 }
 
+static uint64_t get_atu_cpu_addr(struct sophgo_dw_pcie *pcie, int func_num, int barid)
+{
+	uint64_t atu_cpu_addr;
+	uint64_t dst_chipid = pcie->dst_chipid + func_num;
+	uint64_t bar2addr[4] = {0x5, 0x6, 0x7, 0x0};
+
+	if (pcie->chip_type == CHIP_BM1690) {
+		atu_cpu_addr = (dst_chipid << pcie->dst_chipid_shift) | (bar2addr[barid] << pcie->func_num_shift);
+	} else if (pcie->chip_type == CHIP_BM1690E) {
+		atu_cpu_addr = (pcie->board_id << pcie->board_id_shift) | (dst_chipid << pcie->dst_chipid_shift) | ((pcie->socket_id * 3 + barid) << pcie->func_num_shift);
+	} else {
+		dev_err(pcie->dev, "%s Unknown chip type\n", __func__);
+		return 0;
+	}
+
+	return atu_cpu_addr;
+}
+
 static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *bridge)
 {
 	struct pci_bus *bus = bridge->bus;
@@ -1513,11 +1537,11 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 	uint64_t atu_cpu_addr;
 	uint64_t dst_chipid = pcie->dst_chipid;
 	int bar_num[4] = {0, 1, 2, 4};
-	uint64_t bar2addr[4] = {0x5, 0x6, 0x7, 0x0};
 	int i = 0;
 	uint64_t offset;
 	int ret;
 	int index;
+	int func_num = 0;
 
 	dev_err(bus->bridge, "bridge bus number:0x%x\n", bus->number);
 
@@ -1531,20 +1555,20 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 
 			for (i = 0; i < 4; i++) {
 				cpu_addr = pci_resource_start(dev, bar_num[i]);
-				dev_err(&dev->dev, "bar%d addr:0x%llx\n", bar_num[i], cpu_addr);
+				dev_dbg(&dev->dev, "bar%d addr:0x%llx\n", bar_num[i], cpu_addr);
 
 				resource_list_for_each_entry(window, &bridge->windows) {
 					dev_dbg(&dev->dev, "windown start:0x%llx, end:0x%llx, offset:0x%llx\n", window->res->start,
 							window->res->end, window->offset);
 					if (window->res->start <= cpu_addr && ( window->res->end >= cpu_addr)) {
 						offset = window->offset;
-						dev_err(&dev->dev, "bar%d match window\n", bar_num[i]);
+						dev_dbg(&dev->dev, "bar%d match window\n", bar_num[i]);
 						break;
 					}
 				}
 				pcie_addr = cpu_addr - offset;
 
-				atu_cpu_addr = (dst_chipid << pcie->dst_chipid_shift) | (bar2addr[i] << pcie->func_num_shift);
+				atu_cpu_addr = get_atu_cpu_addr(pcie, func_num, i);
 
 				if (bar_num[i] == 2 || bar_num[i] == 4)
 					continue;
@@ -1561,13 +1585,233 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 					return ret;
 				}
 
-				dev_err(pcie->dev, "iATU%d: cpu 0x%llx -> PCIe 0x%llx, size 0x%llx\n",
+				dev_err(pcie->dev, "prg ob iatu%d: cpu 0x%llx -> PCIe 0x%llx, size 0x%llx\n",
 						index, atu_cpu_addr, pcie_addr, pci_resource_len(dev, bar_num[i]));
 			}
 
 			dst_chipid++;
 		}
+
+		func_num++;
 	}
+
+	return 0;
+}
+
+static inline void *get_wr_order_addr(struct sophgo_dw_pcie *pcie, uint32_t index)
+{
+	return pcie->c2c_top + 0x1120 + (index * 0x10);
+}
+
+static inline void *get_wr_order_en_addr(struct sophgo_dw_pcie *pcie)
+{
+	return pcie->c2c_top + 0x1320;
+}
+
+static inline void *get_wr_order_mode_addr(struct sophgo_dw_pcie *pcie)
+{
+	return pcie->c2c_top + 0x1324;
+}
+
+static inline int find_avaliable_wr_order(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t wr_order_en_val = readl(get_wr_order_en_addr(pcie));
+
+	for (int i = 0; i < 32; i++) {
+		if (!(wr_order_en_val & (1 << i)))
+			return i;
+	}
+
+	return -1;
+}
+
+static inline void enable_wr_order(struct sophgo_dw_pcie *pcie, uint32_t index)
+{
+	uint32_t wr_order_en_val = readl(get_wr_order_en_addr(pcie));
+
+	wr_order_en_val |= (1 << index);
+	writel(wr_order_en_val, get_wr_order_en_addr(pcie));
+}
+
+static inline void set_wr_order_mode(struct sophgo_dw_pcie *pcie, uint32_t index, uint32_t mode)
+{
+	void *wr_order_mode_addr = get_wr_order_mode_addr(pcie);
+	uint32_t wr_order_mode_val;
+	uint32_t atu_index = index % 16;
+
+	wr_order_mode_addr = index < 16 ?  wr_order_mode_addr + 0x0 : wr_order_mode_addr + 0x4;
+	wr_order_mode_val = readl(wr_order_mode_addr);
+	wr_order_mode_val &= ~(0x3 << (atu_index * 2));
+	wr_order_mode_val |= (mode << (atu_index * 2));
+	writel(wr_order_mode_val, wr_order_mode_addr);
+}
+
+static int prog_wr_order(struct sophgo_dw_pcie *pcie, uint32_t index, uint32_t mode,
+	uint64_t barid, uint64_t start_addr, uint64_t size)
+{
+	void *wr_order = get_wr_order_addr(pcie, index);
+	uint64_t end_addr;
+
+	if (mode == WR_ORDER_CHIP_MODE)
+		start_addr |= (barid << 40);
+
+	end_addr = start_addr + size - 1;
+
+	writel(lower_32_bits(start_addr), wr_order + WR_ORDER_START_LOWER);
+	writel(upper_32_bits(start_addr), wr_order + WR_ORDER_START_UPPER);
+	writel(lower_32_bits(end_addr), wr_order + WR_ORDER_END_LOWER);
+	writel(upper_32_bits(end_addr), wr_order + WR_ORDER_END_UPPER);
+
+	set_wr_order_mode(pcie, index, mode);
+	enable_wr_order(pcie, index);
+
+	dev_err(pcie->dev, "wr_order %d:0x%llx -> 0x%llx, mode:0x%x\n", index, start_addr,
+		end_addr, mode);
+
+	return 0;
+}
+
+static int config_wr_order(struct sophgo_dw_pcie *pcie)
+{
+	int wr_order_index;
+
+	struct wr_order_list cdma_access_order[] = {
+		[0] = {
+			.start_addr = 0x6c00000000,
+			.size = 0x1000000,
+		},
+		[1] = {
+			.start_addr = 0x6e00000000,
+			.size = 0x1000000,
+		},
+	};
+
+	struct wr_order_list ap_access_order[] = {
+		[0] = {
+			.start_addr = 0x4800000000,
+			.size = 0x1000000,
+		},
+		[1] = {
+			.start_addr = 0x5000000000,
+			.size = 0x1000000,
+		},
+		[2] = {
+			.start_addr = 0x4900000000,
+			.size = 0x1000000,
+		},
+		[3] = {
+			.start_addr = 0x5100000000,
+			.size = 0x1000000,
+		},
+	};
+
+	struct wr_order_list msi_access_order[] = {
+		[0] = {
+			.start_addr = 0x7100000000,
+			.size = 0x1000000,
+		},
+		[1] = {
+			.start_addr = 0x7200000000,
+			.size = 0x1000000,
+		},
+		[2] = {
+			.start_addr = 0x7300000000,
+			.size = 0x1000000,
+		},
+		[3] = {
+			.start_addr = 0x7400000000,
+			.size = 0x1000000,
+		},
+	};
+
+	if (pcie->chip_type == CHIP_BM1690)
+		return 0;
+	else if (pcie->chip_type == CHIP_BM1690E) {
+		for (int i = 0; i < sizeof(cdma_access_order) / sizeof(struct wr_order_list); i++) {
+			wr_order_index = find_avaliable_wr_order(pcie);
+			if (wr_order_index < 0) {
+				dev_err(pcie->dev, "cdma access order no available wr order\n");
+				return -1;
+			}
+			prog_wr_order(pcie, wr_order_index, WR_ORDER_CHIP_MODE,
+				0, cdma_access_order[i].start_addr, cdma_access_order[i].size);
+		}
+
+		for (int i = 0; i < sizeof(ap_access_order) / sizeof(struct wr_order_list); i++) {
+			wr_order_index = find_avaliable_wr_order(pcie);
+			if (wr_order_index < 0) {
+				dev_err(pcie->dev, "ap access order no available wr order\n");
+				return -1;
+			}
+			prog_wr_order(pcie, wr_order_index, WR_ORDER_CHIP_MODE,
+				0, ap_access_order[i].start_addr, ap_access_order[i].size);
+		}
+
+		for (int i = 0; i < sizeof(msi_access_order) / sizeof(struct wr_order_list); i++) {
+			wr_order_index = find_avaliable_wr_order(pcie);
+			if (wr_order_index < 0) {
+				dev_err(pcie->dev, "msi access order no available wr order\n");
+				return -1;
+			}
+			prog_wr_order(pcie, wr_order_index, WR_ORDER_CHIP_MODE,
+				0, msi_access_order[i].start_addr, msi_access_order[i].size);
+		}
+	} else {
+		dev_err(pcie->dev, "%s Unknown chip type\n", __func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+static inline void *get_portcode_addr(struct sophgo_dw_pcie *pcie)
+{
+	return pcie->c2c_top;
+}
+
+static int bm1690e_pcie_config_port_code(struct sophgo_dw_pcie *pcie)
+{
+	void *portcode = get_portcode_addr(pcie);
+	uint32_t portcode_val = 0;
+	uint32_t portcode_route_bits[4] = {
+		0x25550,
+		0x35503,
+		0x25022,
+	};
+
+	portcode_val = ((pcie->board_size << PORTCODE_BOARDSIZE_SHIFT) |
+			(pcie->board_id << PORTCODE_BOARDID_SHIFT) |
+			portcode_route_bits[pcie->socket_id]);
+
+	writel(portcode_val, portcode);
+	dev_err(pcie->dev, "portcode_val:0x%x\n", portcode_val);
+
+	return 0;
+}
+
+static void bm1690_pcie_config_port_code(struct sophgo_dw_pcie *pcie)
+{
+	uint32_t val = 0;
+	int c2c_id = 1;
+
+	//config port code
+	if (c2c_id == 0)
+		val = (0xf) | (0x0 << 4) | (0xf << 8) | (0xf << 12) | (0xf << 16);
+	else if (c2c_id == 1)
+		val = (0x0) | (0x5 << 4) | (0xf << 8) | (0xf << 12) | (0x7 << 16);
+
+	writel(val, pcie->c2c_top);
+	dev_err(pcie->dev, "pcie port code:0x%x\n", val);
+}
+
+static int config_port_code(struct sophgo_dw_pcie *pcie)
+{
+	if (pcie->chip_type == CHIP_BM1690)
+		bm1690_pcie_config_port_code(pcie);
+	else if (pcie->chip_type == CHIP_BM1690E)
+		bm1690e_pcie_config_port_code(pcie);
+	else
+		dev_err(pcie->dev, "%s Unknown chip type\n", __func__);
 
 	return 0;
 }
@@ -1662,6 +1906,8 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 
 	if (pcie->pcie_card && pcie->c2c_pcie_rc == 0) {
 		config_rc_atu(pcie, bridge);
+		config_port_code(pcie);
+		config_wr_order(pcie);
 	}
 
 	return 0;

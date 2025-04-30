@@ -26,6 +26,7 @@
 #include <linux/proc_fs.h>
 #include <linux/sched/clock.h>
 #include <linux/delay.h>
+#include <linux/vmalloc.h>
 #include "sgdrv.h"
 #include "../pcie_ep/ap_pcie_ep.h"
 #include "../c2c_rc/c2c_rc.h"
@@ -59,6 +60,8 @@ do { \
 #define DRIVER_EXECED	0x5
 
 #define WAKE_UP_ALL_STREAM	(0xffffffffffffffff)
+
+#define MAX_HOST_REQUEST_SIZE (8 * 1024 * 1024)
 
 
 const char *request_response_type[] = {
@@ -185,6 +188,12 @@ struct sg_card_cdev_info {
 	char devno_map[PORT_MAX];
 };
 
+struct host_channel_verify {
+	void *verify_addr;
+	uint64_t verify_val;
+	uint64_t verify_enable;
+};
+
 struct sg_card {
 	uint64_t addr_start;
 	void __iomem *membase;
@@ -208,6 +217,7 @@ struct sg_card {
 	const struct sophgo_pcie_vfun *pcie_vfun;
 	struct wake_up_stream_port wake_up_stream_port;
 	atomic_t c2c_kernel_token;
+	struct host_channel_verify verify;
 };
 
 static struct sg_card *g_card;
@@ -407,6 +417,36 @@ static void host_int_work_func (struct work_struct *p_work)
 	iowrite32(0x1, channel->rx_clean_irq.clr_irq_va);
 }
 
+static uint64_t calculate_verify(uint8_t *data, size_t len)
+{
+	uint64_t bip64 = 0;
+	uint32_t verify_len = len / sizeof(uint64_t);
+	uint64_t *data64 = (uint64_t *)data;
+
+	for (size_t i = 0; i < verify_len; i++)
+		bip64 ^= data64[i];
+
+	return bip64;
+}
+
+static int verify_request(struct sg_card *card, struct host_request_action *request, uint32_t len)
+{
+	uint64_t verify_val;
+	card->verify.verify_val = request->time.verify_val;
+	request->time.verify_val = 0;
+
+	if (card->verify.verify_enable) {
+		verify_val = calculate_verify((uint8_t *)request, len);
+		if (verify_val != card->verify.verify_val) {
+			pr_err("error verify, get verify_val:0x%llx, calc_val:0x%llx, try again\n",
+				card->verify.verify_val, verify_val);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 static int host_int(struct sg_card *card, struct v_channel *channel)
 {
 	struct cacheline_align_circ_buf *rx_buf = NULL;
@@ -458,11 +498,14 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			channel->channel_index, request_action.request_id, request_action.type);
 
 		if (request_action.type == ERROR_REQUEST_RESPONSE || request_action.type > SETUP_C2C_REQUEST) {
-			pr_err("error type host request type is %u\n", request_action.type);
+			pr_err("error type host request type is %u, try again\n", request_action.type);
 			for (i = 0; i < sizeof(request_action) / sizeof(uint64_t); i++)
 				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&request_action))[i]);
+			schedule_delayed_work(&channel->channel_delayed_work, 1);
+
+			return 0;
 		}
-		request_action.time.kr_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
+		//request_action.time.kr_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
 
 		if (request_action.type < FREE_DEVICE_MEM_RESPONSE || request_action.type == SETUP_C2C_REQUEST ||
 		    request_action.type == FORCE_QUIT_REQUEST) {
@@ -515,6 +558,17 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 				pr_err("port rx buf head:0x%x, tail:0x%x\n", port_rx_buf->head, port_rx_buf->tail);
 				break;
 			}
+
+			if (card->verify.verify_enable) {
+				copy_from_circbuf_not_change_index((char *)card->verify.verify_addr, rx_buf,
+							sizeof(request_action) + request_action.task_size, card->pool_size);
+				if (verify_request(card, card->verify.verify_addr, length + sizeof(request_action))) {
+					pr_err("task error verify, try again\n");
+					schedule_delayed_work(&channel->channel_delayed_work, 1);
+					return 0;
+				}
+			}
+
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
 			if (c < length + sizeof(request_action)) {
 				schedule_delayed_work(&channel->channel_delayed_work, 1);
@@ -562,6 +616,12 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			atomic_add(sizeof(request_action) + request_action.task_size, &port->cnt_available);
 			wake_up_all(&port->read_available);
 		} else {
+			if (verify_request(card, &request_action, sizeof(request_action))) {
+				pr_err("host request error verify, try again\n");
+				schedule_delayed_work(&channel->channel_delayed_work, 1);
+				return 0;
+			}
+
 			DBG_MSG("only copy [%s]-0x%llx to %s\n", request_response_type[request_action.type],
 				 request_action.request_id, port->name);
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
@@ -887,6 +947,12 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 	card->tpu_channel_irq_base = card->channel[1].irq;
 	if (card->media_channel_count)
 		card->media_channel_irq_base = card->channel[card->tpu_channel_count + 1].irq;
+
+	card->verify.verify_addr = vmalloc(MAX_HOST_REQUEST_SIZE);
+	if (!card->verify.verify_addr) {
+		pr_err("verify addr alloc failed\n");
+		goto free_request;
+	}
 
 	return 0;
 
@@ -1809,9 +1875,39 @@ static ssize_t recorded_response_show(struct device *dev,
 	return msg_append(buf, PAGE_SIZE, "all response have been displayed\n");
 }
 
+static ssize_t verify_enable_store(struct device *dev,
+				  struct device_attribute *attr, const char *ubuf, size_t len)
+{
+	struct sg_card *card = dev_get_drvdata(dev);
+	char buf[32] = {0};
+	int enable;
+	int ret;
+
+	memcpy(buf, ubuf, len);
+	ret = kstrtoint(buf, 0, &enable);
+
+	if (enable == 0 || enable == 1) {
+		card->verify.verify_enable = enable;
+		pr_err("verify %s\n", enable ? "enable" : "disable");
+
+		return len;
+	} else {
+		return -EINVAL;
+	}
+}
+
+static ssize_t verify_enable_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct sg_card *card = dev_get_drvdata(dev);
+
+	return msg_append(buf, PAGE_SIZE, "verify %s\n", card->verify.verify_enable ? "enable" : "disable");
+}
+
 static DEVICE_ATTR_RW(card_info);
 static DEVICE_ATTR_RW(debug_enable);
 static DEVICE_ATTR_RW(recorded_response);
+static DEVICE_ATTR_RW(verify_enable);
 
 
 static ssize_t tpurt_config_proc_read(struct file *fp, char __user *user_buf, size_t count, loff_t *ppos)
@@ -1874,6 +1970,7 @@ static int sgcard_create_file(struct device *dev, struct sg_card *card)
 	ret = device_create_file(dev, &dev_attr_card_info);
 	ret = device_create_file(dev, &dev_attr_debug_enable);
 	ret = device_create_file(dev, &dev_attr_recorded_response);
+	ret = device_create_file(dev, &dev_attr_verify_enable);
 
 	if (card->config_file)
 		ret = create_sg_proc_file(dev, card);

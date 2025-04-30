@@ -643,10 +643,10 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		ret = of_property_read_u64_index(np, "dw_range", 1, &pcie->dw_end);
 		if (ret == 0)
 			dev_err(dev, "dw[0x%llx-0x%llx]\n", pcie->dw_start, pcie->dw_end);
-
-		ret = of_property_read_u64_index(np, "up_start_addr", 0, &pcie->up_start_addr);
-		if (ret == 0)
-			dev_err(dev, "up start addr:[0x%llx]\n", pcie->up_start_addr);
+		else {
+			pcie->dw_start = 0;
+			pcie->dw_end = 0;
+		}
 
 		pcie->phy = devm_of_phy_get(dev, dev->of_node, "pcie-phy");
 
@@ -1344,7 +1344,10 @@ static void pcie_config_slv_mapping(struct sophgo_dw_pcie *pcie)
 	full_addr = (((dw_end_addr >> 16) & 0xffff) << 16) | ((dw_start_addr >> 16) & 0xffff);
 
 	val = readl(ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG);
-	val |= 0x3 << PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT;
+	if (full_addr)
+		val |= 0x3 << PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT;
+	else
+		val |= 0x1 << PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT;
 	writel(val, (ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG));
 	up_start_addr = up_start_addr >> 16;
 	writel((up_start_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_START_ADDR_REG));

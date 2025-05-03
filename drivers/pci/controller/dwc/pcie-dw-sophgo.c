@@ -677,7 +677,7 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 
 		of_property_read_u32_index(np, "dst-chip", 0, &pcie->dst_chipid);
 
-		ret = of_property_read_u64_index(np, "global_chipip", 0, &pcie->global_chipid);
+		ret = of_property_read_u64_index(np, "global_chipid", 0, &pcie->global_chipid);
 		if (ret < 0)
 			dev_err(dev, "cannot get global chipid from dtb\n");
 

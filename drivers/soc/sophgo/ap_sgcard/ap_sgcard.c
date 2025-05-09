@@ -190,7 +190,7 @@ struct sg_card_cdev_info {
 
 struct host_channel_verify {
 	void *verify_addr;
-	uint64_t verify_val;
+	uint64_t head_verify_val;
 	uint64_t verify_enable;
 };
 
@@ -429,17 +429,15 @@ static uint64_t calculate_verify(uint8_t *data, size_t len)
 	return bip64;
 }
 
-static int verify_request(struct sg_card *card, struct host_request_action *request, uint32_t len)
+static int verify_data(struct sg_card *card, void *data, uint64_t len, uint64_t verify_val)
 {
-	uint64_t verify_val;
-	card->verify.verify_val = request->time.verify_val;
-	request->time.verify_val = 0;
+	uint64_t cal_verify_val;
 
 	if (card->verify.verify_enable) {
-		verify_val = calculate_verify((uint8_t *)request, len);
-		if (verify_val != card->verify.verify_val) {
-			pr_err("error verify, get verify_val:0x%llx, calc_val:0x%llx, try again\n",
-				card->verify.verify_val, verify_val);
+		cal_verify_val = calculate_verify((uint8_t *)data, len);
+		if (cal_verify_val != verify_val) {
+			pr_err("error verify, get head_verify_val:0x%llx, calc_val:0x%llx, try again\n",
+				verify_val, cal_verify_val);
 			return -1;
 		}
 	}
@@ -465,6 +463,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 	uint64_t head;
 	uint64_t tail;
 	int fifo_empty_cnt = 0;
+	int ret;
 
 	DBG_MSG("enter host int:0x%llx\n", host_int_cnt++);
 
@@ -493,6 +492,12 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 
 		copy_from_circbuf_not_change_index((char *)&request_action, rx_buf,
 							sizeof(request_action), card->pool_size);
+		ret = verify_data(card, &request_action, sizeof(struct host_request_action) -
+				  sizeof(struct time_stamp), request_action.time.head_verify_val);
+		if (ret) {
+			pr_err("verify request head error, try again\n");
+			schedule_delayed_work(&channel->channel_delayed_work, 1);
+		}
 		ktime_get_real_ts64(&ts);
 		DBG_MSG("host int [ch:0x%llx] request_id:0x%llx, request_type:0x%x\n",
 			channel->channel_index, request_action.request_id, request_action.type);
@@ -562,8 +567,9 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			if (card->verify.verify_enable) {
 				copy_from_circbuf_not_change_index((char *)card->verify.verify_addr, rx_buf,
 							sizeof(request_action) + request_action.task_size, card->pool_size);
-				if (verify_request(card, card->verify.verify_addr, length + sizeof(request_action))) {
-					pr_err("task error verify, try again\n");
+				if (verify_data(card, card->verify.verify_addr + sizeof(struct host_request_action),
+						length, request_action.time.body_verify_val)) {
+					pr_err("task body error verify, try again\n");
 					schedule_delayed_work(&channel->channel_delayed_work, 1);
 					return 0;
 				}
@@ -616,12 +622,6 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			atomic_add(sizeof(request_action) + request_action.task_size, &port->cnt_available);
 			wake_up_all(&port->read_available);
 		} else {
-			if (verify_request(card, &request_action, sizeof(request_action))) {
-				pr_err("host request error verify, try again\n");
-				schedule_delayed_work(&channel->channel_delayed_work, 1);
-				return 0;
-			}
-
 			DBG_MSG("only copy [%s]-0x%llx to %s\n", request_response_type[request_action.type],
 				 request_action.request_id, port->name);
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);

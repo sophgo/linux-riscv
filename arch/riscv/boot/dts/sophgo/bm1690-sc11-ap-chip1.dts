@@ -60,6 +60,152 @@
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
+
+		ddrc@0 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x40000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <47 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <0>;
+		};
+		ddrc@1 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x44000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <48 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <1>;
+		};
+		ddrc@2 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x50000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <49 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <2>;
+		};
+		ddrc@3 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x54000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <50 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <3>;
+		};
+		ddrc@4 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x60000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <51 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <4>;
+		};
+		ddrc@5 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x64000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <52 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <5>;
+		};
+		ddrc@6 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x70000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <53 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <6>;
+		};
+		ddrc@7 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x74000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <54 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <7>;
+		};
+		ddrc@8 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x80000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <55 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <8>;
+		};
+		ddrc@9 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x84000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <56 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <9>;
+		};
+		ddrc@10 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x90000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <57 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <10>;
+		};
+		ddrc@11 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0x94000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <58 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <11>;
+		};
+		ddrc@12 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0xA0000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <59 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <12>;
+		};
+		ddrc@13 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0xA4000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <60 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <13>;
+		};
+		ddrc@14 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0xB0000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <61 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <14>;
+		};
+		ddrc@15 {
+			compatible = "sophgo,ddrc";
+
+			reg = <0x6b 0xB4000000 0x00000000 0x04000000>;
+			interrupt-parent = <&intc>;
+			interrupts = <62 IRQ_TYPE_LEVEL_HIGH>;
+			// trigger_error_index = <0x0201060c>;
+			ddrc_id = <15>;
+		};
+
 		//c2c0 x8/x4_1
 		pciephy_0: pciephy_0@6C00f81000 {
 			compatible = "sophgo,pcie-phy";

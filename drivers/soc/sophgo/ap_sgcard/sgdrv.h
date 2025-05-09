@@ -182,13 +182,18 @@ struct time_stamp {
 	union {
 		uint64_t kr_time;
 		uint64_t tmp_last_time;
-		uint64_t verify_val;
 	};
-	uint64_t wait_resource_time;
+
+	union {
+		uint64_t wait_resource_time;
+		uint64_t head_verify_val;
+	};
+
 	union {
 		uint64_t ur_time;
 		uint64_t tp_start_time;
 		uint64_t wait_hw_avaliable;
+		uint64_t body_verify_val;
 	};
 	uint64_t start_time;
 	uint64_t end_time;

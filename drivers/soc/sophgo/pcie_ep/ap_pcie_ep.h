@@ -104,6 +104,7 @@ struct sophgo_pcie_ep {
 	int (*set_recoder)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_portcode)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_wr_order)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_quirks)(struct sophgo_pcie_ep *sg_ep);
 };
 
 

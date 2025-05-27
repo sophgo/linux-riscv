@@ -456,6 +456,57 @@ static void __iomem *sophgo_dw_pcie_other_conf_map_bus(struct pci_bus *bus,
 	return pp->va_cfg0_base + where;
 }
 
+static int sophgo_pci_generic_config_read(struct pci_bus *bus, unsigned int devfn,
+					int where, int size, u32 *val)
+{
+	void __iomem *addr;
+	int align_where = where & (~0x3);
+	uint32_t val_mask = (1UL << size * 8) - 1;
+	uint32_t val_shift = (where - align_where) * 8;
+	uint32_t read_val;
+
+	addr = bus->ops->map_bus(bus, devfn, align_where);
+	if (!addr)
+		return PCIBIOS_DEVICE_NOT_FOUND;
+
+	read_val = readl(addr);
+	*val = (read_val >> val_shift) & val_mask;
+
+	if (align_where != where || size != 4) {
+		pr_debug("read:where:0x%x, align_where:0x%x, size:0x%x, val:0x%x, return val:0x%x\n",
+		where, align_where, size, read_val, *val);
+	}
+
+	return PCIBIOS_SUCCESSFUL;
+}
+
+static int sophgo_pci_generic_config_write(struct pci_bus *bus, unsigned int devfn,
+					int where, int size, u32 val)
+{
+	void __iomem *addr;
+	int align_where = where & (~0x3);
+	uint32_t read_val;
+	uint32_t val_shift = (where - align_where) * 8;
+	uint32_t val_mask = ((1UL << size * 8) - 1) << val_shift;
+	uint32_t old_val;
+
+	addr = bus->ops->map_bus(bus, devfn, align_where);
+	if (!addr)
+	return PCIBIOS_DEVICE_NOT_FOUND;
+
+	read_val = readl(addr);
+	old_val = read_val;
+	read_val = (read_val & ~val_mask) | ((val << val_shift) & val_mask);
+	writel(read_val, addr);
+
+	if (align_where != where || size != 4) {
+		pr_debug(" write: where:0x%x, align_where:0x%x, size:0x%x, old_val:0x%x, val:0x%x, new_val:0x%x\n",
+		where, align_where, size, old_val, val, read_val);
+	}
+
+	return PCIBIOS_SUCCESSFUL;
+}
+
 static int sophgo_dw_pcie_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 				 int where, int size, u32 *val)
 {
@@ -469,7 +520,7 @@ static int sophgo_dw_pcie_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
 	}
 
-	ret = pci_generic_config_read(bus, devfn, where, size, val);
+	ret = sophgo_pci_generic_config_read(bus, devfn, where, size, val);
 	if (ret != PCIBIOS_SUCCESSFUL)
 		return ret;
 
@@ -497,7 +548,7 @@ static int sophgo_dw_pcie_wr_other_conf(struct pci_bus *bus, unsigned int devfn,
 		pcie = to_sophgo_dw_pcie_from_pp(pp);
 	}
 
-	ret = pci_generic_config_write(bus, devfn, where, size, val);
+	ret = sophgo_pci_generic_config_write(bus, devfn, where, size, val);
 	if (ret != PCIBIOS_SUCCESSFUL)
 		return ret;
 
@@ -540,8 +591,8 @@ static struct pci_ops sophgo_dw_child_pcie_ops = {
 
 static struct pci_ops sophgo_dw_pcie_ops = {
 	.map_bus = sophgo_dw_pcie_own_conf_map_bus,
-	.read = pci_generic_config_read,
-	.write = pci_generic_config_write,
+	.read = sophgo_pci_generic_config_read,
+	.write = sophgo_pci_generic_config_write,
 };
 
 static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
@@ -675,7 +726,9 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 			return -1;
 		}
 
-		of_property_read_u32_index(np, "dst-chip", 0, &pcie->dst_chipid);
+		ret = of_property_read_u32_index(np, "dst-chip", 0, &pcie->dst_chipid);
+		if (ret < 0)
+			dev_err(dev, "cannot get dst chipid from dtb\n");
 
 		ret = of_property_read_u64_index(np, "global_chipid", 0, &pcie->global_chipid);
 		if (ret < 0)
@@ -1178,12 +1231,13 @@ static int pcie_wait_link(struct sophgo_dw_pcie *pcie)
 	int err;
 	int timeout = 500;
 
-	err = readl_poll_timeout(sii_reg_base + 0xb4, status, ((status >> 7) & 1), 20, timeout * USEC_PER_MSEC);
+	err = readl_poll_timeout(sii_reg_base + 0xb4, status, ((status >> 6) & 0x3), 20, timeout * USEC_PER_MSEC);
 	if (err) {
 		pr_err("[sg2260] failed to poll link ready\n");
 		return -ETIMEDOUT;
 	}
 
+	pr_err("link status reg: 0x%x\n", readl(sii_reg_base + 0xb4));
 	return 0;
 }
 
@@ -1420,7 +1474,7 @@ static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 
 	gpio_direction_output(pcie->pe_rst, 0);
 	gpio_set_value(pcie->pe_rst, 0);
-	msleep(1000);
+	msleep(100);
 	gpio_set_value(pcie->pe_rst, 1);
 	ret = phy_configure(pcie->phy, NULL);
 	if (ret) {
@@ -1513,12 +1567,13 @@ static uint64_t get_atu_cpu_addr(struct sophgo_dw_pcie *pcie, int func_num, int 
 {
 	uint64_t atu_cpu_addr;
 	uint64_t dst_chipid = pcie->dst_chipid + func_num;
+	uint64_t base_barid = (dst_chipid - 1) * 3;
 	uint64_t bar2addr[4] = {0x5, 0x6, 0x7, 0x0};
 
 	if (pcie->chip_type == CHIP_BM1690) {
 		atu_cpu_addr = (dst_chipid << pcie->dst_chipid_shift) | (bar2addr[barid] << pcie->func_num_shift);
 	} else if (pcie->chip_type == CHIP_BM1690E) {
-		atu_cpu_addr = (pcie->board_id << pcie->board_id_shift) | (dst_chipid << pcie->dst_chipid_shift) | ((pcie->socket_id * 3 + barid) << pcie->func_num_shift);
+		atu_cpu_addr = (pcie->board_id << pcie->board_id_shift) | (dst_chipid << pcie->dst_chipid_shift) | ((base_barid + barid) << pcie->func_num_shift);
 	} else {
 		dev_err(pcie->dev, "%s Unknown chip type\n", __func__);
 		return 0;
@@ -1540,6 +1595,7 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 	uint64_t atu_cpu_addr;
 	uint64_t dst_chipid = pcie->dst_chipid;
 	int bar_num[4] = {0, 1, 2, 4};
+	int cfg_barid;
 	int i = 0;
 	uint64_t offset;
 	int ret;
@@ -1556,7 +1612,11 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 			dev = container_of(dev_list, struct pci_dev, bus_list);
 			dev_err(&dev->dev, "devfn:0x%x, class:0x%x\n", dev->devfn, dev->class);
 
+			cfg_barid = 0;
 			for (i = 0; i < 4; i++) {
+				if (bar_num[i] == 2)
+					continue;
+
 				cpu_addr = pci_resource_start(dev, bar_num[i]);
 				dev_dbg(&dev->dev, "bar%d addr:0x%llx\n", bar_num[i], cpu_addr);
 
@@ -1571,10 +1631,7 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 				}
 				pcie_addr = cpu_addr - offset;
 
-				atu_cpu_addr = get_atu_cpu_addr(pcie, func_num, i);
-
-				if (bar_num[i] == 2 || bar_num[i] == 4)
-					continue;
+				atu_cpu_addr = get_atu_cpu_addr(pcie, func_num, cfg_barid++);
 
 				index = find_available_ob_atu(pcie);
 				if (index < 0) {
@@ -1593,9 +1650,8 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 			}
 
 			dst_chipid++;
+			func_num++;
 		}
-
-		func_num++;
 	}
 
 	return 0;
@@ -1824,6 +1880,30 @@ static int config_port_code(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
+static int config_device_id(struct sophgo_dw_pcie *pcie, uint32_t device_id)
+{
+	uint32_t val = 0;
+
+	//enable DBI_RO_WR_EN
+	val = readl(pcie->dbi_base + 0x8bc);
+	val = (val & 0xfffffffe) | 0x1;
+	writel(val, (pcie->dbi_base + 0x8bc));
+
+	val = readl(pcie->dbi_base);
+	val &= 0xffff;
+	val |= (device_id << 16);
+	writel(val, pcie->dbi_base);
+	val = readl(pcie->dbi_base);
+	pr_err("pcie id:0x%x", val);
+
+	// disable DBI_RO_WR_EN
+	val = readl(pcie->dbi_base + 0x8bc);
+	val &= 0xfffffffe;
+	writel(val, (pcie->dbi_base + 0x8bc));
+
+	return 0;
+}
+
 int sophgo_dw_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1873,6 +1953,8 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 
 		if (pcie->c2c_pcie_rc)
 			sophgo_pcie_config_cdma_route(pcie);
+
+		config_device_id(pcie, 0x2044);
 	}
 
 	bridge = devm_pci_alloc_host_bridge(dev, 0);
@@ -1924,6 +2006,7 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 static const struct of_device_id sophgo_dw_pcie_of_match[] = {
 	{ .compatible = "sophgo,sg2044-pcie-host", },
 	{ .compatible = "sophgo,bm1690-pcie-host", },
+	{ .compatible = "sophgo,bm1690e-pcie-host", },
 	{},
 };
 

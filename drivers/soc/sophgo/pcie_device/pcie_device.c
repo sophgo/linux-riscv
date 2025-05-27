@@ -380,7 +380,7 @@ static int pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	pci_platform_init(pdev);
 	bm1690_map_bar(hdev, pdev);
 
-	if (id->subdevice == PCIE_DATA_LINK_C2C) {
+	if (id->subdevice == PCIE_DATA_LINK_C2C_DEVICEID) {
 		ret = build_pcie_info(hdev);
 		if (ret)
 			goto failed;
@@ -426,7 +426,11 @@ static struct pci_device_id pci_table[] = {
 	{PCI_DEVICE(0x1E30, 0x1684)},
 	{PCI_DEVICE(0x1f1C, 0x1686)},
 	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = PCIE_DATA_LINK_PCIE, 0, 0},
-	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = PCIE_DATA_LINK_C2C, 0, 0},
+	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = PCIE_DATA_LINK_C2C_DEVICEID, 0, 0},
+	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = 0x10, 0, 0},
+	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = 0x11, 0, 0},
+	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = 0x12, 0, 0},
+	{.vendor = 0x1f1C, .device = 0x1690, .subvendor = PCI_ANY_ID, .subdevice = 0x13, 0, 0},
 	{0, 0, 0, 0, 0, 0, 0}
 };
 

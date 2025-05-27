@@ -85,6 +85,7 @@ enum {
 
 #define PCIE_DATA_LINK_PCIE	0
 #define PCIE_DATA_LINK_C2C	1
+#define PCIE_DATA_LINK_C2C_DEVICEID	0xc2c
 
 #define PCIE_ATU_REGION_CTRL1		0x000
 
@@ -198,5 +199,6 @@ struct wr_order_list {
 #define BAR0_SIZE	(0x400000)
 #define BAR1_SIZE	(0x400000)
 
+#define PCIE_CACHE_CTRL 0x1118
 
 #endif

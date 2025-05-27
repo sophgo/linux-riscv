@@ -159,7 +159,7 @@ static void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
 
 
 	//config subdevice id
-	writel(PCIE_DATA_LINK_C2C << 16, pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG);
+	writel(PCIE_DATA_LINK_C2C_DEVICEID << 16, pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG);
 	pr_err("config dbi subdevice id:0x%x\n", readl(pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG));
 
 	val = readl(pcie_dbi_base + 0xc);
@@ -925,7 +925,7 @@ static int bm1690e_reset_vector(struct sophgo_pcie_ep *sg_ep)
 static int bm1690eep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 {
 	int base_index = 32 - (sg_ep->func_num * 4);
-	uint64_t bar_list[4] = {0, 1, 4};
+	uint64_t bar_list[3] = {0, 1, 4};
 	struct iatu atu;
 	uint64_t barid = 0;
 	uint64_t chipid;
@@ -973,6 +973,17 @@ static int bm1690eep_set_iatu(struct sophgo_pcie_ep *sg_ep)
 	return 0;
 }
 
+static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
+{
+	uint32_t val;
+
+	val = readl(sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
+	val |= (0x1 << 4);
+	writel(val, sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
+
+	return 0;
+}
+
 static inline void *get_c2c_ibatu(struct sophgo_pcie_ep *sg_ep, uint32_t index)
 {
 	return sg_ep->c2c_top_base + C2C_IBATU(index);
@@ -1006,7 +1017,7 @@ static void prog_c2c_ibatu(struct sophgo_pcie_ep *sg_ep, uint32_t index,
 
 static int bm1690eep_set_c2c_ib_atu(struct sophgo_pcie_ep *sg_ep)
 {
-	uint64_t bar_list[4] = {0, 1, 4};
+	uint64_t bar_list[3] = {0, 1, 4};
 	uint64_t barid = 0;
 	uint64_t c2c_iatu_index = 0;
 	uint64_t addr;
@@ -1121,7 +1132,7 @@ static int prog_recoder(struct sophgo_pcie_ep *sg_ep, uint32_t dir, uint32_t ind
 
 static int bm1690eep_set_ib_recoder(struct sophgo_pcie_ep *sg_ep)
 {
-	uint64_t bar_list[4] = {0, 1, 4};
+	uint64_t bar_list[3] = {0, 1, 4};
 	uint64_t barid = 0;
 	uint64_t recoder_index;
 	uint64_t addr;
@@ -1556,6 +1567,7 @@ int bm1690_ep_init(struct platform_device *pdev)
 		sg_ep->set_vector = bm1690_set_vector;
 		sg_ep->reset_vector = bm1690_reset_vector;
 	} else if (sg_ep->chip_type == CHIP_BM1690E) {
+		sg_ep->set_quirks = bm1690eep_set_quirks;
 		sg_ep->set_iatu = bm1690eep_set_iatu;
 		sg_ep->set_c2c_atu = bm1690eep_set_c2c_atu;
 		sg_ep->set_recoder = bm1690eep_set_recoder;

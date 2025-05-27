@@ -934,8 +934,13 @@ static int bm1690eep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 
 	atu.match_type = BAR_MATCH;
 
+	chipid = sg_ep->ep_info.socket_id;
+	barid = 3 * chipid;
+	pr_err("chipid:0x%llx, barid:0x%llx\n", chipid, barid);
+
 	for (func = 0; func < sg_ep->func_num; func++) {
 		atu.func = func;
+		chipid++;
 
 		for (j = 0; j < sizeof(bar_list) / sizeof(uint64_t); j++) {
 			if ((func == 0 && bar_list[j] == 0) || (func == 0 && bar_list[j] == 1)) {
@@ -945,7 +950,7 @@ static int bm1690eep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 			}
 
 			atu.bar = bar_list[j];
-			chipid = func + 1;
+
 			atu.cpu_addr = BM1690E_PCIE_FMT_BOARDID(sg_ep->board_id) |
 					BM1690E_PCIE_FMT_CHIPID(chipid) |
 					BM1690E_PCIE_FMT_BARID(barid);
@@ -1237,10 +1242,16 @@ static int bm1690eep_set_portcode(struct sophgo_pcie_ep *sg_ep)
 {
 	void *portcode = get_portcode_addr(sg_ep);
 	uint32_t portcode_val = 0;
-	uint32_t portcode_route_bits[4] = {
+	__attribute__((unused)) uint32_t pld_portcode_route_bits[4] = {
 		0x5ddd0,
 		0x51105,
 		0x5d055,
+		0x50555,
+	};
+	uint32_t portcode_route_bits[4] = {
+		0x5ccc0,
+		0x51105,
+		0x5c055,
 		0x50555,
 	};
 
@@ -1249,6 +1260,9 @@ static int bm1690eep_set_portcode(struct sophgo_pcie_ep *sg_ep)
 			portcode_route_bits[sg_ep->ep_info.socket_id]);
 
 	writel(portcode_val, portcode);
+	pr_err("portcode:0x%x, board_size:0x%llx, board_id:0x%llx, route_bits:0x%x\n",
+		portcode_val, sg_ep->board_size, sg_ep->board_id,
+		portcode_route_bits[sg_ep->ep_info.socket_id]);
 
 	return 0;
 }

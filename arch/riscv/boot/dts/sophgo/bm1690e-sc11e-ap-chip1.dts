@@ -9,14 +9,21 @@
 #include "bm1690-pcie-msi.dtsi"
 
 / {
+	/delete-node/ memory@80200000;
+	memory@ea0200000 {
+		device_type = "memory";
+		reg = <0x0000000e 0xa0200000 0x00000000 0x4fe00000>;
+	};
+
 	aliases {
 		serial0 = &uart0;
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=4";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xeab000000,32M maxcpus=4";
 		stdout-path = "serial0";
 	};
+
 
 	soc {
 		uart0: serial@7030000000 {
@@ -97,7 +104,7 @@
 
 		//c2c0_x8 cascade rc
 		pcie_rc_0: pcie@6c00400000 {
-			compatible = "sophgo,bm1690-pcie-host";
+			compatible = "sophgo,bm1690e-pcie-host";
 			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -142,6 +149,7 @@
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
 			board_size = <0x0 0x4>;
+			dst-chip = <0x3>;
 
 			status = "okay";
 		};
@@ -745,7 +753,7 @@
 
 		//c2c2_x8
 		pcie_ep_4: pcie_ep@6c04400000 {
-			compatible = "sophgo,pcie-link-ep";
+			compatible = "sophgo,c2c-link-ep";
 			chip_type = "bm1690e";
 			#address-cells = <2>;
 			#size-cells = <2>;
@@ -811,7 +819,7 @@
 
 		//c2c3_x8
 		pcie_ep_6: pcie_ep@6c06400000 {
-			compatible = "sophgo,c2c-link-ep";
+			compatible = "sophgo,pcie-link-ep";
 			chip_type = "bm1690e";
 			#address-cells = <2>;
 			#size-cells = <2>;

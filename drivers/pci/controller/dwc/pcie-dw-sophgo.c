@@ -1776,10 +1776,15 @@ static int bm1690e_pcie_config_port_code(struct sophgo_dw_pcie *pcie)
 {
 	void *portcode = get_portcode_addr(pcie);
 	uint32_t portcode_val = 0;
-	uint32_t portcode_route_bits[4] = {
+	__attribute__((unused)) uint32_t pld_portcode_route_bits[4] = {
 		0x25550,
 		0x35503,
 		0x25022,
+	};
+	uint32_t portcode_route_bits[4] = {
+		0xd5550,
+		0xc550c,
+		0x35033,
 	};
 
 	portcode_val = ((pcie->board_size << PORTCODE_BOARDSIZE_SHIFT) |

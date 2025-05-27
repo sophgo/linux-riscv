@@ -9,12 +9,18 @@
 #include "bm1690-pcie-msi.dtsi"
 
 / {
+	/delete-node/ memory@80200000;
+	memory@ea0200000 {
+		device_type = "memory";
+		reg = <0x0000000e 0xa0200000 0x00000000 0x4fe00000>;
+	};
+
 	aliases {
 		serial0 = &uart0;
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,32M maxcpus=4";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xeab000000,32M maxcpus=4";
 		stdout-path = "serial0";
 	};
 
@@ -511,7 +517,7 @@
 
 		//c2c4_x8
 		pcie_rc_8: pcie@6c08400000 {
-			compatible = "sophgo,bm1690-pcie-host";
+			compatible = "sophgo,bm1690-c2c-pcie-host";
 			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -745,7 +751,7 @@
 
 		//c2c2_x8
 		pcie_ep_4: pcie_ep@6c04400000 {
-			compatible = "sophgo,pcie-link-ep";
+			compatible = "sophgo,c2c-link-ep";
 			chip_type = "bm1690e";
 			#address-cells = <2>;
 			#size-cells = <2>;
@@ -877,7 +883,7 @@
 
 		//c2c4_x8
 		pcie_ep_8: pcie_ep@6c08400000 {
-			compatible = "sophgo,c2c-link-ep";
+			compatible = "sophgo,pcie-link-ep";
 			chip_type = "bm1690e";
 			#address-cells = <2>;
 			#size-cells = <2>;

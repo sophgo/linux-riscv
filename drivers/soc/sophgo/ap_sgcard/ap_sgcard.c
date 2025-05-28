@@ -218,6 +218,7 @@ struct sg_card {
 	struct wake_up_stream_port wake_up_stream_port;
 	atomic_t c2c_kernel_token;
 	struct host_channel_verify verify;
+	uint64_t last_reqid;
 };
 
 static struct sg_card *g_card;
@@ -498,6 +499,16 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			pr_err("verify request head error, try again\n");
 			schedule_delayed_work(&channel->channel_delayed_work, 1);
 		}
+
+		if (request_action.request_id <= card->last_reqid || (request_action.request_id - card->last_reqid) > 10) {
+			pr_err("id not match, head:0x%llx, tail:0x%llx last id:0x%llx, get id:0x%llx, try again\n",
+				head, tail, card->last_reqid, request_action.request_id);
+			for (i = 0; i < sizeof(request_action) / sizeof(uint64_t); i++)
+				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&request_action))[i]);
+
+			schedule_delayed_work(&channel->channel_delayed_work, 1);
+			return 0;
+		}
 		ktime_get_real_ts64(&ts);
 		DBG_MSG("host int [ch:0x%llx] request_id:0x%llx, request_type:0x%x\n",
 			channel->channel_index, request_action.request_id, request_action.type);
@@ -531,10 +542,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 				pr_err("request_id:0x%llx, request_type:0x%x, no stream id:0x%llx match\n",
 					request_action.request_id, request_action.type, request_action.stream_id);
 				pr_err("[error stream id]:current tail:0x%llx\n", tail);
-				tail = (tail + sizeof(request_action) + request_action.task_size)
-						& (card->pool_size - 1);
-				rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
-				pr_err("[error stream id]:now fix to 0x%llx\n", tail);
+				schedule_delayed_work(&channel->channel_delayed_work, 1);
 
 				return 0;
 
@@ -637,6 +645,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 			atomic_add(sizeof(request_action), &port->cnt_available);
 			wake_up_all(&port->read_available);
 		}
+		card->last_reqid = request_action.request_id;
 	}
 
 	return 0;

@@ -293,15 +293,8 @@
 			cdns,no-bar-match-nbits = <48>;
 			sophgo,link-id = <0>;
 			sophgo,syscon-pcie-ctrl = <&cdns_pcie1_ctrl>;
-			msi-parent = <&msi_pcie>;
+			msi-parent = <&msi>;
 			status = "disabled";
-			msi_pcie: msi {
-				compatible = "sophgo,sg2042-pcie-msi";
-				msi-controller;
-				interrupt-parent = <&intc>;
-				interrupts = <123 IRQ_TYPE_LEVEL_HIGH>;
-				interrupt-names = "msi";
-			};
 		};
 
 		pcie_rc2: pcie@7062800000 {

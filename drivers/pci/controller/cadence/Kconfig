@@ -54,6 +54,16 @@ config PCIE_SG2042
 	  controller in host mode. Sophgo SG2042 PCIe controller uses Cadence
 	  PCIe core.
 
+config PCIE_SG2042_HACK
+	bool "Sophgo SG2042 PCIe controller (host mode) with hack"
+	depends on ARCH_SOPHGO || COMPILE_TEST
+	depends on OF
+	depends on PCIE_SG2042
+	default n
+	help
+	  To enable support for graphics cards and some peripherals on the 
+	  Sophgo SG2042, some "hacks" are required. Say "Y" to enable it.
+
 config PCI_J721E
 	bool
 

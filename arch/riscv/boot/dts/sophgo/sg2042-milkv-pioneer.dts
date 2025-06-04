@@ -65,14 +65,32 @@
 };
 
 &pcie_rc0 {
-	status = "okay";
-};
-
-&pcie_rc1 {
+	reg = <0x70 0x60000000  0x0 0x02000000>,
+	      <0x40 0x00000000  0x0 0x00001000>;
+	linux,pci-domain = <0>;
+	bus-range = <0x00 0x7f>;
+	vendor-id = <0x1f1c>;
+	device-id = <0x2042>;
 	status = "okay";
 };
 
 &pcie_rc2 {
+	reg = <0x70 0x62000000  0x0 0x00800000>,
+	      <0x48 0x00000000  0x0 0x00001000>;
+	linux,pci-domain = <1>;
+	bus-range = <0x80 0xbf>;
+	vendor-id = <0x1f1c>;
+	device-id = <0x2042>;
+	status = "okay";
+};
+
+&pcie_rc3 {
+	reg = <0x70 0x62800000  0x0 0x00800000>,
+	      <0x4c 0x00000000  0x0 0x00001000>;
+	linux,pci-domain = <2>;
+	bus-range = <0xc0 0xff>;
+	vendor-id = <0x1f1c>;
+	device-id = <0x2042>;
 	status = "okay";
 };
 

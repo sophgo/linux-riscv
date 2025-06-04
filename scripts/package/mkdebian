@@ -181,6 +181,27 @@ echo $debarch > debian/arch
 
 host_gnu=$(dpkg-architecture -a "${debarch}" -q DEB_HOST_GNU_TYPE | sed 's/_/-/g')
 
+# A.B.CDE -> A.BE
+# 1. Extract the A.B part
+# Uses sed with extended regex (POSIX standard)
+PARSED_AB=$(echo "${KERNELRELEASE}" | sed -E 's/^([0-9]+\.[0-9]+)\..*$/\1/')
+
+# 2. Extract the E part
+# This sed chain removes A.B.C and optional -rcX parts,
+# leaving only the 'E' portion (which might be empty or start with a hyphen).
+E_PART=$(echo "${KERNELRELEASE}" | sed -E '
+    s/^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?(.*)$/\2/;
+    /^-rc[0-9]+$/d; # If only "-rcX" remains, delete it (meaning E is empty)
+')
+
+# 3. Combine A.B and E
+# Check if E_PART is not empty. If it's not, append it to A.B.
+if [ -n "${E_PART}" ]; then
+    PACKAGENAMEVERSION="${PARSED_AB}${E_PART}"
+else
+    PACKAGENAMEVERSION="${PARSED_AB}"
+fi
+
 # Generate a simple changelog template
 cat <<EOF > debian/changelog
 $sourcename ($packageversion) $distribution; urgency=low
@@ -205,7 +226,7 @@ Build-Depends-Arch: bc, bison, cpio, flex,
  rsync
 Homepage: https://www.kernel.org/
 
-Package: $packagename-$version
+Package: $packagename-${PACKAGENAMEVERSION}
 Architecture: $debarch
 Description: Linux kernel, version $version
  This package contains the Linux kernel, modules and corresponding other
@@ -228,7 +249,7 @@ EOF
 if is_enabled CONFIG_MODULES; then
 cat <<EOF >> debian/control
 
-Package: linux-headers-$version
+Package: linux-headers-${PACKAGENAMEVERSION}
 Architecture: $debarch
 Build-Profiles: <!pkg.${sourcename}.nokernelheaders>
 Description: Linux kernel headers for $version on $debarch
@@ -242,7 +263,7 @@ fi
 if is_enabled CONFIG_DEBUG_INFO; then
 cat <<EOF >> debian/control
 
-Package: linux-image-$version-dbg
+Package: linux-image-${PACKAGENAMEVERSION}-dbg
 Section: debug
 Architecture: $debarch
 Build-Profiles: <!pkg.${sourcename}.nokerneldbg>

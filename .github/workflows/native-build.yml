@@ -1,0 +1,75 @@
+name: sg2042-upstream-native-kernel
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+env:
+  wget_alias: 'wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0'
+  ARCH: riscv
+  KBUILD_BUILD_USER: builder
+  KBUILD_BUILD_HOST: revyos-riscv-builder
+  KDEB_COMPRESS: none
+  KDEB_CHANGELOG_DIST: unstable
+
+jobs:
+  kernel:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: native
+            cross: riscv64-linux-gnu-
+            machine: [ self-hosted, Linux, riscv64 ]
+            run_image: ghcr.io/revyos/revyos-kernel-builder:riscv64-2025.05.20-plucky
+            board: pioneer
+            compiler: riscv64-linux-gnu-gcc-14
+
+    runs-on: ${{ matrix.machine }}
+    container:
+      image: ${{ matrix.run_image }}
+    env:
+      CROSS_COMPILE: ${{ matrix.cross }}
+      board: ${{ matrix.board }}
+      compiler: ${{ matrix.compiler }}
+
+    steps:
+      - name: Checkout kernel
+        uses: actions/checkout@v4
+        with:
+            path: 'kernel'
+
+      - name: Compile Kernel && Install
+        run: |
+              mkdir -p output
+              ${CROSS_COMPILE}gcc -v
+
+              pushd kernel
+                export KDEB_PKGVERSION="$(make kernelversion)-$(date "+%Y.%m.%d.%H.%M")+$(git rev-parse --short HEAD)"
+                make CC="${compiler}" debian_defconfig
+
+                # FIXME: force use 32 thread
+                make CC="${compiler}" -j64 bindeb-pkg LOCALVERSION="-${board}"
+                make CC="${compiler}" -j64 dtbs
+
+                sudo cp -v arch/riscv/boot/dts/sophgo/*.dtb ${GITHUB_WORKSPACE}/output
+                # Copy deb
+                sudo dcmd cp -v ../*.changes ${GITHUB_WORKSPACE}/output
+
+                # record commit-id
+                git rev-parse HEAD > kernel-commitid
+                sudo cp -v kernel-commitid ${GITHUB_WORKSPACE}/output
+              popd
+
+      - name: compress
+        run: tar -zcvf sg2042-kernel-${{ matrix.name }}-${{ matrix.board }}.tar.gz output
+
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sg2042-kernel-${{ matrix.name }}-${{ matrix.board }}.tar.gz
+          path: sg2042-kernel-${{ matrix.name }}-${{ matrix.board }}.tar.gz
+          retention-days: 30

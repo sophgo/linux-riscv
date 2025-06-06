@@ -99,12 +99,15 @@ struct sophgo_pcie_ep {
 	struct sophgo_pcie_vfun vfun[PCIE_VFUN_MAX];
 	int (*set_vector)(struct sophgo_pcie_ep *ep);
 	int (*reset_vector)(struct sophgo_pcie_ep *ep);
-	int (*set_iatu)(struct sophgo_pcie_ep *sg_ep);
-	int (*set_c2c_atu)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_ib_iatu)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_c2c_ib_atu)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_ob_iatu)(struct sophgo_pcie_ep *sg_ep);
+	int (*set_c2c_ob_atu)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_recoder)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_portcode)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_wr_order)(struct sophgo_pcie_ep *sg_ep);
 	int (*set_quirks)(struct sophgo_pcie_ep *sg_ep);
+	struct delayed_work probe_delayed_work;
 };
 
 

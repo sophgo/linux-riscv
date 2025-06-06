@@ -137,6 +137,11 @@ struct iatu {
 #define BM1690E_PCIE_FMT_GET_BARID(addr)	(((addr) & GENMASK(48, 45)) >> 45)
 
 #define C2C_IBATU(index) (0xc00 + ((index) * 0x10))
+#define C2C_OBATU(index) (0x200 + ((index) * 0x10))
+
+#define C2C_OBATU_UPPER_BASE	0x0
+#define C2C_OBATU_LOWER_BASE	0x4
+#define C2C_OBATU_CTRL		0x8
 
 #define C2C_IBATU_UPPER_BASE	0x0
 #define C2C_IBATU_LOWER_BASE	0x4
@@ -150,6 +155,14 @@ struct iatu {
 #define C2C_IBATU_CTRL_FUNC(id) ((((id) & 0x3) << 29) | (((id) >> 2) << 27))
 #define C2C_IBATU_CTRL_SELX8(id) ((id) << 28)
 #define C2C_IBATU_CTRL_IBSIZE(id) ((id) << 0)
+
+#define C2C_OBATU_CTRL_ENABLE	BIT(31)
+#define C2C_OBATU_DST_PC(val)	((val) << 30)
+#define C2C_OBATU_PC_MSI(val)	((val) << 29)
+#define C2C_OBATU_SELX8(val)	((val) << 28)
+#define C2C_OBATU_FUNC_NUM(val)	((val) << 24)
+#define C2C_OBATU_MATCH_ADDR(addr)	(((addr >> 32) & 0xff) << 16)
+#define C2C_OBATU_OB_SIZE(val)	(val)
 
 #define OB_RECODER	0x0
 #define IB_RECODER	0x1
@@ -200,5 +213,17 @@ struct wr_order_list {
 #define BAR1_SIZE	(0x400000)
 
 #define PCIE_CACHE_CTRL 0x1118
+
+#define BM1690E_MSI_GEN_ADDR(val)	(val)
+#define BM1690E_MSI_GEN_MSI_EN(val)	((val) << 21)
+#define BM1690E_MSI_FUNC_NUM(val)	((val) << 22)
+#define BM1690E_MSI_GEN_DST_CHIPID(val)	((val) << 25)
+
+#define BM1690E_MSI_ADDR(val)	((val) | BM1690E_MSI_GEN_MSI_EN(1) | \
+				 BM1690E_MSI_FUNC_NUM(0) | \
+				 BM1690E_MSI_GEN_DST_CHIPID(7))
+
+#define BM1690E_SOC_MSI_ADDR_FUNC_NUM(val)	(val << 60)
+
 
 #endif

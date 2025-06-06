@@ -55,20 +55,20 @@ static int sophgo_pcie_link_probe(struct platform_device *pdev)
 
 	pr_err("[pcie ep] pcie link probe\n");
 
-	if (sg_ep->set_quirks)
-		sg_ep->set_quirks(sg_ep);
 	if (sg_ep->set_vector)
 		sg_ep->set_vector(sg_ep);
-	if (sg_ep->set_iatu)
-		sg_ep->set_iatu(sg_ep);
-	if (sg_ep->set_c2c_atu)
-		sg_ep->set_c2c_atu(sg_ep);
+	if (sg_ep->set_ib_iatu)
+		sg_ep->set_ib_iatu(sg_ep);
+	if (sg_ep->set_c2c_ib_atu)
+		sg_ep->set_c2c_ib_atu(sg_ep);
 	// if (sg_ep->set_recoder)
 	// 	sg_ep->set_recoder(sg_ep);
 	if (sg_ep->set_portcode)
 		sg_ep->set_portcode(sg_ep);
 	if (sg_ep->set_wr_order)
 		sg_ep->set_wr_order(sg_ep);
+	if (sg_ep->set_quirks)
+		sg_ep->set_quirks(sg_ep);
 
 	res = kzalloc(sizeof(struct resource) * 32, GFP_KERNEL);
 	if (!res)

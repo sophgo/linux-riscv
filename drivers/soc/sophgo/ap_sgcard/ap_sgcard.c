@@ -497,7 +497,12 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 				  sizeof(struct time_stamp), request_action.time.head_verify_val);
 		if (ret) {
 			pr_err("verify request head error, try again\n");
+			pr_err("head not match, head:0x%llx, tail:0x%llx last id:0x%llx, get id:0x%llx, try again\n",
+				head, tail, card->last_reqid, request_action.request_id);
+			for (i = 0; i < sizeof(request_action) / sizeof(uint64_t); i++)
+				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&request_action))[i]);
 			schedule_delayed_work(&channel->channel_delayed_work, 1);
+			return 0;
 		}
 
 		if (request_action.request_id <= card->last_reqid || (request_action.request_id - card->last_reqid) > 10) {
@@ -557,7 +562,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		if (request_action.type == TASK_CREATE_REQUEST || request_action.type == MALLOC_DEVICE_MEM_REQUEST
 		    || request_action.type == FREE_DEVICE_MEM_REQUEST) {
 			length = request_action.task_size;
-			DBG_MSG("request id:0x%llx, task size:0x%llx\n", request_action.request_id,
+			DBG_MSG("request id:0x%llx, task size:0x%x\n", request_action.request_id,
 				 request_action.task_size);
 			rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
 			rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
@@ -577,7 +582,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 							sizeof(request_action) + request_action.task_size, card->pool_size);
 				if (verify_data(card, card->verify.verify_addr + sizeof(struct host_request_action),
 						length, request_action.time.body_verify_val)) {
-					pr_err("task body error verify, try again\n");
+					pr_err("task body error verify, try again lenght=%d\n", length);
 					schedule_delayed_work(&channel->channel_delayed_work, 1);
 					return 0;
 				}
@@ -585,6 +590,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 
 			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
 			if (c < length + sizeof(request_action)) {
+				pr_err("task body lenght not match head:0x%llx, tail:0x%llx length=%d\n", head, tail, length);
 				schedule_delayed_work(&channel->channel_delayed_work, 1);
 				break;
 			}
@@ -1147,7 +1153,7 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
 				pr_err("offset:%d data:0x%llx\n", i, ((uint64_t *)(&action))[i]);
 		}
 
-		DBG_MSG("[port:%s] [%s]-0x%llx, task size:0x%llx\n", port->name, request_response_type[action.type],
+		DBG_MSG("[port:%s] [%s]-0x%llx, task size:0x%x\n", port->name, request_response_type[action.type],
 			 action.request_id, action.task_size);
 	} else if (read_response) {
 		DBG_MSG("[port:%s] response task id:0x%llx, result:0x%llx\n", port->name, response.task_id,

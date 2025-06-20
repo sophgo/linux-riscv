@@ -215,8 +215,11 @@ struct host_request_action {
 		uint64_t callback_id;
 	};
 	union {
-		uint64_t task_size;
 		uint64_t record_stream_id;
+		struct {
+			uint32_t task_size;
+			uint32_t pid;
+		};
 	};
 	struct time_stamp time;
 } __attribute__((packed));

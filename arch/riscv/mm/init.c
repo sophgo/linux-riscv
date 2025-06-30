@@ -363,6 +363,7 @@ static void __init setup_bootmem(void)
 	if (IS_ENABLED(CONFIG_64BIT) && IS_ENABLED(CONFIG_MMU))
 		kernel_map.va_pa_offset = PAGE_OFFSET - phys_ram_base;
 
+#ifndef CONFIG_HIGHMEM
 	/*
 	 * The size of the linear page mapping may restrict the amount of
 	 * usable RAM.
@@ -372,7 +373,7 @@ static void __init setup_bootmem(void)
 		memblock_cap_memory_range(phys_ram_base,
 					  max_mapped_addr - phys_ram_base);
 	}
-
+#endif
 	/*
 	 * Reserve physical address space that would be mapped to virtual
 	 * addresses greater than (void *)(-PAGE_SIZE) because:
@@ -1454,6 +1455,10 @@ static void __init create_linear_mapping_page_table(void)
 		if (start <= __pa(PAGE_OFFSET) &&
 		    __pa(PAGE_OFFSET) < end)
 			start = __pa(PAGE_OFFSET);
+#ifdef CONFIG_HIGHMEM
+		if (end >= __pa(PAGE_OFFSET) + memory_limit)
+			end = __pa(PAGE_OFFSET) + memory_limit;
+#endif
 
 		create_linear_mapping_range(start, end, PMD_SIZE);
 	}

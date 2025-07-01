@@ -914,6 +914,39 @@
 			perst-gpios = <&port0a 25 0>;
 
 			status = "okay";
+
+			sophgo_card@0 {
+				compatible = "sophgo,sophgo-card";
+				reg = <0xe  0xf8000000 0x00000000 0x01400000>,
+					<0x70 0x101ff000 0x00000000 0x00001000>,
+					<0x70 0x50000000 0x00000000 0x00001000>;
+				reg-names = "share-memory", "config_file";
+
+				host-channel-num = <1>;
+				tpu-channel-num = <4>;
+				media-channel-num = <0>;
+				tx-channel = <0x0 0x2 0x4 0x6 0x8>;
+				rx-channel = <0x1 0x3 0x5 0x7 0x9>;
+				channel-size = <0x100000>;
+				share-memory-type = <1>;
+
+				interrupt-parent = <&intc>;
+				interrupts = <352 IRQ_TYPE_EDGE_RISING>,
+						<353 IRQ_TYPE_EDGE_RISING>,
+						<354 IRQ_TYPE_EDGE_RISING>,
+						<355 IRQ_TYPE_EDGE_RISING>,
+						<356 IRQ_TYPE_EDGE_RISING>;
+				clr-irq = <0x6E 0x10000000 0x00000000 0x00000000>,
+						<0x6E 0x10000004 0x00000000 0x00000000>,
+						<0x6E 0x10000008 0x00000000 0x00000000>,
+						<0x6E 0x1000000c 0x00000000 0x00000000>,
+						<0x6E 0x10000010 0x00000000 0x00000000>;
+				virtual-msi = <0x0 0x0 0x00000000 0x00000000>,
+						<0x69 0x0cd00000 0x00000000 0x00000001>,
+						<0x69 0x1cd00000 0x00000000 0x00000001>,
+						<0x69 0x2cd00000 0x00000000 0x00000001>,
+						<0x69 0x3cd00000 0x00000000 0x00000001>;
+			};
 		};
 
 		//c2c4_x4

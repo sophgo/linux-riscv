@@ -1441,7 +1441,14 @@ static void __init create_linear_mapping_page_table(void)
 	 *  before we setup the linear mapping so that we avoid using hugepages
 	 *  for this region.
 	 */
+#ifdef CONFIG_HIGHMEM
+	kfence_pool = memblock_phys_alloc_range(KFENCE_POOL_SIZE,
+						PAGE_SIZE,
+						min_low_pfn << PAGE_SHIFT,
+						max_low_pfn << PAGE_SHIFT);
+#else
 	kfence_pool = memblock_phys_alloc(KFENCE_POOL_SIZE, PAGE_SIZE);
+#endif
 	BUG_ON(!kfence_pool);
 
 	memblock_mark_nomap(kfence_pool, KFENCE_POOL_SIZE);

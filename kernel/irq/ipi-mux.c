@@ -83,7 +83,10 @@ static void ipi_mux_send_mask(struct irq_data *d, const struct cpumask *mask)
 		 * dependency on the result of atomic_read() below, which is
 		 * itself already ordered after the vIPI flag write.
 		 */
-		if (!(pending & ibit) && (atomic_read(&icpu->enable) & ibit))
+		if (!(atomic_read(&icpu->enable) & ibit))
+			continue;
+
+		if (!(pending & ibit) || (system_state < SYSTEM_RUNNING))
 			ipi_mux_send(cpu);
 	}
 }

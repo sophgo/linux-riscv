@@ -97,7 +97,13 @@
 #ifdef CONFIG_64BIT
 #define MAX_FDT_SIZE	 PMD_SIZE
 #define FIX_FDT_SIZE	 (MAX_FDT_SIZE + SZ_2M)
+#ifdef CONFIG_HIGHMEM
+//kmap size is related to the number of CPUs, so increase fixaddr size.
+#define FIXADDR_PMD_NUM  6
+#define FIXADDR_SIZE     ((PMD_SIZE * FIXADDR_PMD_NUM) + FIX_FDT_SIZE)
+#else
 #define FIXADDR_SIZE     (PMD_SIZE + FIX_FDT_SIZE)
+#endif
 #else
 #define MAX_FDT_SIZE	 PGDIR_SIZE
 #define FIX_FDT_SIZE	 MAX_FDT_SIZE
@@ -552,10 +558,18 @@ void flush_icache_pte(struct mm_struct *mm, pte_t pte);
 
 static inline void __set_pte_at(struct mm_struct *mm, pte_t *ptep, pte_t pteval)
 {
+#ifdef CONFIG_HIGHMEM
+	u64 pa = PFN_PHYS(pte_pfn(pteval));
+#endif
+
 	if (pte_present(pteval) && pte_exec(pteval))
 		flush_icache_pte(mm, pteval);
 
 	set_pte(ptep, pteval);
+
+#ifdef CONFIG_HIGHMEM
+	local_flush_tlb_page(pa);
+#endif
 }
 
 #define PFN_PTE_SHIFT		_PAGE_PFN_SHIFT

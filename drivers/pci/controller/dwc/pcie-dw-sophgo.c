@@ -2023,12 +2023,9 @@ builtin_platform_driver(sophgo_dw_pcie_driver);
 
 #if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
 
-static struct device *phb_dev;
-struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev);
-
-struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev)
+static struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev)
 {
-	return acpi_fwnode_handle(to_acpi_device(phb_dev));
+	return acpi_fwnode_handle(to_acpi_device(dev));
 }
 
 static int sophgo_pcie_init(struct pci_config_window *cfg)
@@ -2049,7 +2046,6 @@ static int sophgo_pcie_init(struct pci_config_window *cfg)
 	if (!pcie)
 		return -ENOMEM;
 
-	phb_dev = dev;
 	pcie->dev = dev;
 	pp = &pcie->pp;
 

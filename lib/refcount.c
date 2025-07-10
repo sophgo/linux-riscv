@@ -7,6 +7,8 @@
 #include <linux/refcount.h>
 #include <linux/spinlock.h>
 #include <linux/bug.h>
+#include <linux/random.h>
+#include <asm/delay.h>
 
 #define REFCOUNT_WARN(str)	WARN_ONCE(1, "refcount_t: " str ".\n")
 
@@ -87,6 +89,8 @@ bool refcount_dec_not_one(refcount_t *r)
 			WARN_ONCE(new > val, "refcount_t: underflow; use-after-free.\n");
 			return true;
 		}
+
+		udelay(get_random_u32() % 5);
 
 	} while (!atomic_try_cmpxchg_release(&r->refs, &val, new));
 

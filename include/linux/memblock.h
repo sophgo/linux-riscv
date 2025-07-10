@@ -470,6 +470,9 @@ phys_addr_t memblock_reserved_size(void);
 unsigned long memblock_estimated_nr_free_pages(void);
 phys_addr_t memblock_start_of_DRAM(void);
 phys_addr_t memblock_end_of_DRAM(void);
+#ifdef CONFIG_HIGHMEM
+phys_addr_t memblock_find_max_low_addr(phys_addr_t limit);
+#endif
 void memblock_enforce_memory_limit(phys_addr_t memory_limit);
 void memblock_cap_memory_range(phys_addr_t base, phys_addr_t size);
 void memblock_mem_limit_remove_map(phys_addr_t limit);

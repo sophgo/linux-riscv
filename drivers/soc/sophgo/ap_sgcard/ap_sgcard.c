@@ -101,12 +101,12 @@ const char *task_type[] = {
 
 struct cacheline_align_circ_buf {
 	union {
-		uint64_t head;
+		uint32_t head;
 		uint64_t head_align[8];
 	};
 
 	union {
-		uint64_t tail;
+		uint32_t tail;
 		uint64_t tail_align[8];
 	};
 	uint64_t phy_addr;
@@ -135,6 +135,7 @@ struct v_channel {
 	struct clr_irq rx_clean_irq;
 	uint64_t channel_index;
 	uint64_t irq;
+	uint64_t buffer_size;
 	struct mutex tx_lock;
 	spinlock_t port_lock;
 	char name[16];
@@ -160,7 +161,9 @@ struct v_port {
 	struct v_channel *parent_channel;
 	struct sg_card *card;
 	char *write_buf;
-	struct circ_buf port_rx_buf;
+	struct circ_buf *port_rx_buf;
+	uint64_t port_rx_buf_size;
+	uint64_t port_rx_buf_phy_addr;
 	uint64_t stream_id;
 	atomic_t cnt_available;
 	atomic_t wake_up_task_cnt;
@@ -327,7 +330,7 @@ __attribute__((unused)) static int copy_from_circbuf(char *to, struct circ_buf *
 }
 
 static int copy_from_circbuf_not_change_index(char *to, struct cacheline_align_circ_buf *buf,
-					      int length, uint64_t pool_size)
+					      uint64_t offset, int length, uint64_t pool_size)
 {
 	uint64_t tail = buf->tail;
 	uint64_t head = buf->head;
@@ -335,13 +338,14 @@ static int copy_from_circbuf_not_change_index(char *to, struct cacheline_align_c
 
 	buf->circ_buf_read(&buf->head, &head, sizeof(head));
 	buf->circ_buf_read(&buf->tail, &tail, sizeof(tail));
+	tail = (tail + offset) & (pool_size - 1);
 
 	while (1) {
 		c = CIRC_CNT_TO_END(head, tail, pool_size);
 		if (length < c)
 			c = length;
 
-		DBG_MSG("circ cnt to end:%llu\n", c);
+		DBG_MSG("rx buf head:0x%llx, tail:0x%llx, circ cnt to end:%llu\n", head, tail, c);
 		buf->circ_buf_read(buf->buf + tail, to, c);
 		tail = (tail + c) & (pool_size - 1);
 		to += c;
@@ -363,19 +367,9 @@ static int copy_to_circbuf(struct circ_buf *rx_buf, char *from, int length, uint
 			break;
 	}
 
-	while (1) {
-		c = CIRC_SPACE_TO_END(rx_buf->head, rx_buf->tail, pool_size);
-		if (length < c)
-			c = length;
-
-		memcpy_toio(rx_buf->buf + rx_buf->head, from, c);
-		smp_mb();
-		rx_buf->head = (rx_buf->head + c) & (pool_size - 1);
-		from += c;
-		length -= c;
-		if (length == 0)
-			break;
-	}
+	memcpy(rx_buf->buf + rx_buf->head, from, length);
+	smp_mb();
+	rx_buf->head = (rx_buf->head + length) & (pool_size - 1);
 
 	return length;
 }
@@ -454,8 +448,6 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 	struct circ_buf *port_rx_buf = NULL;
 	struct host_request_action request_action;
 	int c;
-	int from_len;
-	int to_len;
 	int length;
 	unsigned long flags;
 	struct timespec64 ts;
@@ -463,6 +455,8 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 	int i = 0;
 	uint64_t head;
 	uint64_t tail;
+	uint64_t port_rx_head;
+	uint64_t port_rx_tail;
 	int fifo_empty_cnt = 0;
 	int ret;
 
@@ -474,7 +468,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
 		rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
 		DBG_MSG("host int [ch:0x%llx] head:0x%llx, tail:0x%llx\n", channel->channel_index, head, tail);
-		c = CIRC_CNT(head, tail, card->pool_size);
+		c = CIRC_CNT(head, tail, channel->buffer_size);
 
 		if (c == 0 && fifo_empty_cnt != 6) {
 			fifo_empty_cnt++;
@@ -492,7 +486,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		DBG_MSG("int rcv %d bytes\n", c);
 
 		copy_from_circbuf_not_change_index((char *)&request_action, rx_buf,
-							sizeof(request_action), card->pool_size);
+						    0, sizeof(request_action), channel->buffer_size);
 		ret = verify_data(card, &request_action, sizeof(struct host_request_action) -
 				  sizeof(struct time_stamp), request_action.time.head_verify_val);
 		if (ret) {
@@ -555,102 +549,81 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 
 			//TODO: red-black tree
 		}
-		port_rx_buf = &port->port_rx_buf;
+		port_rx_buf = port->port_rx_buf;
 		port->port_info.all_msg_cnt[request_action.type]++;
 		port->port_info.last_rx_msg_type = request_action.type;
 
 		if (request_action.type == TASK_CREATE_REQUEST || request_action.type == MALLOC_DEVICE_MEM_REQUEST
-		    || request_action.type == FREE_DEVICE_MEM_REQUEST) {
+		    || request_action.type == FREE_DEVICE_MEM_REQUEST)
 			length = request_action.task_size;
-			DBG_MSG("request id:0x%llx, task size:0x%x\n", request_action.request_id,
-				 request_action.task_size);
-			rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
-			rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
-			c = CIRC_CNT(head, tail, card->pool_size);
-			if (c < length + sizeof(request_action)) {
-				pr_err("warning, task size is not match\n");
-				pr_err("request id:0x%llx, type:0x%x, bring bufer size:0x%x but want size:0x%lx\n",
-					request_action.request_id, request_action.type, c,
-					length + sizeof(request_action));
-				pr_err("host rx buf head:0x%llx, tail:0x%llx\n", head, tail);
-				pr_err("port rx buf head:0x%x, tail:0x%x\n", port_rx_buf->head, port_rx_buf->tail);
-				break;
-			}
+		else
+			length = 0;
+		DBG_MSG("request id:0x%llx, task size:0x%x\n", request_action.request_id,
+				request_action.task_size);
 
+		rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
+		rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
+		c = CIRC_CNT(head, tail, channel->buffer_size);
+		if (c < length + sizeof(request_action)) {
+			pr_err("warning, task size is not match\n");
+			pr_err("request id:0x%llx, type:0x%x, bring bufer size:0x%x but want size:0x%lx\n",
+				request_action.request_id, request_action.type, c,
+				length + sizeof(request_action));
+			pr_err("host rx buf head:0x%llx, tail:0x%llx\n", head, tail);
+			pr_err("port rx buf head:0x%x, tail:0x%x\n", port_rx_buf->head, port_rx_buf->tail);
+			break;
+		}
+
+		port_rx_head = port_rx_buf->head;
+		port_rx_tail = port_rx_buf->tail;
+		c = CIRC_SPACE(port_rx_head, port_rx_tail, port->port_rx_buf_size);
+		if (c < length + sizeof(request_action)) {
+			pr_err("no space in host rx buf,head:0x%llx,tail:0x%llx,need:0x%lx,availabe:0x%x\n",
+				port_rx_head, port_rx_tail, length + sizeof(request_action), c);
+			schedule_delayed_work(&channel->channel_delayed_work, 1);
+			break;
+		}
+
+		memcpy(port_rx_buf->buf + port_rx_head, &request_action, sizeof(request_action));
+		port_rx_head = (port_rx_head + sizeof(request_action)) & (port->port_rx_buf_size - 1);
+
+		if (request_action.type == TASK_CREATE_REQUEST || request_action.type == MALLOC_DEVICE_MEM_REQUEST
+		    || request_action.type == FREE_DEVICE_MEM_REQUEST) {
+			if (request_action.type == TASK_CREATE_REQUEST)
+				if (task_head.task_type == LAUNCH_KERNEL && task_head.kernel_type == C2C_KERNEL)
+					task_head.task_token = atomic_add_return(1, &card->c2c_kernel_token);
+
+			DBG_MSG("copy [%s]-0x%llx to %s\n", request_response_type[request_action.type],
+				 request_action.request_id, port->name);
+
+			copy_from_circbuf_not_change_index((char *)port_rx_buf->buf + port_rx_head, rx_buf,
+							sizeof(struct host_request_action), length, channel->buffer_size);
 			if (card->verify.verify_enable) {
-				copy_from_circbuf_not_change_index((char *)card->verify.verify_addr, rx_buf,
-							sizeof(request_action) + request_action.task_size, card->pool_size);
-				if (verify_data(card, card->verify.verify_addr + sizeof(struct host_request_action),
+				if (verify_data(card, port_rx_buf->buf + port_rx_head,
 						length, request_action.time.body_verify_val)) {
 					pr_err("task body error verify, try again lenght=%d\n", length);
 					schedule_delayed_work(&channel->channel_delayed_work, 1);
 					return 0;
 				}
 			}
+			//clean_dcache_range(port_rx_buf->buf + port_rx_head, length);
 
-			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
-			if (c < length + sizeof(request_action)) {
-				pr_err("task body lenght not match head:0x%llx, tail:0x%llx length=%d\n", head, tail, length);
-				schedule_delayed_work(&channel->channel_delayed_work, 1);
-				break;
-			}
-			DBG_MSG("copy [%s]-0x%llx to %s, port buf head:0x%x, tail:0x%x\n",
-				request_response_type[request_action.type], request_action.request_id, port->name,
-				port_rx_buf->head, port_rx_buf->tail);
-			copy_to_circbuf(port_rx_buf, (char *)&request_action, sizeof(request_action), card->pool_size);
-			tail = (tail + sizeof(request_action)) & (card->pool_size - 1);
-			rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
-
-			if (request_action.type == TASK_CREATE_REQUEST) {
-				copy_from_circbuf_not_change_index((char *)&task_head, rx_buf,
-							sizeof(task_head), card->pool_size);
-				if (task_head.task_type == LAUNCH_KERNEL && task_head.kernel_type == C2C_KERNEL)
-					task_head.task_token = atomic_add_return(1, &card->c2c_kernel_token);
-				DBG_MSG("copy task %s to %s, task body size:0x%llx\n", task_type[task_head.task_type],
-					 port->name, task_head.task_body_size);
-				copy_to_circbuf(port_rx_buf, (char *)&task_head, sizeof(task_head), card->pool_size);
-				tail = (tail + sizeof(task_head)) & (card->pool_size - 1);
-				rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
-				length -= sizeof(task_head);
-			}
-
-			while (1) {
-				rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
-				rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
-				from_len = CIRC_CNT_TO_END(head, tail, card->pool_size);
-				to_len = CIRC_SPACE_TO_END(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
-				c = min(from_len, to_len);
-				if (length < c)
-					c = length;
-
-				rx_buf->circ_buf_read(rx_buf->buf + tail, port_rx_buf->buf + port_rx_buf->head, c);
-				smp_mb();
-				port_rx_buf->head = (port_rx_buf->head + c) & (card->pool_size - 1);
-				tail = (tail + c) & (card->pool_size - 1);
-				rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
-				length -= c;
-				if (length == 0)
-					break;
-			}
 			channel->channel_info.int_rcv_cnt += (sizeof(request_action) + request_action.task_size);
 			atomic_add(sizeof(request_action) + request_action.task_size, &port->cnt_available);
 			wake_up_all(&port->read_available);
 		} else {
 			DBG_MSG("only copy [%s]-0x%llx to %s\n", request_response_type[request_action.type],
 				 request_action.request_id, port->name);
-			c = CIRC_SPACE(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
-			if (c < sizeof(request_action)) {
-				schedule_delayed_work(&channel->channel_delayed_work, 1);
-				break;
-			}
-
-			copy_to_circbuf(port_rx_buf, (char *)&request_action, sizeof(request_action), card->pool_size);
-			tail = (tail + sizeof(request_action)) & (card->pool_size - 1);
-			rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
 			channel->channel_info.int_rcv_cnt += (sizeof(request_action));
 			atomic_add(sizeof(request_action), &port->cnt_available);
 			wake_up_all(&port->read_available);
 		}
+
+		tail = (tail + sizeof(request_action) + length) & (channel->buffer_size - 1);
+		rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
+		port_rx_head = (port_rx_head + length) & (port->port_rx_buf_size - 1);
+		port_rx_buf->head = port_rx_head;
+
 		card->last_reqid = request_action.request_id;
 	}
 
@@ -676,23 +649,23 @@ static int tpu_int(struct sg_card *card, struct v_channel *channel)
 	rx_buf = channel->rx_buf;
 	port_list = channel->port_list.next;
 	port = container_of(port_list, struct v_port, list);
-	port_rx_buf = &port->port_rx_buf;
+	port_rx_buf = port->port_rx_buf;
 
 	while (1) {
 		rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
 		rx_buf->circ_buf_read(&rx_buf->tail, &tail, sizeof(tail));
 		DBG_MSG("[ch:0x%llx] head:0x%llx, tail:0x%llx\n", channel->channel_index, head, tail);
-		c = CIRC_CNT(head, tail, card->pool_size);
+		c = CIRC_CNT(head, tail, channel->buffer_size);
 		if (c == 0)
 			break;
 
-		copy_from_circbuf_not_change_index((char *)&response_from_tpu, rx_buf,
-						   sizeof(response_from_tpu), card->pool_size);
+		copy_from_circbuf_not_change_index((char *)&response_from_tpu, rx_buf, 0,
+						   sizeof(response_from_tpu), channel->buffer_size);
 		response_from_tpu.kr_time = (uint64_t)(ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec);
-		copy_to_circbuf(port_rx_buf, (char *)&response_from_tpu, sizeof(response_from_tpu), card->pool_size);
+		copy_to_circbuf(port_rx_buf, (char *)&response_from_tpu, sizeof(response_from_tpu), port->port_rx_buf_size);
 
 		all_len += len;
-		tail = (tail + len) & (card->pool_size - 1);
+		tail = (tail + len) & (channel->buffer_size - 1);
 		rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
 
 	}
@@ -723,36 +696,36 @@ static int media_int(struct sg_card *card, struct v_channel *channel)
 	rx_buf = channel->rx_buf;
 	port_list = channel->port_list.next;
 	port = container_of(port_list, struct v_port, list);
-	port_rx_buf = &port->port_rx_buf;
+	port_rx_buf = port->port_rx_buf;
 
 	while (1) {
-		DBG_MSG("[ch:0x%llx] head:0x%llx, tail:0x%llx\n", channel->channel_index,
+		DBG_MSG("[ch:0x%llx] head:0x%x, tail:0x%x\n", channel->channel_index,
 			rx_buf->head, rx_buf->tail);
-		c = CIRC_CNT(rx_buf->head, rx_buf->tail, card->pool_size);
+		c = CIRC_CNT(rx_buf->head, rx_buf->tail, channel->buffer_size);
 		if (c == 0)
 			break;
 
 
-		copy_from_circbuf_not_change_index((char *)&response_from_media, rx_buf,
-						   sizeof(response_from_media), card->pool_size);
+		copy_from_circbuf_not_change_index((char *)&response_from_media, rx_buf, 0,
+						   sizeof(response_from_media), channel->buffer_size);
 		response_from_media.kr_time = read_arch_timer();
 		copy_to_circbuf(port_rx_buf, (char *)&response_from_media, sizeof(response_from_media),
-				card->pool_size);
+				port->port_rx_buf_size);
 
 		all_len += len;
-		rx_buf->tail = (rx_buf->tail + len) & (card->pool_size - 1);
+		rx_buf->tail = (rx_buf->tail + len) & (channel->buffer_size - 1);
 
 		if (response_from_media.response_size) {
 			length = response_from_media.response_size;
 			while (1) {
-				from_len = CIRC_CNT_TO_END(rx_buf->head, rx_buf->tail, card->pool_size);
-				to_len = CIRC_SPACE_TO_END(port_rx_buf->head, port_rx_buf->tail, card->pool_size);
+				from_len = CIRC_CNT_TO_END(rx_buf->head, rx_buf->tail, channel->buffer_size);
+				to_len = CIRC_SPACE_TO_END(port_rx_buf->head, port_rx_buf->tail, port->port_rx_buf_size);
 				c = min(from_len, to_len);
 				if (length < c)
 					c = length;
 				memcpy_fromio(port_rx_buf->buf + port_rx_buf->head, rx_buf->buf + rx_buf->tail, c);
-				port_rx_buf->head = (port_rx_buf->head + c) & (card->pool_size - 1);
-				rx_buf->tail = (rx_buf->tail + c) & (card->pool_size - 1);
+				port_rx_buf->head = (port_rx_buf->head + c) & (port->port_rx_buf_size - 1);
+				rx_buf->tail = (rx_buf->tail + c) & (channel->buffer_size - 1);
 				length -= c;
 				if (length == 0)
 					break;
@@ -1067,6 +1040,7 @@ static int config_channel(struct sg_card *card)
 						   + card->pool_size * card->tx_pool_index[i];
 		channel->rx_buf->buf = card->membase + MSGFIFO_HEAD_SIZE
 						   + card->pool_size * card->rx_pool_index[i];
+		channel->buffer_size = card->pool_size;
 
 		mutex_init(&channel->tx_lock);
 		spin_lock_init(&channel->port_lock);
@@ -1088,8 +1062,7 @@ static int config_channel(struct sg_card *card)
 static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 {
 	struct v_port *port = file->private_data;
-	struct sg_card *card = port->card;
-	struct circ_buf *rx_buf = &port->port_rx_buf;
+	struct circ_buf *rx_buf = port->port_rx_buf;
 	size_t length;
 	size_t real_count;
 	int ret;
@@ -1102,7 +1075,7 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
 	char *tmp_buf;
 
 	real_count = count >> READ_TYPE_SHIFT;
-	c = CIRC_CNT(rx_buf->head, rx_buf->tail, card->pool_size);
+	c = CIRC_CNT(rx_buf->head, rx_buf->tail, port->port_rx_buf_size);
 	if (c < real_count)
 		return 0;
 
@@ -1119,7 +1092,7 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
 	DBG_MSG("[port:%s] read 0x%lx bytes, head:0x%x, tail:0x%x\n", port->name, real_count,
 		 rx_buf->head, rx_buf->tail);
 	while (1) {
-		c = CIRC_CNT_TO_END(rx_buf->head, rx_buf->tail, card->pool_size);
+		c = CIRC_CNT_TO_END(rx_buf->head, rx_buf->tail, port->port_rx_buf_size);
 		if (length < c)
 			c = length;
 		smp_mb();
@@ -1134,7 +1107,7 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
 			DBG_MSG("to tmp buf %d bytes\n", c);
 			memcpy(tmp_buf, rx_buf->buf + rx_buf->tail, c);
 		}
-		rx_buf->tail = (rx_buf->tail + c) & (card->pool_size - 1);
+		rx_buf->tail = (rx_buf->tail + c) & (port->port_rx_buf_size - 1);
 		buf += c;
 		tmp_buf += c;
 		length -= c;
@@ -1170,15 +1143,14 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
 {
 	struct v_port *port = file->private_data;
 	struct v_channel *channel = port->parent_channel;
-	struct sg_card *card = port->card;
 	struct cacheline_align_circ_buf *tx_buf = channel->tx_buf;
 	size_t length = count;
 	size_t send_length = 0;
 	struct record_response_action *response;
 	int ret;
 	int c;
-	uint64_t head;
-	uint64_t tail;
+	uint32_t head;
+	uint32_t tail;
 
 	struct host_response_action *action = (struct host_response_action *)port->write_buf;
 	struct task_head *task_head = (struct task_head *)port->write_buf;
@@ -1192,18 +1164,18 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
 
 	mutex_lock(&channel->tx_lock);
 	head = tx_buf->head;
-	DBG_MSG("[port:%s], ch-%lld-tx head:0x%llx, tail:0x%llx\n", port->name, channel->channel_index, tx_buf->head,
+	DBG_MSG("[port:%s], ch-%lld-tx head:0x%x, tail:0x%x\n", port->name, channel->channel_index, tx_buf->head,
 		tx_buf->tail);
 
 	while (1) {
 		tx_buf->circ_buf_read(&tx_buf->tail, &tail, sizeof(tail));
-		c = CIRC_SPACE_TO_END(head, tail, card->pool_size);
+		c = CIRC_SPACE_TO_END(head, tail, port->port_rx_buf_size);
 		if (length < c)
 			c = length;
 
 		tx_buf->circ_buf_write(tx_buf->buf + head + i, port->write_buf + send_length + i, c);
 
-		head = (head + c) & (card->pool_size - 1);
+		head = (head + c) & (port->port_rx_buf_size - 1);
 		length -= c;
 		send_length += c;
 		if (length == 0) {
@@ -1212,7 +1184,7 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
 		}
 	}
 	tx_buf->circ_buf_write(&tx_buf->head, &head, sizeof(head));
-	DBG_MSG("[port:%s], ch-%lld-tx update head:0x%llx, tail:0x%llx\n", port->name, channel->channel_index,
+	DBG_MSG("[port:%s], ch-%lld-tx update head:0x%x, tail:0x%x\n", port->name, channel->channel_index,
 		 head, tx_buf->tail);
 	if (channel->channel_index != CHANNEL_HOST) {
 		DBG_MSG("[port:%s] [%s]-0x%llx, tsk body size:0x%llx\n", port->name, task_type[task_head->task_type],
@@ -1251,7 +1223,6 @@ static int sg_open(struct inode *inode, struct file *file)
 {
 	struct v_port *port = container_of(inode->i_cdev, struct v_port, cdev);
 
-	DBG_MSG("[stream:0x%llx] sg open\n", port->stream_id);
 	if (atomic_read(&port->cnt_opened)) {
 		pr_err("file has been opened\n");
 
@@ -1293,8 +1264,18 @@ static int sg_close(struct inode *inode, struct file *file)
 
 static int sg_mmap(struct file *file, struct vm_area_struct *vma)
 {
-	DBG_MSG("%s called by %s\n", __func__, current->comm);
-	return -EOPNOTSUPP;
+	struct v_port *port = file->private_data;
+	DBG_MSG("remap port rx buf:0x%llx, size:0x%llx\n",
+	       port->port_rx_buf_phy_addr, 2 * port->port_rx_buf_size);
+	if (remap_pfn_range(vma,
+			    vma->vm_start,
+			    port->port_rx_buf_phy_addr >> PAGE_SHIFT,
+			    2 * port->port_rx_buf_size,
+			    vma->vm_page_prot)) {
+		return -EAGAIN;
+	}
+
+	return 0;
 }
 
 void sophgo_setup_c2c(void);
@@ -1336,6 +1317,10 @@ static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_err("all c2c link up success\n");
 
 		break;
+	case SG_IOC_GET_PORT_RX_ADDR:
+		if (copy_to_user((void __user *)arg, &port->port_rx_buf_phy_addr, sizeof(port->port_rx_buf_phy_addr)))
+			return -EFAULT;
+		break;
 	default:
 		pr_err("unknown ioctl command 0x%x\n", cmd);
 		return -EINVAL;
@@ -1373,6 +1358,7 @@ static int create_stream_cdev(struct sg_card *card, struct sg_stream_info *strea
 	struct v_port *port = NULL;
 	int ret;
 	unsigned long flags;
+	void *port_buf;
 
 	port = kzalloc(sizeof(struct v_port), GFP_KERNEL);
 	if (IS_ERR(port)) {
@@ -1403,13 +1389,17 @@ static int create_stream_cdev(struct sg_card *card, struct sg_stream_info *strea
 	cdev_init(&port->cdev, &sg_fops);
 	port->cdev.owner = THIS_MODULE;
 	port->stream_id = stream_info->stream_id;
-	port->port_rx_buf.buf = kzalloc(card->pool_size, GFP_KERNEL);
-	if (!port->port_rx_buf.buf) {
+	port->port_rx_buf_size = PORT_RX_BUF_SIZE;
+	port_buf = kzalloc(2 * port->port_rx_buf_size, GFP_KERNEL);
+	if (port_buf == NULL) {
 		pr_err("stream port kzalloc rx buf failed\n");
 		return -ENOENT;
 	}
+	port->port_rx_buf = port_buf + port->port_rx_buf_size + RING_BUF_RESERVE_SIZE;
+	port->port_rx_buf->buf = port_buf;
+	port->port_rx_buf_phy_addr = virt_to_phys(port_buf);
 	DBG_MSG("[stream:0x%llx] create port, port->port_rx_buf.buf=0x%px pa=0x%lx\n",
-		port->stream_id, port->port_rx_buf.buf, virt_to_phys(port->port_rx_buf.buf));
+		port->stream_id, port->port_rx_buf, virt_to_phys(port->port_rx_buf));
 	port->write_buf = kzalloc(card->pool_size, GFP_KERNEL);
 	if (!port->write_buf) {
 		pr_err("stream port kzalloc write buf failed\n");
@@ -1441,10 +1431,9 @@ static int destroy_stream_cdev_by_fd(struct v_port *port)
 	cdev_del(&port->cdev);
 	device_destroy(card->cdev_info.sg_class, port->devno);
 	clr_card_devno_map(card, (port->devno - card->cdev_info.devno));
-	DBG_MSG("clr_card_devno_map %d\n", (port->devno - card->cdev_info.devno));
 	channel->channel_info.port_cnt--;
 
-	kfree(port->port_rx_buf.buf);
+	kfree(port->port_rx_buf->buf);
 	kfree(port->write_buf);
 	kfree(port);
 
@@ -1469,7 +1458,7 @@ __attribute__((unused)) static int destroy_stream_cdev(struct sg_card *card, str
 	cdev_del(&port->cdev);
 	device_destroy(card->cdev_info.sg_class, port->devno);
 
-	kfree(port->port_rx_buf.buf);
+	kfree(port->port_rx_buf->buf);
 	kfree(port);
 
 	return 0;
@@ -1626,6 +1615,7 @@ static int sg_create_cdev(struct device *dev, struct sg_card *card)
 	int ret;
 	int i;
 	unsigned long flags;
+	void *port_buf;
 
 	if (card->cdev_info.sg_class == NULL) {
 		card->cdev_info.sg_class = compat_class_create(THIS_MODULE, DRV_NAME);
@@ -1663,12 +1653,16 @@ static int sg_create_cdev(struct device *dev, struct sg_card *card)
 		port->dev = device_create(card->cdev_info.sg_class, port->parent, port->devno, NULL, port->name);
 		cdev_init(&port->cdev, &sg_fops);
 		port->cdev.owner = THIS_MODULE;
-		port->port_rx_buf.buf = kzalloc(card->pool_size, GFP_KERNEL);
-		if (IS_ERR(port->port_rx_buf.buf)) {
+		port->port_rx_buf_size = PORT_RX_BUF_SIZE;
+		port_buf = kzalloc(2 * port->port_rx_buf_size, GFP_KERNEL);
+		if (IS_ERR(port_buf)) {
 			pr_err("port kzalloc rx buf failed\n");
 			return -ENOENT;
 		} else {
-			pr_err("port->port_rx_buf:%px\n", &port->port_rx_buf);
+			port->port_rx_buf = port_buf + port->port_rx_buf_size + RING_BUF_RESERVE_SIZE;
+			port->port_rx_buf->buf = port_buf;
+			port->port_rx_buf_phy_addr = virt_to_phys(port_buf);
+			pr_err("new port->port_rx_buf:%px\n", port->port_rx_buf);
 		}
 		port->write_buf = kzalloc(card->pool_size, GFP_KERNEL);
 		if (!port->write_buf) {
@@ -1676,7 +1670,11 @@ static int sg_create_cdev(struct device *dev, struct sg_card *card)
 			return -ENOENT;
 		}
 
-		cdev_add(&port->cdev, port->devno, 1);
+		ret = cdev_add(&port->cdev, port->devno, 1);
+		if (ret) {
+			pr_err("cdev add failed\n");
+			return -ENOENT;
+		}
 		spin_lock_irqsave(&channel->port_lock, flags);
 		list_add_tail(&port->list, &channel->port_list);
 		channel->channel_info.port_cnt++;
@@ -1706,7 +1704,7 @@ static int sg_destroy_cdev(struct device *dev, struct sg_card *card)
 			spin_lock_irqsave(&channel->port_lock, flags);
 			list_del(&port->list);
 			spin_unlock_irqrestore(&channel->port_lock, flags);
-			kfree(port->port_rx_buf.buf);
+			kfree(port->port_rx_buf);
 			kfree(port);
 		}
 	}

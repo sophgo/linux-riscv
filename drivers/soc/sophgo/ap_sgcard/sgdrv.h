@@ -34,9 +34,13 @@ struct sg_task_info {
 #define SG_IOC_STREAM_CREATE		_IOWR('W', 1, struct sg_stream_info)
 #define SG_IOC_STREAM_DESTROY		_IOWR('W', 2, struct sg_stream_info)
 #define SG_IOC_SETUP_C2C		_IOWR('W', 3, int)
+#define SG_IOC_GET_PORT_RX_ADDR		_IOWR('W', 4, uint64_t)
 
 #define SG_WAKE_UP_STREAM		_IOWR('W', 0, uint64_t)
 #define SG_STREAM_RUNNING		_IOWR('W', 1, uint64_t)
+
+#define PORT_RX_BUF_SIZE	(0x200000)
+#define RING_BUF_RESERVE_SIZE	(0x80000)
 
 enum {
 	ERROR_REQUEST_RESPONSE = 0,
@@ -171,6 +175,7 @@ struct task_head {
 
 	uint64_t stream_id;
 	uint64_t task_body_size;
+	uint64_t task_body_pa;
 } __attribute__((packed));
 
 struct task {

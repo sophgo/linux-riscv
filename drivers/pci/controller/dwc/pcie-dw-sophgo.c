@@ -2046,6 +2046,7 @@ static int sophgo_pcie_init(struct pci_config_window *cfg)
 	if (!pcie)
 		return -ENOMEM;
 
+	pcie->dev = dev;
 	pp = &pcie->pp;
 
 	ret = acpi_get_rc_target_num_resources(dev, "SOPH0000", root->segment, res, 4);

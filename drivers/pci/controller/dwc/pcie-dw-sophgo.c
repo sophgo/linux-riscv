@@ -2025,7 +2025,11 @@ builtin_platform_driver(sophgo_dw_pcie_driver);
 
 static struct fwnode_handle *pci_host_bridge_acpi_get_fwnode(struct device *dev)
 {
-	return acpi_fwnode_handle(to_acpi_device(dev));
+	struct pci_bus *bus = container_of(dev, struct pci_bus, dev);
+	struct pci_config_window *cfg = bus->sysdata;
+	struct device *target_dev = cfg->parent;
+
+	return acpi_fwnode_handle(to_acpi_device(target_dev));
 }
 
 static int sophgo_pcie_init(struct pci_config_window *cfg)

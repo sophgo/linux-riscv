@@ -1,0 +1,687 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2025 Sophgo Technology Inc. All rights reserved.
+ */
+
+#include "sg2042.dtsi"
+#include "sg2042-cpus-pisces.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	chosen {
+		bootargs = "console=ttyS0,115200 maxcpus=1";
+		stdout-path = "serial0";
+	};
+
+	/delete-node/ distance-map;
+	distance-map {
+		compatible = "numa-distance-map-v1";
+		distance-matrix = <0 0 10>,	//chip0
+				  <0 1 15>,
+				  <0 2 25>,
+				  <0 3 30>,
+				  <0 4 110>,
+				  <0 5 115>,
+				  <0 6 125>,
+				  <0 7 130>,
+				  <1 0 15>,
+				  <1 1 10>,
+				  <1 2 30>,
+				  <1 3 25>,
+				  <1 4 115>,
+				  <1 5 110>,
+				  <1 6 130>,
+				  <1 7 125>,
+				  <2 0 25>,
+				  <2 1 30>,
+				  <2 2 10>,
+				  <2 3 15>,
+				  <2 4 125>,
+				  <2 5 130>,
+				  <2 6 110>,
+				  <2 7 115>,
+				  <3 0 30>,
+				  <3 1 25>,
+				  <3 2 15>,
+				  <3 3 10>,
+				  <3 4 130>,
+				  <3 5 125>,
+				  <3 6 115>,
+				  <3 7 110>,
+				  <4 0 110>,	//chip1
+				  <4 1 115>,
+				  <4 2 125>,
+				  <4 3 130>,
+				  <4 4 10>,
+				  <4 5 15>,
+				  <4 6 25>,
+				  <4 7 30>,
+				  <5 0 115>,
+				  <5 1 110>,
+				  <5 2 130>,
+				  <5 3 125>,
+				  <5 4 15>,
+				  <5 5 10>,
+				  <5 6 30>,
+				  <5 7 25>,
+				  <6 0 125>,
+				  <6 1 130>,
+				  <6 2 110>,
+				  <6 3 115>,
+				  <6 4 25>,
+				  <6 5 30>,
+				  <6 6 10>,
+				  <6 7 15>,
+				  <7 0 130>,
+				  <7 1 125>,
+				  <7 2 115>,
+				  <7 3 110>,
+				  <7 4 30>,
+				  <7 5 25>,
+				  <7 6 15>,
+				  <7 7 10>;
+	};
+
+	soc {
+		msi1: msi-controller@f030010308 {
+			compatible = "sophgo,sg2042-msi";
+			reg = <0xf0 0x30010304 0x0 0x4>,
+			      <0xf0 0x30010300 0x0 0x4>;
+			reg-names = "clr", "doorbell";
+			msi-controller;
+			#msi-cells = <0>;
+			msi-ranges = <&intc 288 IRQ_TYPE_LEVEL_HIGH 32>;
+		};
+
+		/delete-node/ pcie@7060000000;
+		/delete-node/ pcie@7060800000;
+		/delete-node/ syscon@7061800000;
+		/delete-node/ pcie@7062000000;
+		/delete-node/ pcie@7062800000;
+		/delete-node/ syscon@7063800000;
+
+		pcie@7062000000 {
+			compatible = "sophgo,sg2042-pcie-host";
+			device_type = "pci";
+			reg-names = "reg", "cfg";
+			#address-cells = <3>;
+			#size-cells = <2>;
+
+			bus-range = <0x00 0x3f>;
+			linux,pci-domain = <0>;
+			cdns,max-outbound-regions = <16>;
+			cdns,no-bar-match-nbits = <48>;
+			vendor-id = /bits/ 16 <0x1E30>;
+			device-id = /bits/ 16 <0x2042>;
+			sophgo,link-id = <0>;
+
+			reg = <0x70 0x62000000  0x0 0x02000000>,
+			      <0x48 0x00000000  0x0 0x00001000>;
+
+			// IO, check IO_SPACE_LIMIT
+			// 32bit prefetchable memory
+			// 32bit non-prefetchable memory
+			// 64bit prefetchable memory
+			// 64bit non-prefetchable memory
+			ranges = <0x01000000 0x0  0xc0000000  0x48 0xc0000000  0x0 0x00400000>,
+				 <0x42000000 0x0  0xd0000000  0x48 0xd0000000  0x0 0x10000000>,
+				 <0x02000000 0x0  0xe0000000  0x48 0xe0000000  0x0 0x20000000>,
+				 <0x43000000 0x4a 0x00000000  0x4a 0x00000000  0x2 0x00000000>,
+				 <0x03000000 0x49 0x00000000  0x49 0x00000000  0x1 0x00000000>;
+
+
+			sophgo,syscon-pcie-ctrl = <&cdns_s0_pcie_ctrl>;
+			msi-parent = <&msi>;
+			status = "okay";
+		};
+
+		cdns_s0_pcie_ctrl: syscon@7063800000 {
+			compatible = "sophgo,sg2042-pcie-ctrl", "syscon";
+			reg = <0x70 0x63800000 0x0 0x800000>;
+		};
+
+		pcie@f06000000 {
+			compatible = "sophgo,sg2042-pcie-host";
+			device_type = "pci";
+			reg-names = "reg", "cfg";
+			#address-cells = <3>;
+			#size-cells = <2>;
+
+			bus-range = <0x80 0xff>;
+			linux,pci-domain = <1>;
+			cdns,max-outbound-regions = <16>;
+			cdns,no-bar-match-nbits = <48>;
+			vendor-id = /bits/ 16 <0x1E30>;
+			device-id = /bits/ 16 <0x2042>;
+			sophgo,link-id = <0>;
+
+			reg = <0xf0 0x60000000  0x0 0x02000000>,
+			      <0xc0 0x00000000  0x0 0x00001000>;
+
+			// IO, check IO_SPACE_LIMIT
+			// 32bit prefetchable memory
+			// 32bit non-prefetchable memory
+			// 64bit prefetchable memory
+			// 64bit non-prefetchable memory
+			ranges = <0x01000000 0x0  0xc0800000  0xc0 0xc0800000  0x0 0x00800000>,
+				 <0x42000000 0x0  0xd0000000  0xc0 0xd0000000  0x0 0x10000000>,
+				 <0x02000000 0x0  0xe0000000  0xc0 0xe0000000  0x0 0x20000000>,
+				 <0x43000000 0xc2 0x00000000  0xc2 0x00000000  0x2 0x00000000>,
+				 <0x03000000 0xc1 0x00000000  0xc1 0x00000000  0x1 0x00000000>;
+
+			sophgo,syscon-pcie-ctrl = <&cdns_s1_pcie_ctrl>;
+			msi-parent = <&msi1>;
+			status = "okay";
+		};
+
+		cdns_s1_pcie_ctrl: syscon@f061800000 {
+			compatible = "sophgo,sg2042-pcie-ctrl", "syscon";
+			reg = <0xf0 0x61800000 0x0 0x800000>;
+		};
+
+		/delete-node/ interrupt-controller@7094000000;
+		clint_mswi: interrupt-controller@7094000000 {
+			compatible = "sophgo,sg2042-aclint-mswi", "thead,c900-aclint-mswi";
+			reg = <0x00000070 0x94000000 0x00000000 0x00004000>;
+			interrupts-extended = <&cpu0_intc 3>,
+					      <&cpu1_intc 3>,
+					      <&cpu2_intc 3>,
+					      <&cpu3_intc 3>,
+					      <&cpu4_intc 3>,
+					      <&cpu5_intc 3>,
+					      <&cpu6_intc 3>,
+					      <&cpu7_intc 3>,
+					      <&cpu8_intc 3>,
+					      <&cpu9_intc 3>,
+					      <&cpu10_intc 3>,
+					      <&cpu11_intc 3>,
+					      <&cpu12_intc 3>,
+					      <&cpu13_intc 3>,
+					      <&cpu14_intc 3>,
+					      <&cpu15_intc 3>,
+					      <&cpu16_intc 3>,
+					      <&cpu17_intc 3>,
+					      <&cpu18_intc 3>,
+					      <&cpu19_intc 3>,
+					      <&cpu20_intc 3>,
+					      <&cpu21_intc 3>,
+					      <&cpu22_intc 3>,
+					      <&cpu23_intc 3>,
+					      <&cpu24_intc 3>,
+					      <&cpu25_intc 3>,
+					      <&cpu26_intc 3>,
+					      <&cpu27_intc 3>,
+					      <&cpu28_intc 3>,
+					      <&cpu29_intc 3>,
+					      <&cpu30_intc 3>,
+					      <&cpu31_intc 3>,
+					      <&cpu32_intc 3>,
+					      <&cpu33_intc 3>,
+					      <&cpu34_intc 3>,
+					      <&cpu35_intc 3>,
+					      <&cpu36_intc 3>,
+					      <&cpu37_intc 3>,
+					      <&cpu38_intc 3>,
+					      <&cpu39_intc 3>,
+					      <&cpu40_intc 3>,
+					      <&cpu41_intc 3>,
+					      <&cpu42_intc 3>,
+					      <&cpu43_intc 3>,
+					      <&cpu44_intc 3>,
+					      <&cpu45_intc 3>,
+					      <&cpu46_intc 3>,
+					      <&cpu47_intc 3>,
+					      <&cpu48_intc 3>,
+					      <&cpu49_intc 3>,
+					      <&cpu50_intc 3>,
+					      <&cpu51_intc 3>,
+					      <&cpu52_intc 3>,
+					      <&cpu53_intc 3>,
+					      <&cpu54_intc 3>,
+					      <&cpu55_intc 3>,
+					      <&cpu56_intc 3>,
+					      <&cpu57_intc 3>,
+					      <&cpu58_intc 3>,
+					      <&cpu59_intc 3>,
+					      <&cpu60_intc 3>,
+					      <&cpu61_intc 3>,
+					      <&cpu62_intc 3>,
+					      <&cpu63_intc 3>,
+					      <&cpu64_intc 3>,
+					      <&cpu65_intc 3>,
+					      <&cpu66_intc 3>,
+					      <&cpu67_intc 3>,
+					      <&cpu68_intc 3>,
+					      <&cpu69_intc 3>,
+					      <&cpu70_intc 3>,
+					      <&cpu71_intc 3>,
+					      <&cpu72_intc 3>,
+					      <&cpu73_intc 3>,
+					      <&cpu74_intc 3>,
+					      <&cpu75_intc 3>,
+					      <&cpu76_intc 3>,
+					      <&cpu77_intc 3>,
+					      <&cpu78_intc 3>,
+					      <&cpu79_intc 3>,
+					      <&cpu80_intc 3>,
+					      <&cpu81_intc 3>,
+					      <&cpu82_intc 3>,
+					      <&cpu83_intc 3>,
+					      <&cpu84_intc 3>,
+					      <&cpu85_intc 3>,
+					      <&cpu86_intc 3>,
+					      <&cpu87_intc 3>,
+					      <&cpu88_intc 3>,
+					      <&cpu89_intc 3>,
+					      <&cpu90_intc 3>,
+					      <&cpu91_intc 3>,
+					      <&cpu92_intc 3>,
+					      <&cpu93_intc 3>,
+					      <&cpu94_intc 3>,
+					      <&cpu95_intc 3>,
+					      <&cpu96_intc 3>,
+					      <&cpu97_intc 3>,
+					      <&cpu98_intc 3>,
+					      <&cpu99_intc 3>,
+					      <&cpu100_intc 3>,
+					      <&cpu101_intc 3>,
+					      <&cpu102_intc 3>,
+					      <&cpu103_intc 3>,
+					      <&cpu104_intc 3>,
+					      <&cpu105_intc 3>,
+					      <&cpu106_intc 3>,
+					      <&cpu107_intc 3>,
+					      <&cpu108_intc 3>,
+					      <&cpu109_intc 3>,
+					      <&cpu110_intc 3>,
+					      <&cpu111_intc 3>,
+					      <&cpu112_intc 3>,
+					      <&cpu113_intc 3>,
+					      <&cpu114_intc 3>,
+					      <&cpu115_intc 3>,
+					      <&cpu116_intc 3>,
+					      <&cpu117_intc 3>,
+					      <&cpu118_intc 3>,
+					      <&cpu119_intc 3>,
+					      <&cpu120_intc 3>,
+					      <&cpu121_intc 3>,
+					      <&cpu122_intc 3>,
+					      <&cpu123_intc 3>,
+					      <&cpu124_intc 3>,
+					      <&cpu125_intc 3>,
+					      <&cpu126_intc 3>,
+					      <&cpu127_intc 3>;
+		};
+
+		clint_mtimer16: timer@70ac104000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac104000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu64_intc 7>,
+					      <&cpu65_intc 7>,
+					      <&cpu66_intc 7>,
+					      <&cpu67_intc 7>;
+		};
+
+		clint_mtimer17: timer@70ac114000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac114000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu68_intc 7>,
+					      <&cpu69_intc 7>,
+					      <&cpu70_intc 7>,
+					      <&cpu71_intc 7>;
+		};
+
+		clint_mtimer18: timer@70ac124000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac124000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu72_intc 7>,
+					      <&cpu73_intc 7>,
+					      <&cpu74_intc 7>,
+					      <&cpu75_intc 7>;
+		};
+
+		clint_mtimer19: timer@70ac134000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac134000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu76_intc 7>,
+					      <&cpu77_intc 7>,
+					      <&cpu78_intc 7>,
+					      <&cpu79_intc 7>;
+		};
+
+		clint_mtimer20: timer@70ac144000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac144000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu80_intc 7>,
+					      <&cpu81_intc 7>,
+					      <&cpu82_intc 7>,
+					      <&cpu83_intc 7>;
+		};
+
+		clint_mtimer21: timer@70ac154000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac154000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu84_intc 7>,
+					      <&cpu85_intc 7>,
+					      <&cpu86_intc 7>,
+					      <&cpu87_intc 7>;
+		};
+
+		clint_mtimer22: timer@70ac164000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac164000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu88_intc 7>,
+					      <&cpu89_intc 7>,
+					      <&cpu90_intc 7>,
+					      <&cpu91_intc 7>;
+		};
+
+		clint_mtimer23: timer@70ac174000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac174000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu92_intc 7>,
+					      <&cpu93_intc 7>,
+					      <&cpu94_intc 7>,
+					      <&cpu95_intc 7>;
+		};
+
+		clint_mtimer24: timer@70ac184000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac184000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu96_intc 7>,
+					      <&cpu97_intc 7>,
+					      <&cpu98_intc 7>,
+					      <&cpu99_intc 7>;
+		};
+
+		clint_mtimer25: timer@70ac194000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac194000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu100_intc 7>,
+					      <&cpu101_intc 7>,
+					      <&cpu102_intc 7>,
+					      <&cpu103_intc 7>;
+		};
+
+		clint_mtimer26: timer@70ac1a4000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac1a4000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu104_intc 7>,
+					      <&cpu105_intc 7>,
+					      <&cpu106_intc 7>,
+					      <&cpu107_intc 7>;
+		};
+
+		clint_mtimer27: timer@70ac1b4000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac1b4000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu108_intc 7>,
+					      <&cpu109_intc 7>,
+					      <&cpu110_intc 7>,
+					      <&cpu111_intc 7>;
+		};
+
+		clint_mtimer28: timer@70ac1c4000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac1c4000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu112_intc 7>,
+					      <&cpu113_intc 7>,
+					      <&cpu114_intc 7>,
+					      <&cpu115_intc 7>;
+		};
+
+		clint_mtimer29: timer@70ac1d4000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac1d4000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu116_intc 7>,
+					      <&cpu117_intc 7>,
+					      <&cpu118_intc 7>,
+					      <&cpu119_intc 7>;
+		};
+
+		clint_mtimer30: timer@70ac1e4000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac1e4000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu120_intc 7>,
+					      <&cpu121_intc 7>,
+					      <&cpu122_intc 7>,
+					      <&cpu123_intc 7>;
+		};
+
+		clint_mtimer31: timer@70ac1f4000 {
+			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
+			reg = <0x00000070 0xac1f4000 0x00000000 0x0000c000>;
+			reg-names = "mtimecmp";
+			interrupts-extended = <&cpu124_intc 7>,
+					      <&cpu125_intc 7>,
+					      <&cpu126_intc 7>,
+					      <&cpu127_intc 7>;
+		};
+
+		/delete-node/ interrupt-controller@7090000000;
+		intc: interrupt-controller@7090000000 {
+			compatible = "sophgo,sg2042-plic", "thead,c900-plic";
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			reg = <0x00000070 0x90000000 0x00000000 0x04000000>;
+			interrupt-controller;
+			interrupts-extended =
+				<&cpu0_intc 11>,  <&cpu0_intc 9>,
+				<&cpu1_intc 11>,  <&cpu1_intc 9>,
+				<&cpu2_intc 11>,  <&cpu2_intc 9>,
+				<&cpu3_intc 11>,  <&cpu3_intc 9>,
+				<&cpu4_intc 11>,  <&cpu4_intc 9>,
+				<&cpu5_intc 11>,  <&cpu5_intc 9>,
+				<&cpu6_intc 11>,  <&cpu6_intc 9>,
+				<&cpu7_intc 11>,  <&cpu7_intc 9>,
+				<&cpu8_intc 11>,  <&cpu8_intc 9>,
+				<&cpu9_intc 11>,  <&cpu9_intc 9>,
+				<&cpu10_intc 11>, <&cpu10_intc 9>,
+				<&cpu11_intc 11>, <&cpu11_intc 9>,
+				<&cpu12_intc 11>, <&cpu12_intc 9>,
+				<&cpu13_intc 11>, <&cpu13_intc 9>,
+				<&cpu14_intc 11>, <&cpu14_intc 9>,
+				<&cpu15_intc 11>, <&cpu15_intc 9>,
+				<&cpu16_intc 11>, <&cpu16_intc 9>,
+				<&cpu17_intc 11>, <&cpu17_intc 9>,
+				<&cpu18_intc 11>, <&cpu18_intc 9>,
+				<&cpu19_intc 11>, <&cpu19_intc 9>,
+				<&cpu20_intc 11>, <&cpu20_intc 9>,
+				<&cpu21_intc 11>, <&cpu21_intc 9>,
+				<&cpu22_intc 11>, <&cpu22_intc 9>,
+				<&cpu23_intc 11>, <&cpu23_intc 9>,
+				<&cpu24_intc 11>, <&cpu24_intc 9>,
+				<&cpu25_intc 11>, <&cpu25_intc 9>,
+				<&cpu26_intc 11>, <&cpu26_intc 9>,
+				<&cpu27_intc 11>, <&cpu27_intc 9>,
+				<&cpu28_intc 11>, <&cpu28_intc 9>,
+				<&cpu29_intc 11>, <&cpu29_intc 9>,
+				<&cpu30_intc 11>, <&cpu30_intc 9>,
+				<&cpu31_intc 11>, <&cpu31_intc 9>,
+				<&cpu32_intc 11>, <&cpu32_intc 9>,
+				<&cpu33_intc 11>, <&cpu33_intc 9>,
+				<&cpu34_intc 11>, <&cpu34_intc 9>,
+				<&cpu35_intc 11>, <&cpu35_intc 9>,
+				<&cpu36_intc 11>, <&cpu36_intc 9>,
+				<&cpu37_intc 11>, <&cpu37_intc 9>,
+				<&cpu38_intc 11>, <&cpu38_intc 9>,
+				<&cpu39_intc 11>, <&cpu39_intc 9>,
+				<&cpu40_intc 11>, <&cpu40_intc 9>,
+				<&cpu41_intc 11>, <&cpu41_intc 9>,
+				<&cpu42_intc 11>, <&cpu42_intc 9>,
+				<&cpu43_intc 11>, <&cpu43_intc 9>,
+				<&cpu44_intc 11>, <&cpu44_intc 9>,
+				<&cpu45_intc 11>, <&cpu45_intc 9>,
+				<&cpu46_intc 11>, <&cpu46_intc 9>,
+				<&cpu47_intc 11>, <&cpu47_intc 9>,
+				<&cpu48_intc 11>, <&cpu48_intc 9>,
+				<&cpu49_intc 11>, <&cpu49_intc 9>,
+				<&cpu50_intc 11>, <&cpu50_intc 9>,
+				<&cpu51_intc 11>, <&cpu51_intc 9>,
+				<&cpu52_intc 11>, <&cpu52_intc 9>,
+				<&cpu53_intc 11>, <&cpu53_intc 9>,
+				<&cpu54_intc 11>, <&cpu54_intc 9>,
+				<&cpu55_intc 11>, <&cpu55_intc 9>,
+				<&cpu56_intc 11>, <&cpu56_intc 9>,
+				<&cpu57_intc 11>, <&cpu57_intc 9>,
+				<&cpu58_intc 11>, <&cpu58_intc 9>,
+				<&cpu59_intc 11>, <&cpu59_intc 9>,
+				<&cpu60_intc 11>, <&cpu60_intc 9>,
+				<&cpu61_intc 11>, <&cpu61_intc 9>,
+				<&cpu62_intc 11>, <&cpu62_intc 9>,
+				<&cpu63_intc 11>, <&cpu63_intc 9>,
+				<&cpu64_intc 11>, <&cpu64_intc 9>,
+				<&cpu65_intc 11>, <&cpu65_intc 9>,
+				<&cpu66_intc 11>, <&cpu66_intc 9>,
+				<&cpu67_intc 11>, <&cpu67_intc 9>,
+				<&cpu68_intc 11>, <&cpu68_intc 9>,
+				<&cpu69_intc 11>, <&cpu69_intc 9>,
+				<&cpu70_intc 11>, <&cpu70_intc 9>,
+				<&cpu71_intc 11>, <&cpu71_intc 9>,
+				<&cpu72_intc 11>, <&cpu72_intc 9>,
+				<&cpu73_intc 11>, <&cpu73_intc 9>,
+				<&cpu74_intc 11>, <&cpu74_intc 9>,
+				<&cpu75_intc 11>, <&cpu75_intc 9>,
+				<&cpu76_intc 11>, <&cpu76_intc 9>,
+				<&cpu77_intc 11>, <&cpu77_intc 9>,
+				<&cpu78_intc 11>, <&cpu78_intc 9>,
+				<&cpu79_intc 11>, <&cpu79_intc 9>,
+				<&cpu80_intc 11>, <&cpu80_intc 9>,
+				<&cpu81_intc 11>, <&cpu81_intc 9>,
+				<&cpu82_intc 11>, <&cpu82_intc 9>,
+				<&cpu83_intc 11>, <&cpu83_intc 9>,
+				<&cpu84_intc 11>, <&cpu84_intc 9>,
+				<&cpu85_intc 11>, <&cpu85_intc 9>,
+				<&cpu86_intc 11>, <&cpu86_intc 9>,
+				<&cpu87_intc 11>, <&cpu87_intc 9>,
+				<&cpu88_intc 11>, <&cpu88_intc 9>,
+				<&cpu89_intc 11>, <&cpu89_intc 9>,
+				<&cpu90_intc 11>, <&cpu90_intc 9>,
+				<&cpu91_intc 11>, <&cpu91_intc 9>,
+				<&cpu92_intc 11>, <&cpu92_intc 9>,
+				<&cpu93_intc 11>, <&cpu93_intc 9>,
+				<&cpu94_intc 11>, <&cpu94_intc 9>,
+				<&cpu95_intc 11>, <&cpu95_intc 9>,
+				<&cpu96_intc 11>, <&cpu96_intc 9>,
+				<&cpu97_intc 11>, <&cpu97_intc 9>,
+				<&cpu98_intc 11>, <&cpu98_intc 9>,
+				<&cpu99_intc 11>, <&cpu99_intc 9>,
+				<&cpu100_intc 11>, <&cpu100_intc 9>,
+				<&cpu101_intc 11>, <&cpu101_intc 9>,
+				<&cpu102_intc 11>, <&cpu102_intc 9>,
+				<&cpu103_intc 11>, <&cpu103_intc 9>,
+				<&cpu104_intc 11>, <&cpu104_intc 9>,
+				<&cpu105_intc 11>, <&cpu105_intc 9>,
+				<&cpu106_intc 11>, <&cpu106_intc 9>,
+				<&cpu107_intc 11>, <&cpu107_intc 9>,
+				<&cpu108_intc 11>, <&cpu108_intc 9>,
+				<&cpu109_intc 11>, <&cpu109_intc 9>,
+				<&cpu110_intc 11>, <&cpu110_intc 9>,
+				<&cpu111_intc 11>, <&cpu111_intc 9>,
+				<&cpu112_intc 11>, <&cpu112_intc 9>,
+				<&cpu113_intc 11>, <&cpu113_intc 9>,
+				<&cpu114_intc 11>, <&cpu114_intc 9>,
+				<&cpu115_intc 11>, <&cpu115_intc 9>,
+				<&cpu116_intc 11>, <&cpu116_intc 9>,
+				<&cpu117_intc 11>, <&cpu117_intc 9>,
+				<&cpu118_intc 11>, <&cpu118_intc 9>,
+				<&cpu119_intc 11>, <&cpu119_intc 9>,
+				<&cpu120_intc 11>, <&cpu120_intc 9>,
+				<&cpu121_intc 11>, <&cpu121_intc 9>,
+				<&cpu122_intc 11>, <&cpu122_intc 9>,
+				<&cpu123_intc 11>, <&cpu123_intc 9>,
+				<&cpu124_intc 11>, <&cpu124_intc 9>,
+				<&cpu125_intc 11>, <&cpu125_intc 9>,
+				<&cpu126_intc 11>, <&cpu126_intc 9>,
+				<&cpu127_intc 11>, <&cpu127_intc 9>;
+			riscv,ndev = <448>;
+		};
+
+		gpio-poweroff {
+			compatible = "gpio-keys";
+			input-name = "gpio-keys";
+			pinctrl-names = "default";
+
+			power {
+				label = "GPIO Key Power";
+				linux,code = <KEY_POWER>;
+				gpios = <&port0a 2 GPIO_ACTIVE_HIGH>;
+				linux,input-type = <1>;
+				debounce-interval = <100>;
+			};
+		};
+	};
+};
+
+&port0a {
+	compatible = "snps,dw-apb-gpio-port", "sophgo,gpio0";
+};
+
+&pinctrl {
+	uart0_cfg: uart0-cfg {
+		uart0-rx-pins {
+			pinmux = <PINMUX(PIN_UART0_TX, 0)>,
+				 <PINMUX(PIN_UART0_RX, 0)>;
+			bias-pull-up;
+			drive-strength-microamp = <26800>;
+			input-schmitt-enable;
+		};
+	};
+};
+
+&cgi_main {
+	clock-frequency = <25000000>;
+};
+
+&cgi_dpll0 {
+	clock-frequency = <25000000>;
+};
+
+&cgi_dpll1 {
+	clock-frequency = <25000000>;
+};
+
+&uart0 {
+	pinctrl-0 = <&uart0_cfg>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+/ {
+	board-info {
+		/* compatible MUST be sophgo,board-info */
+		compatible = "sophgo,board-info";
+		/* valid values are: full-function, xmr */
+		chip-package = "full-function";
+		/* valid values are: x4, x8 */
+		ddr-pcb-type = "x4";
+	};
+
+	cpld_poweroff: cpld-poweroff {
+		compatible = "gpio-poweroff";
+		gpios = <&port0a 3 GPIO_ACTIVE_HIGH>;
+		active-delay-ms = <300>;
+	};
+
+	cpld_reboot: cpld-reboot {
+		compatible = "gpio-restart";
+		gpios = <&port0a 5 GPIO_ACTIVE_HIGH>;
+		active-delay-ms = <300>;
+	};
+};

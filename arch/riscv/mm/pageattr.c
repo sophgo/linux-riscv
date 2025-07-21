@@ -181,7 +181,7 @@ int set_direct_map_default_noflush(struct page *page)
 	unsigned long end = start + PAGE_SIZE;
 	struct pageattr_masks masks = {
 		.set_mask = PAGE_KERNEL,
-		.clear_mask = __pgprot(0)
+		.clear_mask = __pgprot(_PAGE_EXEC)
 	};
 
 	mmap_read_lock(&init_mm);

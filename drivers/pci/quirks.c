@@ -3654,6 +3654,22 @@ DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x37d0, quirk_broken_intx_masking);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x37d1, quirk_broken_intx_masking);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x37d2, quirk_broken_intx_masking);
 
+/*
+ * Intel Arc dGPUs' internal switch upstream port contains a mysterious 8MB
+ * 64-bit prefetchable BAR that blocks resize of main dGPU VRAM BAR with
+ * Linux's PCI space allocation algorithm.
+ */
+static void quirk_intel_xe_upstream(struct pci_dev *pdev)
+{
+	memset(&pdev->resource[0], 0, sizeof(pdev->resource[0]));
+}
+/* Intel Arc A380 PCI Express Switch Upstream Port */
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, 0x4fa1, quirk_intel_xe_upstream);
+/* Intel Arc A770 PCI Express Switch Upstream Port */
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, 0x4fa0, quirk_intel_xe_upstream);
+/* Intel Arc B580 PCI Express Switch Upstream Port */
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, 0xe2ff, quirk_intel_xe_upstream);
+
 static u16 mellanox_broken_intx_devs[] = {
 	PCI_DEVICE_ID_MELLANOX_HERMON_SDR,
 	PCI_DEVICE_ID_MELLANOX_HERMON_DDR,

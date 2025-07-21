@@ -282,7 +282,7 @@ static const struct xe_device_desc dg1_desc = {
 	PLATFORM(DG1),
 	.has_display = true,
 	.has_heci_gscfi = 1,
-	.require_force_probe = true,
+	.require_force_probe = false,
 };
 
 static const u16 dg2_g10_ids[] = { XE_DG2_G10_IDS(NOP), XE_ATS_M150_IDS(NOP), 0 };
@@ -324,7 +324,7 @@ static const __maybe_unused struct xe_device_desc pvc_desc = {
 	PLATFORM(PVC),
 	.has_display = false,
 	.has_heci_gscfi = 1,
-	.require_force_probe = true,
+	.require_force_probe = false,
 };
 
 static const struct xe_device_desc mtl_desc = {

@@ -63,6 +63,8 @@ do { \
 
 #define MAX_HOST_REQUEST_SIZE (8 * 1024 * 1024)
 
+#define TPU_SYNC_MSG_BUF	(640)
+
 
 const char *request_response_type[] = {
 	[ERROR_REQUEST_RESPONSE] = "error request response type",
@@ -621,6 +623,8 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 
 		tail = (tail + sizeof(request_action) + length) & (channel->buffer_size - 1);
 		rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
+		if (request_action.type == TASK_CREATE_REQUEST)
+			length += TPU_SYNC_MSG_BUF;
 		port_rx_head = (port_rx_head + length) & (port->port_rx_buf_size - 1);
 		port_rx_buf->head = port_rx_head;
 

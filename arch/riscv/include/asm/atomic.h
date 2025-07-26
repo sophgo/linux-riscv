@@ -201,6 +201,7 @@ static __always_inline int arch_atomic_fetch_add_unless(atomic_t *v, int a, int 
 {
        int prev, rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.w     %[p],  %[c]\n"
 		"	beq      %[p],  %[u], 1f\n"
@@ -212,6 +213,7 @@ static __always_inline int arch_atomic_fetch_add_unless(atomic_t *v, int a, int 
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		: [a]"r" (a), [u]"r" (u)
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return prev;
 }
 #define arch_atomic_fetch_add_unless arch_atomic_fetch_add_unless
@@ -222,6 +224,7 @@ static __always_inline s64 arch_atomic64_fetch_add_unless(atomic64_t *v, s64 a, 
        s64 prev;
        long rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.d     %[p],  %[c]\n"
 		"	beq      %[p],  %[u], 1f\n"
@@ -233,6 +236,7 @@ static __always_inline s64 arch_atomic64_fetch_add_unless(atomic64_t *v, s64 a, 
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		: [a]"r" (a), [u]"r" (u)
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return prev;
 }
 #define arch_atomic64_fetch_add_unless arch_atomic64_fetch_add_unless
@@ -242,6 +246,7 @@ static __always_inline bool arch_atomic_inc_unless_negative(atomic_t *v)
 {
 	int prev, rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.w      %[p],  %[c]\n"
 		"	bltz      %[p],  1f\n"
@@ -253,6 +258,7 @@ static __always_inline bool arch_atomic_inc_unless_negative(atomic_t *v)
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		:
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return !(prev < 0);
 }
 
@@ -262,6 +268,7 @@ static __always_inline bool arch_atomic_dec_unless_positive(atomic_t *v)
 {
 	int prev, rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.w      %[p],  %[c]\n"
 		"	bgtz      %[p],  1f\n"
@@ -273,6 +280,7 @@ static __always_inline bool arch_atomic_dec_unless_positive(atomic_t *v)
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		:
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return !(prev > 0);
 }
 
@@ -282,6 +290,7 @@ static __always_inline int arch_atomic_dec_if_positive(atomic_t *v)
 {
        int prev, rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.w     %[p],  %[c]\n"
 		"	addi     %[rc], %[p], -1\n"
@@ -293,6 +302,7 @@ static __always_inline int arch_atomic_dec_if_positive(atomic_t *v)
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		:
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return prev - 1;
 }
 
@@ -304,6 +314,7 @@ static __always_inline bool arch_atomic64_inc_unless_negative(atomic64_t *v)
 	s64 prev;
 	long rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.d      %[p],  %[c]\n"
 		"	bltz      %[p],  1f\n"
@@ -315,6 +326,7 @@ static __always_inline bool arch_atomic64_inc_unless_negative(atomic64_t *v)
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		:
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return !(prev < 0);
 }
 
@@ -325,6 +337,7 @@ static __always_inline bool arch_atomic64_dec_unless_positive(atomic64_t *v)
 	s64 prev;
 	long rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.d      %[p],  %[c]\n"
 		"	bgtz      %[p],  1f\n"
@@ -336,6 +349,7 @@ static __always_inline bool arch_atomic64_dec_unless_positive(atomic64_t *v)
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		:
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return !(prev > 0);
 }
 
@@ -346,6 +360,7 @@ static __always_inline s64 arch_atomic64_dec_if_positive(atomic64_t *v)
        s64 prev;
        long rc;
 
+	pre_lrsc((unsigned long)v);
 	__asm__ __volatile__ (
 		"0:	lr.d     %[p],  %[c]\n"
 		"	addi      %[rc], %[p], -1\n"
@@ -357,6 +372,7 @@ static __always_inline s64 arch_atomic64_dec_if_positive(atomic64_t *v)
 		: [p]"=&r" (prev), [rc]"=&r" (rc), [c]"+A" (v->counter)
 		:
 		: "memory");
+	post_lrsc((unsigned long)v);
 	return prev - 1;
 }
 

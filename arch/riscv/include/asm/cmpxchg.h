@@ -10,6 +10,7 @@
 
 #include <asm/barrier.h>
 #include <asm/fence.h>
+#include <asm/lrsc.h>
 
 #define __xchg_relaxed(ptr, new, size)					\
 ({									\
@@ -170,6 +171,7 @@
 	__typeof__(*(ptr)) __new = (new);				\
 	__typeof__(*(ptr)) __ret;					\
 	register unsigned int __rc;					\
+	pre_lrsc((unsigned long)__ptr);					\
 	switch (size) {							\
 	case 4:								\
 		__asm__ __volatile__ (					\
@@ -196,6 +198,7 @@
 	default:							\
 		BUILD_BUG();						\
 	}								\
+	post_lrsc((unsigned long)__ptr);				\
 	__ret;								\
 })
 
@@ -214,6 +217,7 @@
 	__typeof__(*(ptr)) __new = (new);				\
 	__typeof__(*(ptr)) __ret;					\
 	register unsigned int __rc;					\
+	pre_lrsc((unsigned long)__ptr);					\
 	switch (size) {							\
 	case 4:								\
 		__asm__ __volatile__ (					\
@@ -242,6 +246,7 @@
 	default:							\
 		BUILD_BUG();						\
 	}								\
+	post_lrsc((unsigned long)__ptr);				\
 	__ret;								\
 })
 
@@ -260,6 +265,7 @@
 	__typeof__(*(ptr)) __new = (new);				\
 	__typeof__(*(ptr)) __ret;					\
 	register unsigned int __rc;					\
+	pre_lrsc((unsigned long)__ptr);					\
 	switch (size) {							\
 	case 4:								\
 		__asm__ __volatile__ (					\
@@ -288,6 +294,7 @@
 	default:							\
 		BUILD_BUG();						\
 	}								\
+	post_lrsc((unsigned long)__ptr);				\
 	__ret;								\
 })
 
@@ -306,6 +313,7 @@
 	__typeof__(*(ptr)) __new = (new);				\
 	__typeof__(*(ptr)) __ret;					\
 	register unsigned int __rc;					\
+	pre_lrsc((unsigned long)__ptr);					\
 	switch (size) {							\
 	case 4:								\
 		__asm__ __volatile__ (					\
@@ -334,6 +342,7 @@
 	default:							\
 		BUILD_BUG();						\
 	}								\
+	post_lrsc((unsigned long)__ptr);				\
 	__ret;								\
 })
 

@@ -32,6 +32,7 @@ config SOPHGO_SG2042_MULTI_SOCKETS
 	bool "Sophgo SG2042 multiple sockets"
 	depends on ARCH_SOPHGO
 	select SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
+	select SOPHGO_SG2042_MULTI_SOCKETS_LRSC_DELAY
 	default n
 	help
 	  This enables support for Sophgo SG2042 multiple sockets platform hardware.
@@ -43,6 +44,14 @@ config SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 	help
 	  To solve the problem of Sophgo SG2042 asynchronous multiple sockets clocks,
 	  the local timer has been replaced with an APB timer.
+
+config SOPHGO_SG2042_MULTI_SOCKETS_LRSC_DELAY
+	bool "Sophgo SG2042 multiple sockets lr/sc delay"
+	depends on SOPHGO_SG2042_MULTI_SOCKETS
+	default n
+	help
+	  This fixs lots of cpus loop in lr/sc on the same address
+	  on Sophgo SG2042 multiple sockets platform hardware.
 
 config ARCH_STARFIVE
 	def_bool SOC_STARFIVE

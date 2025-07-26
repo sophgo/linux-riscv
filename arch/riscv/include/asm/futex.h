@@ -12,6 +12,7 @@
 #include <linux/errno.h>
 #include <asm/asm.h>
 #include <asm/asm-extable.h>
+#include <asm/cmpxchg.h>
 
 /* We don't even really need the extable code, but for now keep it simple */
 #ifndef CONFIG_MMU
@@ -84,6 +85,7 @@ futex_atomic_cmpxchg_inatomic(u32 *uval, u32 __user *uaddr,
 		return -EFAULT;
 
 	__enable_user_access();
+	pre_lrsc((unsigned long)uaddr);
 	__asm__ __volatile__ (
 	"1:	lr.w.aqrl %[v],%[u]			\n"
 	"	bne %[v],%z[ov],3f			\n"
@@ -95,6 +97,7 @@ futex_atomic_cmpxchg_inatomic(u32 *uval, u32 __user *uaddr,
 	: [r] "+r" (ret), [v] "=&r" (val), [u] "+m" (*uaddr), [t] "=&r" (tmp)
 	: [ov] "Jr" ((long)(int)oldval), [nv] "Jr" (newval)
 	: "memory");
+	post_lrsc((unsigned long)uaddr);
 	__disable_user_access();
 
 	*uval = val;

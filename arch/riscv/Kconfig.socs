@@ -28,12 +28,20 @@ config ARCH_SOPHGO
 	help
 	  This enables support for Sophgo SoC platform hardware.
 
-config SOPHGO_MULTI_CHIP_CLOCK_SYNC
-	bool "Sophgo multi-chip clock synchronous"
+config SOPHGO_SG2042_MULTI_SOCKETS
+	bool "Sophgo SG2042 multiple sockets"
 	depends on ARCH_SOPHGO
+	select SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 	default n
 	help
-	  To solve the problem of asynchronous multi-chip clocks,
+	  This enables support for Sophgo SG2042 multiple sockets platform hardware.
+
+config SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
+	bool "Sophgo SG2042 multiple sockets clock synchronous"
+	depends on SOPHGO_SG2042_MULTI_SOCKETS
+	default n
+	help
+	  To solve the problem of Sophgo SG2042 asynchronous multiple sockets clocks,
 	  the local timer has been replaced with an APB timer.
 
 config ARCH_STARFIVE

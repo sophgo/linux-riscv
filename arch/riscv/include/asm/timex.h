@@ -9,7 +9,7 @@
 #include <asm/csr.h>
 
 typedef unsigned long cycles_t;
-#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+#ifdef CONFIG_SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 extern u64 dw_timer_read_counter(void);
 extern void __iomem *sched_io_base;
 #endif
@@ -56,7 +56,7 @@ static inline cycles_t get_cycles(void)
 {
 	return csr_read(CSR_TIME);
 }
-#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+#ifdef CONFIG_SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 static inline cycles_t dw_get_cycles(void)
 {
 	if (sched_io_base)

@@ -84,7 +84,7 @@ static __always_inline const struct vdso_data *__arch_get_vdso_data(void)
 	return _vdso_data;
 }
 
-#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+#ifdef CONFIG_SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 static inline bool sophgo_vdso_hres_capable(void)
 {
         return false;

@@ -15,7 +15,7 @@
 #include <asm/delay.h>
 #include <asm/kvm_vcpu_timer.h>
 
-#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+#ifdef CONFIG_SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 extern void dw_cs_get_mult_shift(u32 *mult, u32 *shift);
 #endif
 
@@ -362,7 +362,7 @@ void kvm_riscv_guest_timer_init(struct kvm *kvm)
 {
 	struct kvm_guest_timer *gt = &kvm->arch.timer;
 
-#ifdef CONFIG_SOPHGO_MULTI_CHIP_CLOCK_SYNC
+#ifdef CONFIG_SOPHGO_SG2042_MULTI_SOCKETS_CLOCK_SYNC
 	dw_cs_get_mult_shift(&gt->nsec_mult, &gt->nsec_shift);
 #else
 	riscv_cs_get_mult_shift(&gt->nsec_mult, &gt->nsec_shift);

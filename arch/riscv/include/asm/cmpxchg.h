@@ -13,6 +13,7 @@
 #include <asm/hwcap.h>
 #include <asm/insn-def.h>
 #include <asm/cpufeature-macros.h>
+#include <asm/lrsc.h>
 
 #define __arch_xchg_masked(sc_sfx, swap_sfx, prepend, sc_append,		\
 			   swap_append, r, p, n)				\
@@ -35,6 +36,7 @@
 		ulong __retx;							\
 		ulong __rc;							\
 										\
+		pre_lrsc((unsigned long)p);					\
 		__asm__ __volatile__ (						\
 		       prepend							\
 		       "0:	lr.w %0, %2\n"					\
@@ -46,6 +48,7 @@
 		       : "=&r" (__retx), "=&r" (__rc), "+A" (*(__ptr32b))	\
 		       : "rJ" (__newx), "rJ" (~__mask)				\
 		       : "memory");						\
+		post_lrsc((unsigned long)p);					\
 										\
 		r = (__typeof__(*(p)))((__retx & __mask) >> __s);		\
 	}									\
@@ -152,6 +155,7 @@
 		ulong __retx;							\
 		ulong __rc;							\
 										\
+		pre_lrsc((unsigned long)p);					\
 		__asm__ __volatile__ (						\
 			sc_prepend							\
 			"0:	lr.w %0, %2\n"					\
@@ -167,6 +171,7 @@
 			: "rJ" ((long)__oldx), "rJ" (__newx),			\
 			  "rJ" (__mask), "rJ" (~__mask)				\
 			: "memory");						\
+		post_lrsc((unsigned long)p);					\
 										\
 		r = (__typeof__(*(p)))((__retx & __mask) >> __s);		\
 	}									\
@@ -191,6 +196,7 @@
 	} else {							\
 		register unsigned int __rc;				\
 									\
+		pre_lrsc((unsigned long)p);				\
 		__asm__ __volatile__ (					\
 			sc_prepend					\
 			"0:	lr" lr_sfx " %0, %2\n"			\
@@ -202,6 +208,7 @@
 			: "=&r" (r), "=&r" (__rc), "+A" (*(p))		\
 			: "rJ" (co o), "rJ" (n)				\
 			: "memory");					\
+		post_lrsc((unsigned long)p);				\
 	}								\
 })
 
@@ -376,6 +383,7 @@ static __always_inline void __cmpwait(volatile void *ptr,
 		/* RISC-V doesn't have lr instructions on byte and half-word. */
 		goto no_zawrs;
 	case 4:
+		pre_lrsc((unsigned long)ptr);
 		asm volatile(
 		"	lr.w	%0, %1\n"
 		"	xor	%0, %0, %2\n"
@@ -384,9 +392,11 @@ static __always_inline void __cmpwait(volatile void *ptr,
 		"1:"
 		: "=&r" (tmp), "+A" (*(u32 *)ptr)
 		: "r" (val));
+		post_lrsc((unsigned long)ptr);
 		break;
 #if __riscv_xlen == 64
 	case 8:
+		pre_lrsc((unsigned long)ptr);
 		asm volatile(
 		"	lr.d	%0, %1\n"
 		"	xor	%0, %0, %2\n"
@@ -395,6 +405,7 @@ static __always_inline void __cmpwait(volatile void *ptr,
 		"1:"
 		: "=&r" (tmp), "+A" (*(u64 *)ptr)
 		: "r" (val));
+		post_lrsc((unsigned long)ptr);
 		break;
 #endif
 	default:

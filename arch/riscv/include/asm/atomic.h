@@ -197,6 +197,7 @@ ATOMIC_OPS(xor, xor, i)
 
 #define _arch_atomic_fetch_add_unless(_prev, _rc, counter, _a, _u, sfx)	\
 ({									\
+	pre_lrsc((unsigned long)&(counter));				\
 	__asm__ __volatile__ (						\
 		"0:	lr." sfx "     %[p],  %[c]\n"			\
 		"	beq	       %[p],  %[u], 1f\n"		\
@@ -208,6 +209,7 @@ ATOMIC_OPS(xor, xor, i)
 		: [p]"=&r" (_prev), [rc]"=&r" (_rc), [c]"+A" (counter)	\
 		: [a]"r" (_a), [u]"r" (_u)				\
 		: "memory");						\
+	post_lrsc((unsigned long)&(counter));				\
 })
 
 /* This is required to provide a full barrier on success. */
@@ -236,6 +238,7 @@ static __always_inline s64 arch_atomic64_fetch_add_unless(atomic64_t *v, s64 a, 
 
 #define _arch_atomic_inc_unless_negative(_prev, _rc, counter, sfx)	\
 ({									\
+	pre_lrsc((unsigned long)&(counter));				\
 	__asm__ __volatile__ (						\
 		"0:	lr." sfx "      %[p],  %[c]\n"			\
 		"	bltz            %[p],  1f\n"			\
@@ -247,6 +250,7 @@ static __always_inline s64 arch_atomic64_fetch_add_unless(atomic64_t *v, s64 a, 
 		: [p]"=&r" (_prev), [rc]"=&r" (_rc), [c]"+A" (counter)	\
 		:							\
 		: "memory");						\
+	post_lrsc((unsigned long)&(counter));				\
 })
 
 static __always_inline bool arch_atomic_inc_unless_negative(atomic_t *v)
@@ -262,6 +266,7 @@ static __always_inline bool arch_atomic_inc_unless_negative(atomic_t *v)
 
 #define _arch_atomic_dec_unless_positive(_prev, _rc, counter, sfx)	\
 ({									\
+	pre_lrsc((unsigned long)&(counter));				\
 	__asm__ __volatile__ (						\
 		"0:	lr." sfx "      %[p],  %[c]\n"			\
 		"	bgtz            %[p],  1f\n"			\
@@ -273,6 +278,7 @@ static __always_inline bool arch_atomic_inc_unless_negative(atomic_t *v)
 		: [p]"=&r" (_prev), [rc]"=&r" (_rc), [c]"+A" (counter)	\
 		:							\
 		: "memory");						\
+	post_lrsc((unsigned long)&(counter));				\
 })
 
 static __always_inline bool arch_atomic_dec_unless_positive(atomic_t *v)
@@ -288,6 +294,7 @@ static __always_inline bool arch_atomic_dec_unless_positive(atomic_t *v)
 
 #define _arch_atomic_dec_if_positive(_prev, _rc, counter, sfx)		\
 ({									\
+	pre_lrsc((unsigned long)&(counter));				\
 	__asm__ __volatile__ (						\
 		"0:	lr." sfx "     %[p],  %[c]\n"			\
 		"	addi           %[rc], %[p], -1\n"		\
@@ -299,6 +306,7 @@ static __always_inline bool arch_atomic_dec_unless_positive(atomic_t *v)
 		: [p]"=&r" (_prev), [rc]"=&r" (_rc), [c]"+A" (counter)	\
 		:							\
 		: "memory");						\
+	post_lrsc((unsigned long)&(counter));				\
 })
 
 static __always_inline int arch_atomic_dec_if_positive(atomic_t *v)

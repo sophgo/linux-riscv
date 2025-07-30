@@ -45,7 +45,10 @@ static int device_mmap(struct file *file, struct vm_area_struct *vma)
 
 	if (user_memory.type == 1) {
 		pr_err("map device memory\n");
-		vma->vm_page_prot =  pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	} else if (user_memory.type == 2) {
+		pr_err("map writecombine memory\n");
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	}
 
 	if (remap_pfn_range(vma,

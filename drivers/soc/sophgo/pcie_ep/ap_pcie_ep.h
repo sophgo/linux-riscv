@@ -94,6 +94,9 @@ struct sophgo_pcie_ep {
 	uint64_t speed;
 	uint64_t lane_num;
 	uint64_t func_num;
+	uint64_t host_ddr_addr;
+	uint64_t slv_start_addr;
+	uint64_t slv_end_addr;
 	int c2c_enable;
 	struct vector_info vector_info[VECTOR_MAX];
 	struct sophgo_pcie_vfun vfun[PCIE_VFUN_MAX];

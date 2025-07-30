@@ -953,7 +953,6 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 {
 	void *top_base = ioremap(0x7050000000, 0x1000);
 	uint64_t host_ring_buf_addr;
-	void *data;
 	int ava_atu = 3;
 
 	host_ring_buf_addr = readl(top_base + 0x1fc);
@@ -1006,8 +1005,6 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 					socket0_ob_atu[i].cpu_addr, socket0_ob_atu[i].pci_addr,
 					socket0_ob_atu[i].size);
 		}
-		data = ioremap(0x5800000000, 0x1000);
-		writel(0xdead2260, data);
 	} else if (ep->ep_info.socket_id == 1) {
 		socket1_ob_atu[0].cpu_addr = ep->slv_start_addr;
 		socket1_ob_atu[0].pci_addr |= host_ring_buf_addr;
@@ -1022,8 +1019,6 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 					socket1_ob_atu[i].cpu_addr, socket1_ob_atu[i].pci_addr,
 					socket1_ob_atu[i].size);
 		}
-		data = ioremap(0x4000000000, 0x1000);
-		writel(0xdead2261, data);
 	} else {
 		pr_err("%s error socket id %llu\n", __func__, ep->ep_info.socket_id);
 	}

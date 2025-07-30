@@ -101,6 +101,13 @@ const char *task_type[] = {
 	[TRIGGER_TASK] = "trigger task",
 };
 
+struct mirror_circ_buf {
+	uint64_t *head;
+	uint64_t *tail;
+	char *buf;
+	int (*mirror_circ_buf_write)(void *circ_buf, void *user_buf, uint64_t size);
+};
+
 struct cacheline_align_circ_buf {
 	union {
 		uint32_t head;
@@ -133,6 +140,8 @@ struct v_channel {
 	struct list_head port_list;
 	struct cacheline_align_circ_buf *tx_buf;
 	struct cacheline_align_circ_buf *rx_buf;
+	struct mirror_circ_buf *tx_mirror_buf;
+	struct mirror_circ_buf *rx_mirror_buf;
 	struct vector_info tx_send_irq;
 	struct clr_irq rx_clean_irq;
 	uint64_t channel_index;
@@ -204,6 +213,9 @@ struct sg_card {
 	void __iomem *membase;
 	void __iomem *top_base;
 	void __iomem *config_file;
+	void *mirror_membase;
+	uint64_t mirror_buf_pa;
+	uint64_t mirror_buf_size;
 	struct proc_dir_entry *tpurt_dir;
 	struct proc_dir_entry *tpurt_proc;
 	uint32_t *tx_pool_index;
@@ -445,6 +457,7 @@ static int verify_data(struct sg_card *card, void *data, uint64_t len, uint64_t 
 static int host_int(struct sg_card *card, struct v_channel *channel)
 {
 	struct cacheline_align_circ_buf *rx_buf = NULL;
+	struct mirror_circ_buf *rx_mirror_buf = NULL;
 	struct list_head *port_list;
 	struct v_port *port = NULL;
 	struct circ_buf *port_rx_buf = NULL;
@@ -465,6 +478,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 	DBG_MSG("enter host int:0x%llx\n", host_int_cnt++);
 
 	rx_buf = channel->rx_buf;
+	rx_mirror_buf = channel->rx_mirror_buf;
 
 	while (1) {
 		rx_buf->circ_buf_read(&rx_buf->head, &head, sizeof(head));
@@ -623,6 +637,8 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 
 		tail = (tail + sizeof(request_action) + length) & (channel->buffer_size - 1);
 		rx_buf->circ_buf_write(&rx_buf->tail, &tail, sizeof(tail));
+		if (rx_mirror_buf)
+			rx_mirror_buf->mirror_circ_buf_write(rx_mirror_buf->tail, &tail, sizeof(tail));
 		if (request_action.type == TASK_CREATE_REQUEST)
 			length += TPU_SYNC_MSG_BUF;
 		port_rx_head = (port_rx_head + length) & (port->port_rx_buf_size - 1);
@@ -808,6 +824,28 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 			pr_err("ioremap failed\n");
 			goto failed;
 		}
+	}
+
+	ret = of_property_read_u64_index(dev_node, "mirror-share-memory", 0, &card->mirror_buf_pa);
+	ret = of_property_read_u64_index(dev_node, "mirror-share-memory", 1, &card->mirror_buf_size);
+	if (ret == 0) {
+		pr_err("mirror share memory start addr:0x%llx\n", card->mirror_buf_pa);
+		if (card->share_memory_type) {
+			card->mirror_membase = memremap(card->mirror_buf_pa, card->mirror_buf_size, MEMREMAP_WC);
+			if (!card->mirror_membase) {
+				pr_err("map wc mirror memory failed\n");
+				goto failed;
+			}
+		} else {
+			card->mirror_membase = devm_ioremap(dev, card->mirror_buf_pa, card->mirror_buf_size);
+			if (!card->mirror_membase) {
+				pr_err("map device mirror memory failed\n");
+				goto failed;
+			}
+		}
+	} else {
+		pr_err("no mirror share memory, so tpu memory are used by tx/rx_buf\n");
+		card->mirror_membase = NULL;
 	}
 
 	regs = platform_get_resource_byname(pdev, IORESOURCE_MEM, "top-reg");
@@ -1000,6 +1038,20 @@ static int device_memory_write(void *circ_buf, void *user_buf, uint64_t size)
 	return size;
 }
 
+static int wc_memory_mirror_write(void *circ_buf, void *user_buf, uint64_t size)
+{
+	memcpy(circ_buf, user_buf, size);
+
+	return size;
+}
+
+static int device_memory_mirror_write(void *circ_buf, void *user_buf, uint64_t size)
+{
+	memcpy_toio(circ_buf, user_buf, size);
+
+	return size;
+}
+
 static int config_channel(struct sg_card *card)
 {
 	struct v_channel *channel;
@@ -1013,18 +1065,40 @@ static int config_channel(struct sg_card *card)
 		channel->channel_index = i;
 		channel->tx_buf = card->membase + sizeof(struct cacheline_align_circ_buf) * card->tx_pool_index[i];
 		channel->rx_buf = card->membase + sizeof(struct cacheline_align_circ_buf) * card->rx_pool_index[i];
+
+		if (card->mirror_membase && i == CHANNEL_HOST) {
+			pr_err("host share memory use mirror buf\n");
+			channel->tx_mirror_buf = kmalloc(sizeof(struct mirror_circ_buf), GFP_KERNEL);
+			channel->rx_mirror_buf = kmalloc(sizeof(struct mirror_circ_buf), GFP_KERNEL);
+			if (!channel->tx_mirror_buf || !channel->rx_mirror_buf) {
+				pr_err("kmalloc mirror buf failed\n");
+				return -ENOMEM;
+			}
+		} else {
+			channel->tx_mirror_buf = NULL;
+			channel->rx_mirror_buf = NULL;
+		}
+
 		pr_err("%d: tx addr:%px, rx_addr:%px\n", i, channel->tx_buf, channel->rx_buf);
 		if (card->share_memory_type) {
 			channel->tx_buf->circ_buf_read = cache_memory_read;
 			channel->tx_buf->circ_buf_write = cache_memory_write;
 			channel->rx_buf->circ_buf_read = cache_memory_read;
 			channel->rx_buf->circ_buf_write = cache_memory_write;
+			if (channel->tx_mirror_buf) {
+				channel->tx_mirror_buf->mirror_circ_buf_write = wc_memory_mirror_write;
+				channel->rx_mirror_buf->mirror_circ_buf_write = wc_memory_mirror_write;
+			}
 			pr_err("cacheable memory\n");
 		} else {
 			channel->tx_buf->circ_buf_read = device_memory_read;
 			channel->tx_buf->circ_buf_write = device_memory_write;
 			channel->rx_buf->circ_buf_read = device_memory_read;
 			channel->rx_buf->circ_buf_write = device_memory_write;
+			if (channel->tx_mirror_buf) {
+				channel->tx_mirror_buf->mirror_circ_buf_write = device_memory_mirror_write;
+				channel->rx_mirror_buf->mirror_circ_buf_write = device_memory_mirror_write;
+			}
 			pr_err("device memory\n");
 		}
 
@@ -1045,6 +1119,21 @@ static int config_channel(struct sg_card *card)
 		channel->rx_buf->buf = card->membase + MSGFIFO_HEAD_SIZE
 						   + card->pool_size * card->rx_pool_index[i];
 		channel->buffer_size = card->pool_size;
+
+		if (channel->tx_mirror_buf) {
+			channel->tx_mirror_buf->buf = card->mirror_membase + MSGFIFO_HEAD_SIZE
+						+ card->pool_size * card->tx_pool_index[i];
+			channel->rx_mirror_buf->buf = card->mirror_membase + MSGFIFO_HEAD_SIZE
+					+ card->pool_size * card->rx_pool_index[i];
+			channel->tx_mirror_buf->head = card->mirror_membase + offsetof(struct cacheline_align_circ_buf, head)
+					+ card->tx_pool_index[i] * sizeof(struct cacheline_align_circ_buf);
+			channel->rx_mirror_buf->head = card->mirror_membase + offsetof(struct cacheline_align_circ_buf, head)
+					+ card->rx_pool_index[i] * sizeof(struct cacheline_align_circ_buf);
+			channel->tx_mirror_buf->tail = card->mirror_membase + offsetof(struct cacheline_align_circ_buf, tail)
+					+ card->tx_pool_index[i] * sizeof(struct cacheline_align_circ_buf);
+			channel->rx_mirror_buf->tail = card->mirror_membase + offsetof(struct cacheline_align_circ_buf, tail)
+						+ card->rx_pool_index[i] * sizeof(struct cacheline_align_circ_buf);
+		}
 
 		mutex_init(&channel->tx_lock);
 		spin_lock_init(&channel->port_lock);

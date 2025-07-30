@@ -599,6 +599,8 @@
 			c2c_top = <0x6c 0x027d0000 0x00000000 0x00001000>;
 			cdma-reg = <0x6c 0x027b0000 0x0 0x10000>;
 
+			slv_range = <0x58 0x00000000 0x5b 0xffffffff>;
+
 			status = "okay";
 
 			sophgo_card@0 {
@@ -608,6 +610,7 @@
 					<0x70 0x50000000 0x00000000 0x00001000>;
 				reg-names = "share-memory", "config_file";
 
+				mirror-share-memory = <0x58 0x00000000 0x0 0x400000>;
 				host-channel-num = <1>;
 				tpu-channel-num = <8>;
 				media-channel-num = <0>;

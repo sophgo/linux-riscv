@@ -951,7 +951,17 @@ static int bm1690ep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 
 static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 {
-	struct iatu ob_atu[2] = {
+	void *top_base = ioremap(0x7050000000, 0x1000);
+	uint64_t host_ring_buf_addr;
+	void *data;
+	int ava_atu = 3;
+
+	host_ring_buf_addr = readl(top_base + 0x1fc);
+	host_ring_buf_addr = host_ring_buf_addr << 32;
+	host_ring_buf_addr |= readl(top_base + 0x1f8);
+	pr_err("host ring buffer addr:0x%llx\n", host_ring_buf_addr);
+
+	struct iatu socket0_ob_atu[3] = {
 		[0] = {
 			.pci_addr = 0x0,
 			.size = 0x1ffffffffffff,
@@ -966,22 +976,59 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 			.type = PCIE_ATU_TYPE_MEM,
 			.func = 1,
 		},
+		[2] = {
+			.size = 0x3fffff,
+			.type = PCIE_ATU_TYPE_MEM,
+			.func = 0,
+		},
 	};
 
-	return 0;
+	struct iatu socket1_ob_atu[1] = {
+		[0] = {
+			.pci_addr = 0xe00000000000000,
+			.size = 0x3fffff,
+			.type = PCIE_ATU_TYPE_MEM,
+			.func = 0,
+		},
+	};
 
 	if (ep->ep_info.socket_id == 0) {
-		for (int i = 0; i < sizeof(ob_atu) / sizeof(struct iatu); i++) {
-			ob_atu[i].index = find_available_ob_atu(ep);
-			if (ob_atu[i].index < 0) {
+		socket0_ob_atu[2].pci_addr = host_ring_buf_addr;
+		socket0_ob_atu[2].cpu_addr = ep->slv_start_addr;
+
+		for (int i = 0; i < sizeof(socket0_ob_atu) / sizeof(struct iatu); i++) {
+			socket0_ob_atu[i].index = ava_atu++;
+			if (socket0_ob_atu[i].index < 0) {
 				pr_err("index%d no available ob iatu\n", i);
 				return -1;
 			}
-			prog_outbound_iatu(ep, ob_atu[i].index, ob_atu[i].func,
-					ob_atu[i].cpu_addr, ob_atu[i].pci_addr,
-					ob_atu[i].size);
+			prog_outbound_iatu(ep, socket0_ob_atu[i].index, socket0_ob_atu[i].func,
+					socket0_ob_atu[i].cpu_addr, socket0_ob_atu[i].pci_addr,
+					socket0_ob_atu[i].size);
 		}
+		data = ioremap(0x5800000000, 0x1000);
+		writel(0xdead2260, data);
+	} else if (ep->ep_info.socket_id == 1) {
+		socket1_ob_atu[0].cpu_addr = ep->slv_start_addr;
+		socket1_ob_atu[0].pci_addr |= host_ring_buf_addr;
+
+		for (int i = 0; i < sizeof(socket1_ob_atu) / sizeof(struct iatu); i++) {
+			socket1_ob_atu[i].index = find_available_ob_atu(ep);
+			if (socket1_ob_atu[i].index < 0) {
+				pr_err("index%d no available ob iatu\n", i);
+				return -1;
+			}
+			prog_outbound_iatu(ep, socket1_ob_atu[i].index, socket1_ob_atu[i].func,
+					socket1_ob_atu[i].cpu_addr, socket1_ob_atu[i].pci_addr,
+					socket1_ob_atu[i].size);
+		}
+		data = ioremap(0x4000000000, 0x1000);
+		writel(0xdead2261, data);
+	} else {
+		pr_err("%s error socket id %llu\n", __func__, ep->ep_info.socket_id);
 	}
+
+
 
 
 	return 0;
@@ -1152,6 +1199,46 @@ static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
 	}
 
 	return 0;
+}
+
+static void pcie_clear_slv_mapping(struct sophgo_pcie_ep *pcie)
+{
+	void __iomem  *ctrl_reg_base = pcie->ctrl_reg_base;
+
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG));
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_UP_START_ADDR_REG));
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_UP_END_ADDR_REG));
+	writel(0x0, (ctrl_reg_base + PCIE_CTRL_SN_DW_ADDR_REG));
+}
+
+static void pcie_config_slv_mapping(struct sophgo_pcie_ep *pcie)
+{
+	uint32_t val = 0;
+	void __iomem  *ctrl_reg_base = pcie->ctrl_reg_base;
+	uint64_t up_start_addr = 0;
+	uint64_t up_end_addr = 0;
+
+	up_start_addr = pcie->slv_start_addr;
+	up_end_addr = pcie->slv_end_addr;
+
+	val = readl(ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG);
+	val |= 0x3 << PCIE_CTRL_REMAP_EN_SN_TO_PCIE_UP4G_EN_BIT;
+	writel(val, (ctrl_reg_base + PCIE_CTRL_REMAPPING_EN_REG));
+
+	up_start_addr = up_start_addr >> 16;
+	writel((up_start_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_START_ADDR_REG));
+	up_end_addr = up_end_addr >> 16;
+	writel((up_end_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_END_ADDR_REG));
+
+
+	pr_err("config slv mapping\n");
+}
+
+static int bm1690ep_set_quirks(struct sophgo_pcie_ep *sg_ep)
+{
+	pcie_clear_slv_mapping(sg_ep);
+	pcie_config_slv_mapping(sg_ep);
+	return sg_ep->set_ob_iatu(sg_ep);
 }
 
 static inline void *get_c2c_ibatu(struct sophgo_pcie_ep *sg_ep, uint32_t index)
@@ -1783,12 +1870,20 @@ int bm1690_ep_init(struct platform_device *pdev)
 
 	}
 
+	ret = of_property_read_u64_index(dev_node, "slv_range", 0, &sg_ep->slv_start_addr);
+	ret = of_property_read_u64_index(dev_node, "slv_range", 1, &sg_ep->slv_end_addr);
+	if (ret == 0)
+		dev_err(dev, "slv[0x%llx-0x%llx]\n", sg_ep->slv_start_addr, sg_ep->slv_end_addr);
+	else
+		dev_err(dev, "dev failed get slv range\n");
+
 	if (sg_ep->chip_type == CHIP_BM1690) {
 		sg_ep->set_ib_iatu = bm1690ep_set_iatu_ib;
 		sg_ep->set_ob_iatu = bm1690ep_set_iatu_ob;
 		sg_ep->set_c2c_ib_atu = bm1690ep_set_c2c_atu;
 		sg_ep->set_vector = bm1690_set_vector;
 		sg_ep->reset_vector = bm1690_reset_vector;
+		sg_ep->set_quirks = bm1690ep_set_quirks;
 	} else if (sg_ep->chip_type == CHIP_BM1690E) {
 		sg_ep->set_quirks = bm1690eep_set_quirks;
 		sg_ep->set_ib_iatu = bm1690eep_set_iatu_ib;

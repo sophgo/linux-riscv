@@ -5,3 +5,7 @@ dtb-$(CONFIG_ARCH_SOPHGO) += sg2042-pisces.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2042-milkv-pioneer.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2042-evb-v1.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += sg2042-evb-v2.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += mango-sophgo-pisces.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += mango-milkv-pioneer.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += mango-sophgo-x8evb.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += mango-sophgo-x4evb.dtb

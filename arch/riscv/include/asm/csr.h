@@ -46,6 +46,15 @@
 #define VCSR_VXRM_SHIFT			1
 #define VCSR_VXSAT_MASK			1
 
+/* xtheadvector symbolic CSR names */
+#define CSR_VXSAT		0x9
+#define CSR_VXRM		0xa
+
+/* xtheadvector CSR masks */
+#define CSR_VXRM_MASK		3
+#define CSR_VXRM_SHIFT		1
+#define CSR_VXSAT_MASK		1
+
 #define SR_FS_VS	(SR_FS | SR_VS | SR_VS_THEAD) /* Vector and Floating-Point Unit */
 
 #ifndef CONFIG_64BIT

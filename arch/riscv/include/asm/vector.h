@@ -94,6 +94,7 @@ static __always_inline void riscv_v_disable(void)
 	csr_clear(CSR_SSTATUS, SR_VS | SR_VS_THEAD);
 }
 
+#if 0
 static __always_inline void __vstate_csr_save(struct __riscv_v_ext_state *dest)
 {
 	register u32 t1 asm("t1") = (SR_FS);
@@ -239,6 +240,176 @@ static inline void __riscv_v_vstate_discard(void)
 		: "=&r" (vl) : "r" (vtype_inval) : "memory");
 	riscv_v_disable();
 }
+#else
+static __always_inline void __vstate_csr_save(struct __riscv_v_ext_state *dest)
+{
+	asm volatile (
+		"csrr	%0, " __stringify(CSR_VSTART) "\n\t"
+		"csrr	%1, " __stringify(CSR_VTYPE) "\n\t"
+		"csrr	%2, " __stringify(CSR_VL) "\n\t"
+		: "=r" (dest->vstart), "=r" (dest->vtype), "=r" (dest->vl),
+		"=r" (dest->vcsr) : :);
+
+	if (has_xtheadvector()) {
+		unsigned long status;
+
+		/*
+		 * CSR_VCSR is defined as
+		 * [2:1] - vxrm[1:0]
+		 * [0] - vxsat
+		 * The earlier vector spec implemented by T-Head uses separate
+		 * registers for the same bit-elements, so just combine those
+		 * into the existing output field.
+		 *
+		 * Additionally T-Head cores need FS to be enabled when accessing
+		 * the VXRM and VXSAT CSRs, otherwise ending in illegal instructions.
+		 * Though the cores do not implement the VXRM and VXSAT fields in the
+		 * FCSR CSR that vector-0.7.1 specifies.
+		 */
+		status = csr_read_set(CSR_STATUS, SR_FS_DIRTY);
+		dest->vcsr = csr_read(CSR_VXSAT) | csr_read(CSR_VXRM) << CSR_VXRM_SHIFT;
+
+		dest->vlenb = riscv_v_vsize / 32;
+
+		if ((status & SR_FS) != SR_FS_DIRTY)
+			csr_write(CSR_STATUS, status);
+	} else {
+		dest->vcsr = csr_read(CSR_VCSR);
+		dest->vlenb = csr_read(CSR_VLENB);
+	}
+}
+
+static __always_inline void __vstate_csr_restore(struct __riscv_v_ext_state *src)
+{
+	asm volatile (
+		".option push\n\t"
+		".option arch, +zve32x\n\t"
+		"vsetvl	 x0, %2, %1\n\t"
+		".option pop\n\t"
+		"csrw	" __stringify(CSR_VSTART) ", %0\n\t"
+		: : "r" (src->vstart), "r" (src->vtype), "r" (src->vl));
+
+	if (has_xtheadvector()) {
+		unsigned long status = csr_read(CSR_SSTATUS);
+
+		/*
+		 * Similar to __vstate_csr_save above, restore values for the
+		 * separate VXRM and VXSAT CSRs from the vcsr variable.
+		 */
+		status = csr_read_set(CSR_STATUS, SR_FS_DIRTY);
+
+		csr_write(CSR_VXRM, (src->vcsr >> CSR_VXRM_SHIFT) & CSR_VXRM_MASK);
+		csr_write(CSR_VXSAT, src->vcsr & CSR_VXSAT_MASK);
+
+		if ((status & SR_FS) != SR_FS_DIRTY)
+			csr_write(CSR_STATUS, status);
+	} else {
+		csr_write(CSR_VCSR, src->vcsr);
+	}
+}
+
+static inline void __riscv_v_vstate_save(struct __riscv_v_ext_state *save_to,
+					 void *datap)
+{
+	unsigned long vl;
+
+	riscv_v_enable();
+	__vstate_csr_save(save_to);
+	if (has_xtheadvector()) {
+		asm volatile (
+			"mv t0, %0\n\t"
+			THEAD_VSETVLI_T4X0E8M8D1
+			THEAD_VSB_V_V0T0
+			"add		t0, t0, t4\n\t"
+			THEAD_VSB_V_V8T0
+			"add		t0, t0, t4\n\t"
+			THEAD_VSB_V_V16T0
+			"add		t0, t0, t4\n\t"
+			THEAD_VSB_V_V24T0
+			: : "r" (datap) : "memory", "t0", "t4");
+	} else {
+		asm volatile (
+			".option push\n\t"
+			".option arch, +zve32x\n\t"
+			"vsetvli	%0, x0, e8, m8, ta, ma\n\t"
+			"vse8.v		v0, (%1)\n\t"
+			"add		%1, %1, %0\n\t"
+			"vse8.v		v8, (%1)\n\t"
+			"add		%1, %1, %0\n\t"
+			"vse8.v		v16, (%1)\n\t"
+			"add		%1, %1, %0\n\t"
+			"vse8.v		v24, (%1)\n\t"
+			".option pop\n\t"
+			: "=&r" (vl) : "r" (datap) : "memory");
+	}
+	riscv_v_disable();
+}
+
+static inline void __riscv_v_vstate_restore(struct __riscv_v_ext_state *restore_from,
+					    void *datap)
+{
+	unsigned long vl;
+
+	riscv_v_enable();
+	if (has_xtheadvector()) {
+		asm volatile (
+			"mv t0, %0\n\t"
+			THEAD_VSETVLI_T4X0E8M8D1
+			THEAD_VLB_V_V0T0
+			"add		t0, t0, t4\n\t"
+			THEAD_VLB_V_V8T0
+			"add		t0, t0, t4\n\t"
+			THEAD_VLB_V_V16T0
+			"add		t0, t0, t4\n\t"
+			THEAD_VLB_V_V24T0
+			: : "r" (datap) : "memory", "t0", "t4");
+	} else {
+		asm volatile (
+			".option push\n\t"
+			".option arch, +zve32x\n\t"
+			"vsetvli	%0, x0, e8, m8, ta, ma\n\t"
+			"vle8.v		v0, (%1)\n\t"
+			"add		%1, %1, %0\n\t"
+			"vle8.v		v8, (%1)\n\t"
+			"add		%1, %1, %0\n\t"
+			"vle8.v		v16, (%1)\n\t"
+			"add		%1, %1, %0\n\t"
+			"vle8.v		v24, (%1)\n\t"
+			".option pop\n\t"
+			: "=&r" (vl) : "r" (datap) : "memory");
+	}
+	__vstate_csr_restore(restore_from);
+	riscv_v_disable();
+}
+
+static inline void __riscv_v_vstate_discard(void)
+{
+	unsigned long vl, vtype_inval = 1UL << (BITS_PER_LONG - 1);
+
+	riscv_v_enable();
+	if (has_xtheadvector())
+		asm volatile (THEAD_VSETVLI_T4X0E8M8D1 : : : "t4");
+	else
+		asm volatile (
+			".option push\n\t"
+			".option arch, +zve32x\n\t"
+			"vsetvli	%0, x0, e8, m8, ta, ma\n\t"
+			".option pop\n\t": "=&r" (vl));
+
+	asm volatile (
+		".option push\n\t"
+		".option arch, +zve32x\n\t"
+		"vmv.v.i	v0, -1\n\t"
+		"vmv.v.i	v8, -1\n\t"
+		"vmv.v.i	v16, -1\n\t"
+		"vmv.v.i	v24, -1\n\t"
+		"vsetvl		%0, x0, %1\n\t"
+		".option pop\n\t"
+		: "=&r" (vl) : "r" (vtype_inval));
+
+	riscv_v_disable();
+}
+#endif
 
 static inline void riscv_v_vstate_discard(struct pt_regs *regs)
 {

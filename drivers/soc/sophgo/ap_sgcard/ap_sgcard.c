@@ -466,7 +466,7 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 	int length;
 	unsigned long flags;
 	struct timespec64 ts;
-	struct task_head task_head;
+	struct task_head *task_head;
 	int i = 0;
 	uint64_t head;
 	uint64_t tail;
@@ -605,9 +605,6 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 
 		if (request_action.type == TASK_CREATE_REQUEST || request_action.type == MALLOC_DEVICE_MEM_REQUEST
 		    || request_action.type == FREE_DEVICE_MEM_REQUEST) {
-			if (request_action.type == TASK_CREATE_REQUEST)
-				if (task_head.task_type == LAUNCH_KERNEL && task_head.kernel_type == C2C_KERNEL)
-					task_head.task_token = atomic_add_return(1, &card->c2c_kernel_token);
 
 			DBG_MSG("copy [%s]-0x%llx to %s\n", request_response_type[request_action.type],
 				 request_action.request_id, port->name);
@@ -622,6 +619,10 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 					return 0;
 				}
 			}
+			task_head = (struct task_head *)(port_rx_buf->buf + port_rx_head);
+			if (request_action.type == TASK_CREATE_REQUEST && task_head->task_type == LAUNCH_KERNEL &&
+				task_head->kernel_type == C2C_KERNEL)
+				task_head->task_token = atomic_add_return(1, &card->c2c_kernel_token);
 			//clean_dcache_range(port_rx_buf->buf + port_rx_head, length);
 
 			channel->channel_info.int_rcv_cnt += (sizeof(request_action) + request_action.task_size);

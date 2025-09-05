@@ -14,7 +14,7 @@
 
 	memory@a4000000 {
 		device_type = "memory";
-		reg = <0x1 0x20200000 0x0 0x1fe00000>;
+		reg = <0x1f 0x00200000 0x0 0x1fe00000>;
 	};
 
 	rsvm: reserved-memory {
@@ -22,7 +22,7 @@
 		#size-cells = <0x2>;
 		ranges;
 		vtty_reserved: vtty_mem {
-			reg = <0x1 0x1fff0000 0x0 0x10000>;
+			reg = <0x1f 0x1fff0000 0x0 0x10000>;
 			no-map;
 		};
 	};
@@ -102,8 +102,8 @@
 			compatible = "sophgo,vtty-tp";
 			#size-cells = <0x2>;
 			#address-cells = <0x2>;
-			reg = <0x1 0x1fff0000 0x0 0x1000>,
-				<0x1 0x1fff1000 0x0 0x1000>;
+			reg = <0x1f 0x1fff0000 0x0 0x1000>,
+				<0x1f 0x1fff1000 0x0 0x1000>;
 			virtaul-msi = <0x6e 0x10000028 0x1>;
 			clr-irq = <0x69 0x0CD00004 0x0>;
 			interrupt-parent = <&intc>;
@@ -117,7 +117,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x12b000000,64M";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x1f0b000000,64M";
 		stdout-path = "serial0";
 	};
 };

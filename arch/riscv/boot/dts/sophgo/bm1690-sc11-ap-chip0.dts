@@ -11,7 +11,6 @@
 #include "bm1690-clock.dtsi"
 #include "sg2044-pinctrl.dtsi"
 #include "sg2044-peri-sys.dtsi"
-#include "bm1690-video-sys-pcie.dtsi"
 #include "bm1690-pcie-msi.dtsi"
 
 /delete-node/ &emmc;
@@ -21,6 +20,16 @@
 	memory@80200000 {
 		device_type = "memory";
 		reg = <0x00000000 0x80200000 0x00000000 0x8fe00000>;
+	};
+
+	pcie-reserved-memory {
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+		ranges;
+		pcie_reserved: pcie_mem {
+			reg = <0x00 0x70000000 0x0 0x10000000>;
+			no-map;
+		};
 	};
 
 	aliases {

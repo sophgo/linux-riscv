@@ -167,6 +167,8 @@ static int pci_platform_init(struct pci_dev *pdev)
 	dev_err(&pdev->dev, "probe pci bus-0x%x ep device, fix device pcie bus to 0x%x\n",
 		pdev->bus->number, hdev->bus_num);
 
+	return 0;
+
 err2_out:
 	pci_release_regions(pdev);
 err1_out:
@@ -327,6 +329,23 @@ failed:
 	return -1;
 }
 
+static int clean_pcie_info(struct p_dev *hdev)
+{
+	struct pcie_info *myself_info_addr;
+	struct pcie_info *peer_info_addr;
+
+	myself_info_addr = hdev->pci_info_base + hdev->bus_num * PER_INFO_SIZE;
+	memset_io(myself_info_addr + 1, 0x5a, sizeof(struct pcie_info));
+
+	peer_info_addr = hdev->BarVirt[1] + CONFIG_STRUCT_OFFSET + hdev->bus_num * PER_INFO_SIZE +
+			 sizeof(struct pcie_info);
+	memset(peer_info_addr, 0x5a, sizeof(struct pcie_info));
+
+	iounmap(hdev->pci_info_base);
+
+	return 0;
+}
+
 static int config_ep_huge_bar(struct p_dev *hdev)
 {
 	void __iomem *pcie_dbi_base;
@@ -406,7 +425,8 @@ static void pci_remove(struct pci_dev *pdev)
 
 	if (hdev == NULL)
 		return;
-
+	dev_err(&pdev->dev, "remove pci bus-0x%x ep device\n", pdev->bus->number);
+	clean_pcie_info(hdev);
 #if ((defined(SG2260_PLD)) && ((defined(SG2260_PLD_MSI)) || (defined(SG2260_PLD_MSI_X))))
 	for (int i = 0; i < MSI_X_NUM; i++) {
 	      //free_irq((pdev->irq+i),hdev);
@@ -414,7 +434,7 @@ static void pci_remove(struct pci_dev *pdev)
 	}
 	pci_free_irq_vectors(pdev);
 #else
-	free_irq(pdev->irq, hdev);
+	//free_irq(pdev->irq, hdev);
 	pci_disable_msi(pdev);
 #endif
 	pci_release_regions(pdev);

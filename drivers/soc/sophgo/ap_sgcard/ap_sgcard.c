@@ -1372,6 +1372,7 @@ static int sg_mmap(struct file *file, struct vm_area_struct *vma)
 	return 0;
 }
 
+void sophgo_rest_c2c(void);
 void sophgo_setup_c2c(void);
 
 static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
@@ -1394,6 +1395,8 @@ static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		break;
 	case SG_IOC_SETUP_C2C:
+		sophgo_rest_c2c();
+
 		sophgo_setup_c2c();
 		for (c2c_loop = 0; c2c_loop < 20; c2c_loop++) {
 			c2c_ok = sophgo_check_c2c();

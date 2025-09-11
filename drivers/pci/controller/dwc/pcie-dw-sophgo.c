@@ -2003,6 +2003,20 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	return 0;
 }
 
+void sophgo_pcie_remove(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct sophgo_dw_pcie *pcie = dev_get_drvdata(dev);
+	struct pci_host_bridge *bridge = pcie->pp.bridge;
+
+	pr_err("remove pci driver\n");
+	pci_stop_root_bus(bridge->bus);
+	pci_remove_root_bus(bridge->bus);
+
+	if (pcie->pp.msi_domain)
+		irq_domain_remove(pcie->pp.msi_domain);
+}
+
 static const struct of_device_id sophgo_dw_pcie_of_match[] = {
 	{ .compatible = "sophgo,sg2044-pcie-host", },
 	{ .compatible = "sophgo,bm1690-pcie-host", },
@@ -2017,6 +2031,7 @@ static struct platform_driver sophgo_dw_pcie_driver = {
 		.suppress_bind_attrs = true,
 	},
 	.probe = sophgo_dw_pcie_probe,
+	.remove = sophgo_pcie_remove,
 };
 builtin_platform_driver(sophgo_dw_pcie_driver);
 

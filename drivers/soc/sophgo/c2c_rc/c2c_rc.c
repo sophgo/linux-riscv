@@ -22,7 +22,9 @@
 #include "c2c_rc.h"
 
 int sophgo_dw_pcie_probe(struct platform_device *pdev);
+void sophgo_pcie_remove(struct platform_device *pdev);
 int sophgo_set_all_c2c_rc_num(uint64_t all_rc);
+void sophgo_rest_c2c(void);
 
 #define PER_CONFIG_STR_OFFSET	(0x1000)
 #define PCIE_INFO_DEF_VAL	0x5a
@@ -93,6 +95,7 @@ static struct platform_driver sophgo_dw_c2c_pcie_driver = {
 		.suppress_bind_attrs = true,
 	},
 	.probe = sophgo_dw_pcie_probe,
+	.remove = sophgo_pcie_remove,
 };
 
 static struct platform_driver *const c2c_drivers[] = {
@@ -110,15 +113,22 @@ static ssize_t c2c_enable_store(struct device *dev,
 	memcpy(buf, ubuf, len);
 	ret = kstrtoint(buf, 0, &enable);
 
-	if (enable == 0 || enable == 1) {
-		pr_err("enable = %d\n", enable);
+	if (enable == 1 && c2c_enable != 1) {
+		pr_err("enable c2c\n");
 		c2c_enable = enable;
 		platform_register_drivers(c2c_drivers, 1);
 
 		return len;
+	} else if (enable == 0 && c2c_enable != 0) {
+		pr_err("disable c2c\n");
+		c2c_enable = enable;
+
+		platform_unregister_drivers(c2c_drivers, 1);
+
+		return len;
 	}
 
-	pr_err("please echo 0 for disable and 1 for enable\n");
+	pr_err("please echo 0 for disable and 1 for enable, now c2c is %s\n", c2c_enable == 1 ? "enable" : "disable");
 
 	return -EINVAL;
 }
@@ -237,9 +247,28 @@ module_platform_driver(sophgo_c2c_enable_driver);
 
 void sophgo_setup_c2c(void)
 {
+	c2c_enable = 1;
 	platform_register_drivers(c2c_drivers, 1);
 }
 EXPORT_SYMBOL_GPL(sophgo_setup_c2c);
+
+static void sophgo_deinit_c2c(void)
+{
+	platform_unregister_drivers(c2c_drivers, 1);
+
+	atomic_set(&ready_c2c_rc, 0);
+	for (int i = 0; i < PCIE_BUS_MAX; i++)
+		want_c2c_link[i] = 0;
+}
+
+void sophgo_rest_c2c(void)
+{
+	if (c2c_enable == 1) {
+		pr_err("c2c already setup, so we reset it\n");
+		sophgo_deinit_c2c();
+	}
+}
+EXPORT_SYMBOL_GPL(sophgo_rest_c2c);
 
 int sophgo_check_c2c(void)
 {

@@ -1684,7 +1684,7 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
 	}
 
 	if (plat->phy_node && bsp_priv->integrated_phy) {
-		bsp_priv->clk_phy = of_clk_get(plat->phy_node, 0);
+		bsp_priv->clk_phy = of_clk_get(to_of_node(plat->phy_node), 0);
 		ret = PTR_ERR_OR_ZERO(bsp_priv->clk_phy);
 		if (ret)
 			return dev_err_probe(dev, ret, "Cannot get PHY clock\n");
@@ -1834,10 +1834,10 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
 							    "rockchip,php-grf");
 
 	if (plat->phy_node) {
-		bsp_priv->integrated_phy = of_property_read_bool(plat->phy_node,
+		bsp_priv->integrated_phy = of_property_read_bool(to_of_node(plat->phy_node),
 								 "phy-is-integrated");
 		if (bsp_priv->integrated_phy) {
-			bsp_priv->phy_reset = of_reset_control_get(plat->phy_node, NULL);
+			bsp_priv->phy_reset = of_reset_control_get(to_of_node(plat->phy_node), NULL);
 			if (IS_ERR(bsp_priv->phy_reset)) {
 				dev_err(&pdev->dev, "No PHY reset control found.\n");
 				bsp_priv->phy_reset = NULL;

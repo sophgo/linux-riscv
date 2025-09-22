@@ -956,7 +956,7 @@ static int sun8i_dwmac_set_syscon(struct device *dev,
 		/* Force EPHY xtal frequency to 24MHz. */
 		reg |= H3_EPHY_CLK_SEL;
 
-		ret = of_mdio_parse_addr(dev, plat->phy_node);
+		ret = of_mdio_parse_addr(dev, to_of_node(plat->phy_node));
 		if (ret < 0) {
 			dev_err(dev, "Could not parse MDIO addr\n");
 			return ret;

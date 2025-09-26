@@ -594,8 +594,8 @@ static int host_int(struct sg_card *card, struct v_channel *channel)
 		port_rx_tail = port_rx_buf->tail;
 		c = CIRC_SPACE(port_rx_head, port_rx_tail, port->port_rx_buf_size);
 		if (c < length + sizeof(request_action) + TPU_SYNC_MSG_BUF) {
-			pr_err("no space in host rx buf,head:0x%llx,tail:0x%llx,need:0x%lx,availabe:0x%x\n",
-				port_rx_head, port_rx_tail, length + sizeof(request_action) + TPU_SYNC_MSG_BUF, c);
+			//pr_err("no space in host rx buf,head:0x%llx,tail:0x%llx,need:0x%lx,availabe:0x%x\n",
+			//	port_rx_head, port_rx_tail, length + sizeof(request_action) + TPU_SYNC_MSG_BUF, c);
 			schedule_delayed_work(&channel->channel_delayed_work, 1);
 			break;
 		}

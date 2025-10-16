@@ -14,11 +14,13 @@
  *
  */
 
+#include <linux/acpi.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
 #include <linux/mmc/mmc.h>
 #include <linux/slab.h>
+#include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include "sdhci-pltfm.h"
 #include "sdhci-sophgo.h"
@@ -29,6 +31,19 @@
 #define BM_SDHCI_VENDOR_MSHC_CTRL_R (BM_SDHCI_VENDOR_OFFSET + 0x8)
 #define BM_SDHCI_VENDOR_A_CTRL_R (BM_SDHCI_VENDOR_OFFSET + 0x40)
 #define BM_SDHCI_VENDOR_A_STAT_R (BM_SDHCI_VENDOR_OFFSET + 0x44)
+
+static unsigned int bm_sdhci_get_max_clock(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_bm_host *bm_host = sdhci_pltfm_priv(pltfm_host);
+	unsigned long source_clock = clk_get_rate(bm_host->clk);
+
+#ifdef CONFIG_ACPI
+	source_clock = pltfm_host->clock;
+#endif
+
+	return source_clock;
+}
 
 static void bm_sdhci_set_tap(struct sdhci_host *host, unsigned int tap)
 {
@@ -168,11 +183,6 @@ static void sdhci_bm_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs
 static unsigned int bm_sdhci_get_min_clock(struct sdhci_host *host)
 {
 	return 200 * 1000;
-}
-
-static unsigned int bm_sdhci_get_max_clock(struct sdhci_host *host)
-{
-	return 50 * 1000 * 1000;
 }
 
 #if 0 // FIXME, SD card not working after this.
@@ -504,20 +514,28 @@ static const struct of_device_id sdhci_bm_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, sdhci_bm_dt_match);
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sdhci_bm_acpi_ids[] = {
+	{.id = "SOPH0005", .driver_data = (kernel_ulong_t)&sdhci_bm_sd_pdata},
+	{}
+};
+MODULE_DEVICE_TABLE(acpi, sdhci_bm_acpi_ids);
+#endif
+
 static int sdhci_bm_probe(struct platform_device *pdev)
 {
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
 	struct sdhci_bm_host *bm_host;
-	const struct of_device_id *match;
 	const struct sdhci_pltfm_data *pdata;
+	struct device *dev = &pdev->dev;
 	int ret;
 
-	match = of_match_device(sdhci_bm_dt_match, &pdev->dev);
-	if (!match)
-		return -EINVAL;
-
-	pdata = match->data;
+	pdata = device_get_match_data(&pdev->dev);
+	if (!pdata) {
+		dev_err(&pdev->dev, "Error: No device match data found\n");
+		return -ENODEV;
+	};
 
 	host = sdhci_pltfm_init(pdev, pdata, sizeof(*bm_host));
 	if (IS_ERR(host))
@@ -535,50 +553,56 @@ static int sdhci_bm_probe(struct platform_device *pdev)
 
 	sdhci_get_of_property(pdev);
 
-	if (host->mmc->caps2 & MMC_CAP2_NO_SD) {
-		bm_host->reset = devm_reset_control_get(&pdev->dev, "emmc");
-		if (IS_ERR(bm_host->reset)) {
-			ret = PTR_ERR(bm_host->reset);
-			goto pltfm_free;
+	if (dev->of_node) {
+		if (host->mmc->caps2 & MMC_CAP2_NO_SD) {
+			bm_host->reset = devm_reset_control_get(&pdev->dev, "emmc");
+			if (IS_ERR(bm_host->reset)) {
+				ret = PTR_ERR(bm_host->reset);
+				goto pltfm_free;
+			}
+
+			bm_host->clkaxi = devm_clk_get(&pdev->dev, "clk_gate_axi_emmc");
+			if (IS_ERR(bm_host->clkaxi))
+				dev_err(&pdev->dev, "get emmc clk axi failed\n");
+			else
+				clk_prepare_enable(bm_host->clkaxi);
+			bm_host->clk = devm_clk_get(&pdev->dev, "clk_gate_emmc");
+			if (IS_ERR(bm_host->clk))
+				dev_err(&pdev->dev, "get emmc clk failed\n");
+			else
+				clk_prepare_enable(bm_host->clk);
+			bm_host->clk100k = devm_clk_get(&pdev->dev, "clk_gate_100k_emmc");
+			if (IS_ERR(bm_host->clk100k))
+				dev_err(&pdev->dev, "get emmc clk 100k failed\n");
+			else
+				clk_prepare_enable(bm_host->clk100k);
+		} else if (host->mmc->caps2 & MMC_CAP2_NO_MMC) {
+			bm_host->reset = devm_reset_control_get(&pdev->dev, "sdio");
+			if (IS_ERR(bm_host->reset)) {
+				ret = PTR_ERR(bm_host->reset);
+				goto pltfm_free;
+			}
+
+			bm_host->clkaxi = devm_clk_get(&pdev->dev, "clk_gate_axi_sd");
+			if (IS_ERR(bm_host->clkaxi))
+				dev_err(&pdev->dev, "get sd clk axi failed\n");
+			else
+				clk_prepare_enable(bm_host->clkaxi);
+			bm_host->clk = devm_clk_get(&pdev->dev, "clk_gate_sd");
+			if (IS_ERR(bm_host->clk))
+				dev_err(&pdev->dev, "get sd clk failed\n");
+			else
+				clk_prepare_enable(bm_host->clk);
+			bm_host->clk100k = devm_clk_get(&pdev->dev, "clk_gate_100k_sd");
+			if (IS_ERR(bm_host->clk100k))
+				dev_err(&pdev->dev, "get sd clk 100k failed\n");
+			else
+				clk_prepare_enable(bm_host->clk100k);
 		}
 
-		bm_host->clkaxi = devm_clk_get(&pdev->dev, "clk_gate_axi_emmc");
-		if (IS_ERR(bm_host->clkaxi))
-			dev_err(&pdev->dev, "get emmc clk axi failed\n");
-		else
-			clk_prepare_enable(bm_host->clkaxi);
-		bm_host->clk = devm_clk_get(&pdev->dev, "clk_gate_emmc");
-		if (IS_ERR(bm_host->clk))
-			dev_err(&pdev->dev, "get emmc clk failed\n");
-		else
-			clk_prepare_enable(bm_host->clk);
-		bm_host->clk100k = devm_clk_get(&pdev->dev, "clk_gate_100k_emmc");
-		if (IS_ERR(bm_host->clk100k))
-			dev_err(&pdev->dev, "get emmc clk 100k failed\n");
-		else
-			clk_prepare_enable(bm_host->clk100k);
-	} else if (host->mmc->caps2 & MMC_CAP2_NO_MMC) {
-		bm_host->reset = devm_reset_control_get(&pdev->dev, "sdio");
-		if (IS_ERR(bm_host->reset)) {
-			ret = PTR_ERR(bm_host->reset);
+	} else {
+		if (device_property_read_u32(dev, "core-clk", &pltfm_host->clock) < 0)
 			goto pltfm_free;
-		}
-
-		bm_host->clkaxi = devm_clk_get(&pdev->dev, "clk_gate_axi_sd");
-		if (IS_ERR(bm_host->clkaxi))
-			dev_err(&pdev->dev, "get sd clk axi failed\n");
-		else
-			clk_prepare_enable(bm_host->clkaxi);
-		bm_host->clk = devm_clk_get(&pdev->dev, "clk_gate_sd");
-		if (IS_ERR(bm_host->clk))
-			dev_err(&pdev->dev, "get sd clk failed\n");
-		else
-			clk_prepare_enable(bm_host->clk);
-		bm_host->clk100k = devm_clk_get(&pdev->dev, "clk_gate_100k_sd");
-		if (IS_ERR(bm_host->clk100k))
-			dev_err(&pdev->dev, "get sd clk 100k failed\n");
-		else
-			clk_prepare_enable(bm_host->clk100k);
 	}
 
 	host->mmc_host_ops.select_drive_strength = sdhci_bm_select_drive_strength;
@@ -611,6 +635,9 @@ static struct platform_driver sdhci_bm_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.of_match_table = sdhci_bm_dt_match,
+	#ifdef CONFIG_ACPI
+		.acpi_match_table = ACPI_PTR(sdhci_bm_acpi_ids),
+	#endif
 	},
 };
 

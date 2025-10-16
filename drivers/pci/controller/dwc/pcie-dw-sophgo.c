@@ -31,6 +31,7 @@
 #include "pcie-dw-sophgo.h"
 
 int sophgo_dw_pcie_probe(struct platform_device *pdev);
+void sophgo_pcie_remove(struct platform_device *pdev);
 
 static void sophgo_dw_intx_mask(struct irq_data *data)
 {
@@ -1231,7 +1232,7 @@ static int pcie_wait_link(struct sophgo_dw_pcie *pcie)
 	int err;
 	int timeout = 500;
 
-	err = readl_poll_timeout(sii_reg_base + 0xb4, status, ((status >> 6) & 0x3), 20, timeout * USEC_PER_MSEC);
+	err = readl_poll_timeout(sii_reg_base + 0xb4, status, (((status >> 6) & 0x3) == 0x3), 20, timeout * USEC_PER_MSEC);
 	if (err) {
 		pr_err("[sg2260] failed to poll link ready\n");
 		return -ETIMEDOUT;
@@ -1280,19 +1281,38 @@ static int pcie_check_link_status(struct sophgo_dw_pcie *pcie)
 	uint32_t ltssm_state = 0;
 	void __iomem *pcie_sii_base = pcie->sii_reg_base;
 	void __iomem *pcie_dbi_base = pcie->dbi_base;
+	int timeout = 10000;
 
 	val = readl(pcie_sii_base + 0xb4); //LNK_DBG_2
 	ltssm_state = val & 0x3f; //bit[5,0]
 	if (ltssm_state != 0x11)
 		pr_err("PCIe link fail, ltssm_state = 0x%x\n", ltssm_state);
 
-	speed = (val >> 8) & 0x7; //bit[10,8]
-	if ((speed + 1) != pcie->link_gen)
+	while (1) {
+		val = readl(pcie_sii_base + 0xb4);
+		speed = (val >> 8) & 0x7; //bit[10,8]
+		if ((speed + 1) == pcie->link_gen || timeout == 0) {
+			break;
+		} else {
+			timeout--;
+			udelay(100);
+		}
+	}
+	if (timeout == 0)
 		pr_err("link speed, expect gen%d, current gen%d\n", pcie->link_gen, (speed + 1));
 
-	val = readl(pcie_dbi_base + 0x80);
-	width = (val >> 20) & 0x3f; //bit[25:20]
-	if (width != pcie->num_lanes)
+	timeout = 10000;
+	while (1) {
+		val = readl(pcie_dbi_base + 0x80);
+		width = (val >> 20) & 0x3f; //bit[25:20]
+		if (width == pcie->num_lanes) {
+			break;
+		} else {
+			timeout--;
+			udelay(100);
+		}
+	}
+	if (timeout == 0)
 		pr_err("link width, expect x%d, current x%d\n", pcie->num_lanes, width);
 
 	pr_info("PCIe Link status, ltssm[0x%x], gen%d, x%d.\n", ltssm_state, (speed + 1), width);

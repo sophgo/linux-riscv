@@ -30,7 +30,7 @@ const guid_t pci_acpi_dsm_guid =
 	GUID_INIT(0xe5c937d0, 0x3553, 0x4d7a,
 		  0x91, 0x17, 0xea, 0x4d, 0x19, 0xc3, 0x43, 0x4d);
 
-#if defined(CONFIG_PCI_QUIRKS) && defined(CONFIG_ARM64)
+#if defined(CONFIG_PCI_QUIRKS) && (defined(CONFIG_ARM64) || defined(CONFIG_RISCV))
 static int acpi_get_rc_addr(struct acpi_device *adev, struct resource *res)
 {
 	struct device *dev = &adev->dev;

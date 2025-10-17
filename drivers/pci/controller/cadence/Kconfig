@@ -44,7 +44,7 @@ config PCIE_CADENCE_PLAT_EP
 
 config PCIE_CADENCE_SOPHGO
 	bool "Cadence Sophgo PCIe Host controller"
-	depends on OF
+	depends on OF || ACPI
 	select IRQ_DOMAIN
 	select PCIE_CADENCE
 	help

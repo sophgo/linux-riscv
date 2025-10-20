@@ -92,6 +92,9 @@ struct pcie_info {
 	uint64_t peer_slotid;
 	uint64_t peer_socketid;
 	uint64_t peer_pcie_id;
+	uint64_t max_link_speed;
+	uint64_t current_link_width;
+	uint64_t current_link_speed;
 };
 
 #define BM1690_SRAM_BASE	(0X7010000000)

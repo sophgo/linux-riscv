@@ -18,6 +18,7 @@
 #include <linux/pagemap.h>
 #include <linux/circ_buf.h>
 #include <linux/device.h>
+#include <linux/bitfield.h>
 #include "pcie_device.h"
 #include "../c2c_rc/c2c_rc.h"
 
@@ -286,6 +287,8 @@ static int show_pcie_info(int pcie_id, char *head, struct pcie_info *info)
 	pr_info("[%s pcie%d]->peer slot id:0x%llx\n", head, pcie_id, info->peer_slotid);
 	pr_info("[%s pcie%d]->peer socket id:0x%llx\n", head, pcie_id, info->peer_socketid);
 	pr_info("[%s pcie%d]->peer pcie id:0x%llx\n", head, pcie_id, info->peer_pcie_id);
+	pr_info("[%s pcie%d]->expect gen%llu_x%llu, current gen%llu_x%llu\n", head, pcie_id, info->max_link_speed, info->phy_role,
+		info->current_link_speed, info->current_link_width);
 
 	return 0;
 }
@@ -295,6 +298,20 @@ static int build_pcie_info(struct p_dev *hdev)
 	struct pcie_info *myself_pcie_info;
 	struct pcie_info *peer_pcie_info;
 	void *info_addr;
+	uint64_t current_link_speed;
+	uint64_t current_link_width;
+	uint16_t status;
+	int err;
+
+	err = pcie_capability_read_word(hdev->pdev, PCI_EXP_LNKSTA, &status);
+	if (err) {
+		pr_err("[pcie device]:pcie%d failed to read current link speed\n", hdev->bus_num);
+		return -1;
+	}
+	current_link_speed = status & PCI_EXP_LNKSTA_CLS;
+	current_link_width = FIELD_GET(PCI_EXP_LNKSTA_NLW, status);
+	pr_err("[pcie device]:pcie%d current link speed:0x%llx, current link width:0x%llx\n",
+		hdev->bus_num, current_link_speed, current_link_width);
 
 	hdev->pci_info_base = ioremap(PCIE_INFO_BASE, PCIE_INFO_SIZE);
 	if (!hdev->pci_info_base) {
@@ -303,12 +320,18 @@ static int build_pcie_info(struct p_dev *hdev)
 	}
 	myself_pcie_info = hdev->pci_info_base + hdev->bus_num * PER_INFO_SIZE;
 	peer_pcie_info = myself_pcie_info + 1;
+
+	myself_pcie_info->current_link_speed = current_link_speed;
+	myself_pcie_info->current_link_width = current_link_width;
+
 	pr_info("[pcie device]:pcie%d, myself pcie info addr:%px, peer pcie info addr:%px\n", hdev->bus_num,
 		myself_pcie_info, peer_pcie_info);
 	show_pcie_info(hdev->bus_num, "myself", myself_pcie_info);
 
 	info_addr = hdev->BarVirt[1] + CONFIG_STRUCT_OFFSET + hdev->bus_num * PER_INFO_SIZE;
 	memcpy_fromio(peer_pcie_info, info_addr, sizeof(struct pcie_info));
+	peer_pcie_info->current_link_speed = current_link_speed;
+	peer_pcie_info->current_link_width = current_link_width;
 	show_pcie_info(hdev->bus_num, "peer", peer_pcie_info);
 
 	if (peer_pcie_info->peer_pcie_id != hdev->bus_num) {

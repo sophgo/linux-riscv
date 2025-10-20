@@ -70,6 +70,9 @@ struct pcie_info {
 	uint64_t peer_slotid;
 	uint64_t peer_socketid;
 	uint64_t peer_pcie_id;
+	uint64_t max_link_speed;
+	uint64_t current_link_width;
+	uint64_t current_link_speed;
 };
 
 struct c2c_info {
@@ -160,6 +163,9 @@ static int dump_pcie_info(struct pcie_info *pcie_info)
 	pr_err("	perst gpio:%llu\n", pcie_info->perst_gpio);
 	pr_err("	peer slot id:%llu, peer socket id:%llu, peer pcie id:%llu\n\n",
 		pcie_info->peer_slotid, pcie_info->peer_socketid, pcie_info->peer_pcie_id);
+	pr_err("	expect gen%llu_x%llu, current gen%llu_x%llu\n",
+		pcie_info->max_link_speed, pcie_info->phy_role,
+		pcie_info->current_link_speed, pcie_info->current_link_width);
 
 	return 0;
 }

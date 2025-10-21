@@ -1469,7 +1469,11 @@ static void __init create_linear_mapping_page_table(void)
 			end = __pa(PAGE_OFFSET) + memory_limit;
 #endif
 
+#ifdef CONFIG_KEXEC_FILE
 		create_linear_mapping_range(start, end, PMD_SIZE);
+#else
+		create_linear_mapping_range(start, end, 0);
+#endif
 	}
 
 #ifdef CONFIG_STRICT_KERNEL_RWX

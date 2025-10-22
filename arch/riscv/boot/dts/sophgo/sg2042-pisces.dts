@@ -220,164 +220,27 @@
 					      <&cpu127_intc 3>;
 		};
 
-		clint_mtimer16: timer@70ac104000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac104000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu64_intc 7>,
-					      <&cpu65_intc 7>,
-					      <&cpu66_intc 7>,
-					      <&cpu67_intc 7>;
-		};
-
-		clint_mtimer17: timer@70ac114000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac114000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu68_intc 7>,
-					      <&cpu69_intc 7>,
-					      <&cpu70_intc 7>,
-					      <&cpu71_intc 7>;
-		};
-
-		clint_mtimer18: timer@70ac124000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac124000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu72_intc 7>,
-					      <&cpu73_intc 7>,
-					      <&cpu74_intc 7>,
-					      <&cpu75_intc 7>;
-		};
-
-		clint_mtimer19: timer@70ac134000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac134000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu76_intc 7>,
-					      <&cpu77_intc 7>,
-					      <&cpu78_intc 7>,
-					      <&cpu79_intc 7>;
-		};
-
-		clint_mtimer20: timer@70ac144000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac144000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu80_intc 7>,
-					      <&cpu81_intc 7>,
-					      <&cpu82_intc 7>,
-					      <&cpu83_intc 7>;
-		};
-
-		clint_mtimer21: timer@70ac154000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac154000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu84_intc 7>,
-					      <&cpu85_intc 7>,
-					      <&cpu86_intc 7>,
-					      <&cpu87_intc 7>;
-		};
-
-		clint_mtimer22: timer@70ac164000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac164000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu88_intc 7>,
-					      <&cpu89_intc 7>,
-					      <&cpu90_intc 7>,
-					      <&cpu91_intc 7>;
-		};
-
-		clint_mtimer23: timer@70ac174000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac174000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu92_intc 7>,
-					      <&cpu93_intc 7>,
-					      <&cpu94_intc 7>,
-					      <&cpu95_intc 7>;
-		};
-
-		clint_mtimer24: timer@70ac184000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac184000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu96_intc 7>,
-					      <&cpu97_intc 7>,
-					      <&cpu98_intc 7>,
-					      <&cpu99_intc 7>;
-		};
-
-		clint_mtimer25: timer@70ac194000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac194000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu100_intc 7>,
-					      <&cpu101_intc 7>,
-					      <&cpu102_intc 7>,
-					      <&cpu103_intc 7>;
-		};
-
-		clint_mtimer26: timer@70ac1a4000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac1a4000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu104_intc 7>,
-					      <&cpu105_intc 7>,
-					      <&cpu106_intc 7>,
-					      <&cpu107_intc 7>;
-		};
-
-		clint_mtimer27: timer@70ac1b4000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac1b4000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu108_intc 7>,
-					      <&cpu109_intc 7>,
-					      <&cpu110_intc 7>,
-					      <&cpu111_intc 7>;
-		};
-
-		clint_mtimer28: timer@70ac1c4000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac1c4000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu112_intc 7>,
-					      <&cpu113_intc 7>,
-					      <&cpu114_intc 7>,
-					      <&cpu115_intc 7>;
-		};
-
-		clint_mtimer29: timer@70ac1d4000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac1d4000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu116_intc 7>,
-					      <&cpu117_intc 7>,
-					      <&cpu118_intc 7>,
-					      <&cpu119_intc 7>;
-		};
-
-		clint_mtimer30: timer@70ac1e4000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac1e4000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu120_intc 7>,
-					      <&cpu121_intc 7>,
-					      <&cpu122_intc 7>,
-					      <&cpu123_intc 7>;
-		};
-
-		clint_mtimer31: timer@70ac1f4000 {
-			compatible = "sophgo,sg2042-aclint-mtimer", "thead,c900-aclint-mtimer";
-			reg = <0x00000070 0xac1f4000 0x00000000 0x0000c000>;
-			reg-names = "mtimecmp";
-			interrupts-extended = <&cpu124_intc 7>,
-					      <&cpu125_intc 7>,
-					      <&cpu126_intc 7>,
-					      <&cpu127_intc 7>;
+		/delete-node/ clint-mtimer@70ac000000;
+		/delete-node/ clint-mtimer@70ac010000;
+		/delete-node/ clint-mtimer@70ac020000;
+		/delete-node/ clint-mtimer@70ac030000;
+		/delete-node/ clint-mtimer@70ac040000;
+		/delete-node/ clint-mtimer@70ac050000;
+		/delete-node/ clint-mtimer@70ac060000;
+		/delete-node/ clint-mtimer@70ac070000;
+		/delete-node/ clint-mtimer@70ac080000;
+		/delete-node/ clint-mtimer@70ac090000;
+		/delete-node/ clint-mtimer@70ac0a0000;
+		/delete-node/ clint-mtimer@70ac0b0000;
+		/delete-node/ clint-mtimer@70ac0c0000;
+		/delete-node/ clint-mtimer@70ac0d0000;
+		/delete-node/ clint-mtimer@70ac0e0000;
+		/delete-node/ clint-mtimer@70ac0f0000;
+		sg2042_global_mtimer: sg2042-global-mtimer@70300101c0 {
+		      compatible = "sophgo,sg2042-global-mtimer";
+		      reg = <   0x00000070 0x300101c0 0x00000000 0x00000008
+		                0x00000070 0xac000000 0x00000000 0x00200000>;
+		      clock-frequency = <50000000 50000000>;
 		};
 
 		/delete-node/ interrupt-controller@7090000000;

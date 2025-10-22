@@ -294,7 +294,10 @@ static int __set_memory(unsigned long addr, int numpages, pgprot_t set_mask,
 		for (i = page_start; i < page_start + numpages; ++i) {
 			lm_start = (unsigned long)page_address(area->pages[i]);
 			lm_end = lm_start + PAGE_SIZE;
-
+#ifdef CONFIG_HIGHMEM
+			if (!lm_start)
+				continue;
+#endif
 			ret = split_linear_mapping(lm_start, lm_end);
 			if (ret)
 				goto unlock;

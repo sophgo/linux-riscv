@@ -27,6 +27,7 @@ struct sophgo_pcie_phy {
 	struct mutex pcie_mutex;
 	int init_cnt;
 	uint32_t lanes;
+	int force_skip_init;
 };
 
 static struct sophgo_pcie_phy *to_pcie_phy(struct phy_pcie_instance *inst)
@@ -145,7 +146,7 @@ static int sophgo_pcie_phy_init(struct phy *phy)
 
 	mutex_lock(&sg_phy->pcie_mutex);
 
-	if (sg_phy->init_cnt++)
+	if (sg_phy->init_cnt++ || sg_phy->force_skip_init)
 		goto err_out;
 
 	pr_err("sophgo pcie phy init:va:0x%llx, num lanes:%d\n", (uint64_t)sg_phy->reg_base, sg_phy->lanes);
@@ -164,14 +165,17 @@ static int sophgo_pcie_config(struct phy *phy, union phy_configure_opts *opts)
 	struct phy_pcie_instance *inst = phy_get_drvdata(phy);
 	struct sophgo_pcie_phy *sg_phy = to_pcie_phy(inst);
 	uint32_t phy_num = sg_phy->lanes == 8 ? 2 : 1;
-	uint32_t phy_id;
+	uint32_t phy_id = inst->index;
 	uint64_t reg_addr;
 	uint32_t val;
 	int timeout = 0;
+	int i = 0;
 
 	void __iomem *reg_base = sg_phy->reg_base;
 
-	for (phy_id = 0; phy_id < phy_num; phy_id++) {
+	pr_err("phy id:%d, phy num:%d\n", phy_id, phy_num);
+
+	for (i = 0; i < phy_num; i++) {
 		//wait sram init done
 		reg_addr = CXP_TOP_REG_RX060;
 		do {
@@ -194,6 +198,8 @@ static int sophgo_pcie_config(struct phy *phy, union phy_configure_opts *opts)
 		val = readl(reg_base + reg_addr);
 		val |= (0x1 << CXP_TOP_REG_PHY0_PHY1_SRAM_EXT_LD_DONE_BIT);
 		writel(val, (reg_base + reg_addr));
+
+		phy_id++;
 	}
 
 	return 0;
@@ -236,7 +242,7 @@ static int sophgo_pcie_phy_probe(struct platform_device *pdev)
 	struct sophgo_pcie_phy *sg_phy;
 	struct phy_provider *phy_provider;
 	int i;
-	u32 phy_num = 1;
+	u32 phy_num = 2;
 	struct resource *regs;
 
 	dev_err(dev, "sophgo pcie phy probe\n");
@@ -255,6 +261,11 @@ static int sophgo_pcie_phy_probe(struct platform_device *pdev)
 	device_property_read_u32(dev, "bus-width", &sg_phy->lanes);
 
 	pr_err("sophgo pcie phy addr:0x%llx, va:0x%llx, bus width:%d\n", regs->start, (uint64_t)sg_phy->reg_base, sg_phy->lanes);
+
+	if (device_property_present(dev, "force-skip-init")) {
+		sg_phy->force_skip_init = 1;
+		pr_err("sophgo pcie phy force skip init\n");
+	}
 
 	mutex_init(&sg_phy->pcie_mutex);
 

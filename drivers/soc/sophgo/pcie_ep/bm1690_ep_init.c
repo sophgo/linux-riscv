@@ -951,7 +951,7 @@ static int bm1690ep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 
 static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 {
-	void *top_base = ioremap(0x7050000000, 0x1000);
+	void *top_base = ep->top_base;
 	uint64_t host_ring_buf_addr;
 	int ava_atu = 3;
 
@@ -1156,7 +1156,7 @@ static int bm1690eep_set_iatu_ob(struct sophgo_pcie_ep *sg_ep)
 static void config_obatu_delay_func(struct work_struct *p_work)
 {
 	struct sophgo_pcie_ep *sg_ep = container_of(p_work, struct sophgo_pcie_ep, probe_delayed_work.work);
-	void *top_base = ioremap(0x7050000000, 0x1000);
+	void *top_base = sg_ep->top_base;
 	uint32_t status;
 	uint32_t check_loop = 0;
 
@@ -1177,23 +1177,6 @@ static void config_obatu_delay_func(struct work_struct *p_work)
 			pr_err("wait for top status:0x%x\n", status);
 		}
 	}
-}
-
-static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
-{
-	uint32_t val;
-
-	val = readl(sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
-	val |= (0x1 << 4);
-	writel(val, sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
-
-	INIT_DELAYED_WORK(&sg_ep->probe_delayed_work, config_obatu_delay_func);
-
-	if (sg_ep->ep_info.socket_id == 0) {
-		schedule_delayed_work(&sg_ep->probe_delayed_work, 1);
-	}
-
-	return 0;
 }
 
 static void pcie_clear_slv_mapping(struct sophgo_pcie_ep *pcie)
@@ -1226,7 +1209,33 @@ static void pcie_config_slv_mapping(struct sophgo_pcie_ep *pcie)
 	writel((up_end_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_END_ADDR_REG));
 
 
-	pr_err("config slv mapping\n");
+	pr_err("config slv mapping 0x%llx - 0x%llx\n", up_start_addr, up_end_addr);
+}
+
+static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
+{
+	uint32_t val;
+
+	val = readl(sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
+	val |= (0x1 << 4);
+	writel(val, sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
+
+	val = readl(sg_ep->c2c_top_base + PCIEX8_SN_ADDR_CTRL);
+	val = val & 0x3;
+	val |= BM1690E_DST_BOARD_ID(0) | BM1690E_MSI(1) | BM1690E_FUNC_NUM(0) | BM1690E_DST_CHIP_ID(7);
+	writel(val, sg_ep->c2c_top_base + PCIEX8_SN_ADDR_CTRL);
+	pr_err("pcie sn addr ctrl:0x%x\n", val);
+
+	pcie_clear_slv_mapping(sg_ep);
+	pcie_config_slv_mapping(sg_ep);
+
+	INIT_DELAYED_WORK(&sg_ep->probe_delayed_work, config_obatu_delay_func);
+
+	if (sg_ep->ep_info.socket_id == 0) {
+		schedule_delayed_work(&sg_ep->probe_delayed_work, 1);
+	}
+
+	return 0;
 }
 
 static int bm1690ep_set_quirks(struct sophgo_pcie_ep *sg_ep)
@@ -1333,24 +1342,58 @@ static void prog_c2c_obatu(struct sophgo_pcie_ep *sg_ep, uint32_t index, uint32_
 	pr_err("c2c obatu %d:0x%llx -> 0x%llx, ob_size:0x%llx, ctrl:0x%x\n", index, match_addr, out_addr, ob_size, atu_ctrl);
 }
 
+static int get_ap_access_buffer_addr(struct sophgo_pcie_ep *sg_ep, uint64_t *addr, int addr_num)
+{
+	void *top_base = sg_ep->top_base;
+	uint32_t high_addr;
+	uint32_t low_addr;
+	int i = 0;
+
+	for (i = 0; i < addr_num; i++) {
+		high_addr = readl(top_base + 0x1fc + i * 8);
+		low_addr = readl(top_base + 0x1f8 + i * 8);
+
+		addr[i] = ((uint64_t)high_addr << 32) | (uint64_t)low_addr;
+		pr_err("chip%d ap access buffer addr:0x%llx\n", i, addr[i]);
+	}
+
+	return 0;
+}
+
 static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
 {
+	uint64_t i;
 	uint32_t msi_obatu_index = 128 + 28;
 	uint64_t match_addr[4] = {0x7100000000,
 				0x7200000000,
 				0x7300000000,
 				0x7400000000};
 	uint64_t pc_msi_addr[4];
-	uint64_t ob_size = 32;
-	uint64_t out_addr_mask = ~((1UL << 32) - 1);
+	uint64_t ob_size = 12;
+	uint64_t out_addr_mask = ~((1UL << ob_size) - 1);
+
+	uint64_t ap_access_obatu_index = 128 + 24;
+	uint64_t ap_access_match_addr[4] = {0x6000000000,
+					0x5800000000,
+					0x5000000000,
+					0x6100000000};
+	uint64_t ap_access_out_addr[4];
+	uint64_t ap_access_ob_size = 22;
+	uint64_t ap_access_out_addr_mask = ~((1UL << ap_access_ob_size) - 1);
 
 	get_msi_addr(sg_ep, pc_msi_addr, sg_ep->func_num);
-	for (uint64_t i = 0; i < sizeof(match_addr) / sizeof(uint64_t); i++) {
+	for (i = 0; i < sizeof(match_addr) / sizeof(uint64_t); i++) {
 		prog_c2c_obatu(sg_ep, msi_obatu_index, 0x1, 0x1, match_addr[i],
 				(BM1690E_SOC_MSI_ADDR_FUNC_NUM(i)) | (pc_msi_addr[i] & out_addr_mask), ob_size);
 		msi_obatu_index++;
 	}
 
+	get_ap_access_buffer_addr(sg_ep, ap_access_out_addr, sg_ep->func_num);
+	for (i = 0; i < sizeof(ap_access_match_addr) / sizeof(uint64_t); i++) {
+		prog_c2c_obatu(sg_ep, ap_access_obatu_index, 0x1, 0x1, ap_access_match_addr[i],
+				ap_access_out_addr[i] & ap_access_out_addr_mask, ap_access_ob_size);
+		ap_access_obatu_index++;
+	}
 
 	return 0;
 }
@@ -1557,18 +1600,38 @@ static int bm1690eep_set_portcode(struct sophgo_pcie_ep *sg_ep)
 {
 	void *portcode = get_portcode_addr(sg_ep);
 	uint32_t portcode_val = 0;
+	uint32_t *portcode_route_bits;
 	__attribute__((unused)) uint32_t pld_portcode_route_bits[4] = {
 		0x5ddd0,
 		0x51105,
 		0x5d055,
 		0x50555,
 	};
-	uint32_t portcode_route_bits[4] = {
+	uint32_t default_port_code[4] = {
+		0x00000,
+		0x00000,
+		0x00000,
+		0x00000,
+	};
+	uint32_t sc11e_portcode_route_bits[4] = {
 		0x5ccc0,
 		0x51105,
 		0x5c055,
 		0x50555,
 	};
+	uint32_t hd12_portcode_route_bits[4] = {
+		0x54440,
+	};
+
+	if (sg_ep->board_type == SC11E)
+		portcode_route_bits = sc11e_portcode_route_bits;
+	else if (sg_ep->board_type == HD12)
+		portcode_route_bits = hd12_portcode_route_bits;
+	else {
+		dev_err(sg_ep->dev, "%s Unknown board type\n", __func__);
+		portcode_route_bits = default_port_code;
+	}
+
 
 	portcode_val = ((sg_ep->board_size << PORTCODE_BOARDSIZE_SHIFT) |
 			(sg_ep->board_id << PORTCODE_BOARDID_SHIFT) |

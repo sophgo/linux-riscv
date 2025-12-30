@@ -18,3 +18,6 @@ dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-sc11e-ap-chip0.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-sc11e-ap-chip1.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-sc11e-ap-chip2.dtb
 dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-sc11e-ap-chip3.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-evb.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-hd12-ap-chip0.dtb
+dtb-$(CONFIG_ARCH_SOPHGO) += bm1690e-hd12-ap-chip1.dtb

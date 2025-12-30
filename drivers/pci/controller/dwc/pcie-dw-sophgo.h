@@ -103,6 +103,11 @@ enum {
 };
 
 enum {
+	PCIE_CTRL_X8 = 0,
+	PCIE_CTRL_X4 = 1,
+};
+
+enum {
 	// RN: K2K; RNI: CCN
 	AXI_RNI = 0b1001,
 	AXI_RN = 0b1000,
@@ -133,9 +138,11 @@ struct sophgo_dw_pcie {
 	uint64_t		cdma_size;
 	uint32_t		c2c_pcie_rc;
 	uint32_t		chip_type;
+	uint32_t		board_type;
 	size_t			atu_size;
 	uint32_t		pcie_card;
 	uint32_t		pcie_route_config;
+	uint32_t		ctrl_type;
 	uint32_t		dst_boardid_shift;
 	uint32_t 		dst_chipid;
 	uint32_t		dst_chipid_shift;
@@ -292,6 +299,12 @@ struct sophgo_dw_pcie {
 struct wr_order_list {
 	uint64_t start_addr;
 	uint64_t size;
+};
+
+enum {
+	SC11 = 0,
+	SC11E,
+	HD12,
 };
 
 

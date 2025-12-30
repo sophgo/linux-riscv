@@ -705,20 +705,34 @@ static int sophgo_dw_pcie_get_resources(struct sophgo_dw_pcie *pcie)
 		pcie->pe_rst = of_get_named_gpio(dev->of_node, "prst", 0); //TODO:default high? or low?
 		dev_err(dev, "perst:[gpio%d]\n", pcie->pe_rst);
 
-		if (device_property_present(dev, "c2c0_x8_1") || device_property_present(dev, "c2c1_x8_1"))
+		if (device_property_present(dev, "c2c0_x8_1") || device_property_present(dev, "c2c1_x8_1")) {
 			pcie->pcie_route_config = C2C_PCIE_X8_1;
-		else if (device_property_present(dev, "c2c0_x8_0") || device_property_present(dev, "c2c1_x8_0"))
+			pcie->ctrl_type = PCIE_CTRL_X8;
+		} else if (device_property_present(dev, "c2c0_x8_0") || device_property_present(dev, "c2c1_x8_0")) {
 			pcie->pcie_route_config = C2C_PCIE_X8_0;
-		else if (device_property_present(dev, "c2c0_x4_1") || device_property_present(dev, "c2c1_x4_1"))
+			pcie->ctrl_type = PCIE_CTRL_X8;
+		} else if (device_property_present(dev, "c2c0_x4_1") || device_property_present(dev, "c2c1_x4_1")) {
 			pcie->pcie_route_config = C2C_PCIE_X4_1;
-		else if (device_property_present(dev, "c2c0_x4_0") || device_property_present(dev, "c2c1_x4_0"))
+			pcie->ctrl_type = PCIE_CTRL_X4;
+		} else if (device_property_present(dev, "c2c0_x4_0") || device_property_present(dev, "c2c1_x4_0")) {
 			pcie->pcie_route_config = C2C_PCIE_X4_0;
-		else if (device_property_present(dev, "cxp_x8"))
+			pcie->ctrl_type = PCIE_CTRL_X4;
+		} else if (device_property_present(dev, "cxp_x8")) {
 			pcie->pcie_route_config = CXP_PCIE_X8;
-		else if (device_property_present(dev, "cxp_x4"))
+			pcie->ctrl_type = PCIE_CTRL_X8;
+		} else if (device_property_present(dev, "cxp_x4")) {
 			pcie->pcie_route_config = CXP_PCIE_X4;
-		else
+			pcie->ctrl_type = PCIE_CTRL_X4;
+		} else {
 			dev_err(dev, "error pcie type\n");
+		}
+
+		if (device_property_present(dev, "sc11"))
+			pcie->board_type = SC11;
+		else if (device_property_present(dev, "sc11e"))
+			pcie->board_type = SC11E;
+		else if (device_property_present(dev, "hd12"))
+			pcie->board_type = HD12;
 
 		ret = of_property_read_u64_index(np, "cdma-reg", 0, &pcie->cdma_pa_start);
 		ret = of_property_read_u64_index(np, "cdma-reg", 1, &pcie->cdma_size);
@@ -1374,12 +1388,15 @@ static void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
 
 	do {
 		udelay(30);
-		if (pcie->num_lanes == 8) {
+		if (pcie->ctrl_type == PCIE_CTRL_X8) {
 			val = readl(base_addr + 0xfc);
 			val = (val >> 29) & 0x1; //bit29, radm_idle
-		} else {
+		} else if (pcie->ctrl_type == PCIE_CTRL_X4) {
 			val = readl(base_addr + 0xe8);
 			val = (val >> 21) & 0x1; //bit21, radm_idle
+		} else {
+			pr_err("error ctrl type %u\n", pcie->ctrl_type);
+			return;
 		}
 		timeout++;
 		if (timeout == 200) {
@@ -1852,16 +1869,29 @@ static int bm1690e_pcie_config_port_code(struct sophgo_dw_pcie *pcie)
 {
 	void *portcode = get_portcode_addr(pcie);
 	uint32_t portcode_val = 0;
+	uint32_t *portcode_route_bits;
 	__attribute__((unused)) uint32_t pld_portcode_route_bits[4] = {
 		0x25550,
 		0x35503,
 		0x25022,
 	};
-	uint32_t portcode_route_bits[4] = {
+	uint32_t sc11e_portcode_route_bits[4] = {
 		0xd5550,
 		0xc550c,
 		0x35033,
 	};
+	uint32_t hd12_portcode_route_bits[4] = {
+		0x54440,
+	};
+
+	if (pcie->board_type == SC11E)
+		portcode_route_bits = sc11e_portcode_route_bits;
+	else if (pcie->board_type == HD12)
+		portcode_route_bits = hd12_portcode_route_bits;
+	else {
+		dev_err(pcie->dev, "%s Unknown board type\n", __func__);
+		return -1;
+	}
 
 	portcode_val = ((pcie->board_size << PORTCODE_BOARDSIZE_SHIFT) |
 			(pcie->board_id << PORTCODE_BOARDID_SHIFT) |

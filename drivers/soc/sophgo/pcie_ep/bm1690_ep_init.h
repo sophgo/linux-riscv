@@ -211,7 +211,6 @@ struct wr_order_list {
 
 #define BAR0_SIZE	(0x400000)
 #define BAR1_SIZE	(0x400000)
-
 #define PCIE_CACHE_CTRL 0x1118
 
 #define BM1690E_MSI_GEN_ADDR(val)	(val)
@@ -224,6 +223,15 @@ struct wr_order_list {
 				 BM1690E_MSI_GEN_DST_CHIPID(7))
 
 #define BM1690E_SOC_MSI_ADDR_FUNC_NUM(val)	(val << 60)
+
+#define PCIEX8_SN_ADDR_CTRL	(0xe0)
+
+#define BM1690E_K2K_ROUTING(val)	((val) << 0)
+#define BM1690E_DST_BOARD_ID(val)	((val) << 3)
+#define BM1690E_MSI(val)		((val) << 11)
+#define BM1690E_FUNC_NUM(val)		((val) << 12)
+#define BM1690E_DST_CHIP_ID(val)	((val) << 15)
+
 
 
 #endif

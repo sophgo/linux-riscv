@@ -78,12 +78,13 @@
 			bus-width = <8>;
 		};
 
-		//c2c2 x8/x4
+		//c2c2 x8/x4 hd12 cascade double x4 phy
 		pciephy_2: pciephy_2@6C02f81000 {
 			compatible = "sophgo,pcie-phy";
 			#phy-cells = <1>;
 			reg = <0x6c 0x04781000 0x0 0x00001000>;
-			bus-width = <8>;
+			bus-width = <4>;
+			force-skip-init;
 		};
 
 		//c2c3 x8/x4
@@ -102,9 +103,9 @@
 			bus-width = <8>;
 		};
 
-		//c2c0_x8 cascade rc
+		//c2c0_x8
 		pcie_rc_0: pcie@6c00400000 {
-			compatible = "sophgo,bm1690e-pcie-host";
+			compatible = "sophgo,bm1690-c2c-pcie-host";
 			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -120,7 +121,6 @@
 			c2c_top =  <0x6C 0x007D0000  0x0 0x00020000>;
 			pcie-card;
 			cxp_x8;
-			sc11e;
 
 			phys = <&pciephy_0 0>;
 			phy-names = "pcie-phy";
@@ -149,10 +149,9 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
-			dst-chip = <0x3>;
+			board_size = <0x0 0x2>;
 
-			status = "okay";
+			status = "disable";
 		};
 
 		//c2c0_x4
@@ -202,7 +201,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -254,14 +253,14 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
 
 		//c2c1_x4
 		pcie_rc_3: pcie@6c02800000 {
-			compatible = "sophgo,bm1690-pcie-host";
+			compatible = "sophgo,bm1690-c2c-pcie-host";
 			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -306,7 +305,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -358,7 +357,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -410,7 +409,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -461,7 +460,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -512,7 +511,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -563,7 +562,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -614,7 +613,7 @@
 
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 
 			status = "disable";
 		};
@@ -629,7 +628,7 @@
 			pcie_id = <0x0 0x0>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
 			lane_num = <0x0 0x8>;
 			func_num = <0x0 0x1>;
@@ -662,9 +661,9 @@
 			pcie_id = <0x0 0x1>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
-			lane_num = <0x0 0x8>;
+			lane_num = <0x0 0x4>;
 			func_num = <0x0 0x1>;
 			cxp_x4;
 
@@ -692,13 +691,13 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x0>;
+			pcie_id = <0x0 0x2>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
 			lane_num = <0x0 0x8>;
-			func_num = <0x0 0x4>;
+			func_num = <0x0 0x1>;
 			cxp_x8;
 
 			reg =	<0x6c 0x02400000  0x0 0x00300000>,
@@ -725,12 +724,12 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x1>;
+			pcie_id = <0x0 0x3>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
-			lane_num = <0x0 0x8>;
+			lane_num = <0x0 0x4>;
 			func_num = <0x0 0x1>;
 			cxp_x4;
 
@@ -753,18 +752,18 @@
 
 		//c2c2_x8
 		pcie_ep_4: pcie_ep@6c04400000 {
-			compatible = "sophgo,c2c-link-ep";
+			compatible = "sophgo,pcie-link-ep";
 			chip_type = "bm1690e";
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x0>;
+			pcie_id = <0x0 0x4>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
 			lane_num = <0x0 0x8>;
-			func_num = <0x0 0x3>;
+			func_num = <0x0 0x1>;
 			cxp_x8;
 
 			reg =	<0x6c 0x04400000  0x0 0x00300000>,
@@ -791,12 +790,12 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x1>;
+			pcie_id = <0x0 0x5>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
-			lane_num = <0x0 0x8>;
+			lane_num = <0x0 0x4>;
 			func_num = <0x0 0x1>;
 			cxp_x4;
 
@@ -817,22 +816,21 @@
 			status = "disable";
 		};
 
-		//c2c3_x8 cascade
+		//c2c3_x8
 		pcie_ep_6: pcie_ep@6c06400000 {
-			compatible = "sophgo,pcie-link-ep";
+			compatible = "sophgo,c2c-link-ep";
 			chip_type = "bm1690e";
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x0>;
+			pcie_id = <0x0 0x6>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
 			lane_num = <0x0 0x8>;
-			func_num = <0x0 0x3>;
+			func_num = <0x0 0x1>;
 			cxp_x8;
-			sc11e;
 
 			reg =	<0x6c 0x06400000  0x0 0x00300000>,
 				<0x6c 0x06700000  0x0 0x00004000>,
@@ -850,7 +848,75 @@
 
 			slv_range = <0x58 0x00000000 0x58 0xffffffff>;
 
+			status = "disable";
+		};
+
+		//c2c3_x4
+		pcie_ep_7: pcie_ep@6c06800000 {
+			compatible = "sophgo,c2c-link-ep";
+			chip_type = "bm1690e";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;//this is must, must, must, must
+			pcie_id = <0x0 0x7>;
+			socket_id = <0x0 0x1>;
+			global_chipid = <0x0 0x1>;
+			board_size = <0x0 0x2>;
+			speed = <0x0 0x5>;
+			lane_num = <0x0 0x4>;
+			func_num = <0x0 0x1>;
+			cxp_x4;
+
+			reg =   <0x6c 0x06800000 0x00000000 0x00300000>,
+				<0x6c 0x06b00000 0x00000000 0x00004000>,
+				<0x6c 0x06b80000 0x00000000 0x00001000>;
+			reg-names = "dbi", "atu", "ctrl";
+
+			c2c_config_range = <0x6c 0x06000000 0x00000000 0x01ffffff>;
+			c2c_top = <0x6c 0x067d0000  0x0 0x00002000>;
+			cdma-reg = <0x6b 0x067b0000 0x0 0x10000>;
+
+			phys = <&pciephy_3 1>;
+			phy-names = "pcie-phy";
+
+			perst-gpios = <&port0a 24 0>;
+
+			status = "disable";
+		};
+
+		//c2c4_x8 ctrl x4 phy for hd12 cascade
+		pcie_ep_8: pcie_ep@6c08400000 {
+			compatible = "sophgo,c2c-link-ep";
+			chip_type = "bm1690e";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;//this is must, must, must, must
+			pcie_id = <0x0 0x8>;
+			socket_id = <0x0 0x1>;
+			global_chipid = <0x0 0x1>;
+			board_size = <0x0 0x2>;
+			speed = <0x0 0x5>;
+			lane_num = <0x0 0x4>;
+			func_num = <0x0 0x1>;
+			cxp_x8;
+			hd12;
+
+			reg =	<0x6c 0x08400000  0x0 0x00300000>,
+				<0x6c 0x08700000  0x0 0x00004000>,
+				<0x6c 0x08780000  0x0 0x00001000>;
+			reg-names = "dbi", "atu", "ctrl";
+
+			c2c_config_range = <0x6c 0x08000000 0x00000000 0x01ffffff>;
+			c2c_top = <0x6c 0x087d0000  0x0 0x00002000>;
+			cdma-reg = <0x6b 0x087a0000 0x0 0x10000>;
+
+			phys = <&pciephy_4 0>;
+			phy-names = "pcie-phy";
+
+			perst-gpios = <&port0a 25 0>;
+
 			status = "okay";
+
 
 			sophgo_card@0 {
 				compatible = "sophgo,sophgo-card";
@@ -887,72 +953,6 @@
 			};
 		};
 
-		//c2c3_x4
-		pcie_ep_7: pcie_ep@6c06800000 {
-			compatible = "sophgo,c2c-link-ep";
-			chip_type = "bm1690e";
-			#address-cells = <2>;
-			#size-cells = <2>;
-			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x1>;
-			socket_id = <0x0 0x1>;
-			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
-			speed = <0x0 0x5>;
-			lane_num = <0x0 0x8>;
-			func_num = <0x0 0x1>;
-			cxp_x4;
-
-			reg =   <0x6c 0x06800000 0x00000000 0x00300000>,
-				<0x6c 0x06b00000 0x00000000 0x00004000>,
-				<0x6c 0x06b80000 0x00000000 0x00001000>;
-			reg-names = "dbi", "atu", "ctrl";
-
-			c2c_config_range = <0x6c 0x06000000 0x00000000 0x01ffffff>;
-			c2c_top = <0x6c 0x067d0000  0x0 0x00002000>;
-			cdma-reg = <0x6b 0x067b0000 0x0 0x10000>;
-
-			phys = <&pciephy_3 1>;
-			phy-names = "pcie-phy";
-
-			perst-gpios = <&port0a 24 0>;
-
-			status = "disable";
-		};
-
-		//c2c4_x8
-		pcie_ep_8: pcie_ep@6c08400000 {
-			compatible = "sophgo,c2c-link-ep";
-			chip_type = "bm1690e";
-			#address-cells = <2>;
-			#size-cells = <2>;
-			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x0>;
-			socket_id = <0x0 0x1>;
-			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
-			speed = <0x0 0x5>;
-			lane_num = <0x0 0x8>;
-			func_num = <0x0 0x1>;
-			cxp_x8;
-
-			reg =	<0x6c 0x08400000  0x0 0x00300000>,
-				<0x6c 0x08700000  0x0 0x00004000>,
-				<0x6c 0x08780000  0x0 0x00001000>;
-			reg-names = "dbi", "atu", "ctrl";
-
-			c2c_config_range = <0x6c 0x08000000 0x00000000 0x01ffffff>;
-			c2c_top = <0x6c 0x087d0000  0x0 0x00002000>;
-			cdma-reg = <0x6b 0x087a0000 0x0 0x10000>;
-
-			phys = <&pciephy_4 0>;
-			phy-names = "pcie-phy";
-
-			perst-gpios = <&port0a 25 0>;
-
-			status = "disable";
-		};
-
 		//c2c4_x4
 		pcie_ep_9: pcie_ep@6c08800000 {
 			compatible = "sophgo,c2c-link-ep";
@@ -960,12 +960,12 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges;//this is must, must, must, must
-			pcie_id = <0x0 0x1>;
+			pcie_id = <0x0 0x9>;
 			socket_id = <0x0 0x1>;
 			global_chipid = <0x0 0x1>;
-			board_size = <0x0 0x4>;
+			board_size = <0x0 0x2>;
 			speed = <0x0 0x5>;
-			lane_num = <0x0 0x8>;
+			lane_num = <0x0 0x4>;
 			func_num = <0x0 0x1>;
 			cxp_x4;
 

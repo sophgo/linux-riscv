@@ -55,6 +55,12 @@ static int sophgo_pcie_link_probe(struct platform_device *pdev)
 
 	pr_err("[pcie ep] pcie link probe\n");
 
+	sg_ep->top_base = devm_ioremap(dev, 0x7050000000, 0x1000);
+	if (!sg_ep->top_base) {
+		pr_err("top base ioremap failed\n");
+		return -ENOMEM;
+	}
+
 	if (sg_ep->set_vector)
 		sg_ep->set_vector(sg_ep);
 	if (sg_ep->set_ib_iatu)
@@ -282,6 +288,12 @@ static int sophgo_pcie_ep_get_dtbif(struct platform_device *pdev, uint64_t link_
 		return -EINVAL;
 	}
 
+	if (device_property_present(dev, "sc11"))
+		sg_ep->board_type = SC11;
+	else if (device_property_present(dev, "sc11e"))
+		sg_ep->board_type = SC11E;
+	else if (device_property_present(dev, "hd12"))
+		sg_ep->board_type = HD12;
 	return 0;
 }
 

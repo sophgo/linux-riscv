@@ -76,6 +76,7 @@ struct sophgo_pcie_ep {
 	void __iomem *share_vector_reg;
 	void __iomem *clr_irq;
 	void __iomem *cdma_reg_base;
+	void __iomem *top_base;
 	uint64_t cdma_pa_start;
 	uint64_t cdma_size;
 	uint64_t clr_irq_data;
@@ -98,6 +99,7 @@ struct sophgo_pcie_ep {
 	uint64_t slv_start_addr;
 	uint64_t slv_end_addr;
 	int c2c_enable;
+	uint32_t board_type;
 	struct vector_info vector_info[VECTOR_MAX];
 	struct sophgo_pcie_vfun vfun[PCIE_VFUN_MAX];
 	int (*set_vector)(struct sophgo_pcie_ep *ep);
@@ -118,6 +120,13 @@ enum soc_work_mode {
 	SOC_WORK_MODE_SERVER = 0,
 	SOC_WORK_MODE_AI,
 	SOC_WORK_MODE_BUTT
+};
+
+enum {
+	SC11 = 0,
+	BM1690EEVB,
+	SC11E,
+	HD12,
 };
 
 

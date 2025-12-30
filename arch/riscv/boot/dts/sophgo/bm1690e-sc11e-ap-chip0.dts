@@ -10,9 +10,9 @@
 
 / {
 	/delete-node/ memory@80200000;
-	memory@ea0200000 {
+	memory@80200000 {
 		device_type = "memory";
-		reg = <0x0000000e 0xa0200000 0x00000000 0x4fe00000>;
+		reg = <0x00000000 0x80200000 0x00000000 0x97e00000>;
 	};
 
 	aliases {
@@ -20,7 +20,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0xeab000000,32M maxcpus=4";
+		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,64M maxcpus=4";
 		stdout-path = "serial0";
 	};
 
@@ -176,7 +176,7 @@
 			phy-names = "pcie-phy";
 
 			max-link-speed = <4>;
-			num-lanes = <8>;
+			num-lanes = <4>;
 
 			prst = <&port0a 18 0>;
 
@@ -259,7 +259,7 @@
 
 		//c2c1_x4
 		pcie_rc_3: pcie@6c02800000 {
-			compatible = "sophgo,bm1690-pcie-host";
+			compatible = "sophgo,bm1690-c2c-pcie-host";
 			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -281,7 +281,7 @@
 			phy-names = "pcie-phy";
 
 			max-link-speed = <4>;
-			num-lanes = <8>;
+			num-lanes = <4>;
 
 			prst = <&port0a 20 0>;
 
@@ -305,7 +305,6 @@
 			socket_id = <0x0 0x0>;
 			global_chipid = <0x0 0x0>;
 			board_size = <0x0 0x4>;
-			dst-chip = <0x2>;
 
 			status = "disable";
 		};
@@ -386,7 +385,7 @@
 			phy-names = "pcie-phy";
 
 			max-link-speed = <4>;
-			num-lanes = <8>;
+			num-lanes = <4>;
 
 			prst = <&port0a 22 0>;
 
@@ -432,6 +431,7 @@
 			c2c_top = <0x6C 0x067D0000  0x0 0x00020000>;
 			pcie-card;
 			cxp_x8;
+			sc11e;
 
 			phys = <&pciephy_3 0>;
 			phy-names = "pcie-phy";
@@ -489,7 +489,7 @@
 			phy-names = "pcie-phy";
 
 			max-link-speed = <4>;
-			num-lanes = <8>;
+			num-lanes = <4>;
 
 			prst = <&port0a 24 0>;
 
@@ -591,7 +591,7 @@
 			phy-names = "pcie-phy";
 
 			max-link-speed = <4>;
-			num-lanes = <8>;
+			num-lanes = <4>;
 
 			prst = <&port0a 26 0>;
 
@@ -883,7 +883,7 @@
 			status = "disable";
 		};
 
-		//c2c4_x8
+		//c2c4_x8 cascade
 		pcie_ep_8: pcie_ep@6c08400000 {
 			compatible = "sophgo,pcie-link-ep";
 			chip_type = "bm1690e";
@@ -898,6 +898,7 @@
 			lane_num = <0x0 0x8>;
 			func_num = <0x0 0x4>;
 			cxp_x8;
+			sc11e;
 
 			reg =	<0x6c 0x08400000  0x0 0x00300000>,
 				<0x6c 0x08700000  0x0 0x00004000>,
@@ -913,15 +914,18 @@
 
 			perst-gpios = <&port0a 25 0>;
 
+			slv_range = <0x60 0x00000000 0x60 0xffffffff>;
+
 			status = "okay";
 
 			sophgo_card@0 {
 				compatible = "sophgo,sophgo-card";
-				reg = <0xe  0xf8000000 0x00000000 0x01400000>,
+				reg =   <0x1  0x18000000 0x00000000 0x01400000>,
 					<0x70 0x101ff000 0x00000000 0x00001000>,
 					<0x70 0x50000000 0x00000000 0x00001000>;
 				reg-names = "share-memory", "config_file";
 
+				mirror-share-memory = <0x60 0x00000000 0x0 0x400000>;
 				host-channel-num = <1>;
 				tpu-channel-num = <4>;
 				media-channel-num = <0>;

@@ -98,6 +98,7 @@ struct sophgo_pcie_ep {
 	uint64_t host_ddr_addr;
 	uint64_t slv_start_addr;
 	uint64_t slv_end_addr;
+	uint64_t boot_flag_addr;
 	int c2c_enable;
 	uint32_t board_type;
 	struct vector_info vector_info[VECTOR_MAX];

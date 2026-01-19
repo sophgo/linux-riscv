@@ -33,17 +33,17 @@ static struct vector_info *get_vector(struct sophgo_pcie_ep *sg_ep, int vector_n
 {
 	struct vector_info *vector;
 
-	pr_err("vector nm: %d, vector flag:%d\n", vector_nm, sg_ep->vector_info[vector_nm].vector_flag);
+	pr_info("vector nm: %d, vector flag:%d\n", vector_nm, sg_ep->vector_info[vector_nm].vector_flag);
 	if (sg_ep->vector_info[vector_nm].vector_flag != VECTOR_INVALID && vector_nm < sg_ep->vector_allocated) {
 		vector = &sg_ep->vector_info[vector_nm];
-		pr_err("get vector:%px, va:%px, da:0x%llx\n", vector, vector->msi_va, vector->msi_data);
+		pr_info("get vector:%px, va:%px, da:0x%llx\n", vector, vector->msi_va, vector->msi_data);
 		return &(sg_ep->vector_info[vector_nm]);
 	}
 	else
 		return NULL;
 }
 
-static int sophgo_pcie_link_probe(struct platform_device *pdev)
+static int sophgo_pcie_link_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sophgo_pcie_ep *sg_ep = dev_get_drvdata(dev);
@@ -53,9 +53,9 @@ static int sophgo_pcie_link_probe(struct platform_device *pdev)
 	int ret = 0;
 	int resource_num = 0;
 
-	pr_err("[pcie ep] pcie link probe\n");
+	pr_info("[pcie ep] pcie link probe\n");
 
-	sg_ep->top_base = devm_ioremap(dev, 0x7050000000, 0x1000);
+	sg_ep->top_base = devm_ioremap(dev, sg_ep->boot_flag_addr, 0x1000);
 	if (!sg_ep->top_base) {
 		pr_err("top base ioremap failed\n");
 		return -ENOMEM;
@@ -83,14 +83,18 @@ static int sophgo_pcie_link_probe(struct platform_device *pdev)
 	child_node = of_get_compatible_child(dev->of_node, "sophgo,sophgo-card");
 	if (!child_node) {
 		pr_err("failed to find sophgo-card node\n");
+		kfree(res);
 		return -ENODEV;
 	}
 
 	child_pdev = platform_device_alloc("sophgo-card", PLATFORM_DEVID_AUTO);
-	if (!pdev)
+	if (!child_pdev) {
+		of_node_put(child_node);
+		kfree(res);
 		return -ENOMEM;
+	}
 
-	child_pdev->dev.of_node = of_node_get(child_node);
+	child_pdev->dev.of_node = child_node;
 
 	ret = of_irq_to_resource_table(child_node, res, 32);
 	if (!ret)
@@ -113,12 +117,16 @@ static int sophgo_pcie_link_probe(struct platform_device *pdev)
 	ret = platform_device_add_resources(child_pdev, res, resource_num);
 	if (ret) {
 		pr_err("[pcie ep] platform_device_add_resources failed\n");
+		platform_device_put(child_pdev);
+		kfree(res);
 		return ret;
 	}
 
 	ret = platform_device_add(child_pdev);
 	if (ret) {
 		pr_err("[pcie ep] platform_device_add failed\n");
+		platform_device_put(child_pdev);
+		kfree(res);
 		return ret;
 	}
 
@@ -166,7 +174,7 @@ static irqreturn_t perst_interrupt(int irq, void *dev_id)
 {
 	struct sophgo_pcie_ep *sg_ep = (struct sophgo_pcie_ep *)dev_id;
 
-	pr_err("[%s] get perst interrupt, clr irq va:0x%llx\n", sg_ep->name, (uint64_t)sg_ep->clr_irq);
+	pr_info("[%s] get perst interrupt, clr irq va:0x%llx\n", sg_ep->name, (uint64_t)sg_ep->clr_irq);
 
 	if (sg_ep->clr_irq)
 		writel(sg_ep->clr_irq_data, sg_ep->clr_irq);
@@ -184,12 +192,12 @@ static ssize_t c2c_ep_enable_store(struct device *dev,
 	int enable;
 	int ret;
 
-	pr_err("c2c enable store\n");
+	pr_info("c2c enable store\n");
 	memcpy(buf, ubuf, len);
 	ret = kstrtoint(buf, 0, &enable);
 
 	if (enable == 0 || enable == 1) {
-		pr_err("enable = %d\n", enable);
+		pr_info("enable = %d\n", enable);
 		sg_ep->c2c_enable = enable;
 		schedule_delayed_work(&sg_ep->link_work, 0);
 
@@ -216,7 +224,7 @@ static ssize_t c2c_ep_enable_show(struct device *dev,
 }
 
 static DEVICE_ATTR_RW(c2c_ep_enable);
-static int sophgo_c2c_ep_enable_probe(struct platform_device *pdev)
+static int sophgo_c2c_ep_enable(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	int ret;
@@ -231,20 +239,20 @@ static void c2c_init_ep(struct work_struct *p_work)
 {
 	struct sophgo_pcie_ep *sg_ep = container_of(p_work, struct sophgo_pcie_ep, link_work.work);
 
-	pr_err("sophgo pcie c2c ep dealy work queue\n");
+	pr_info("sophgo pcie c2c ep dealy work queue\n");
 
 	bm1690_pcie_init_link(sg_ep);
 	sophgo_pcie_ep_config_cdma_route(sg_ep);
 }
 
-static int sophgo_c2c_link_probe(struct platform_device *pdev)
+static int sophgo_c2c_link_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct sophgo_pcie_ep *sg_ep = dev_get_drvdata(dev);
 	int ret;
 
 	INIT_DELAYED_WORK(&sg_ep->link_work, c2c_init_ep);
-	sophgo_c2c_ep_enable_probe(pdev);
+	sophgo_c2c_ep_enable(pdev);
 
 	ret = request_irq(sg_ep->perst_irqnr, perst_interrupt, IRQF_TRIGGER_RISING,
 			  sg_ep->name, sg_ep);
@@ -308,7 +316,7 @@ static int sophgo_ep_probe(struct platform_device *pdev)
 
 	sg_ep = kzalloc(sizeof(struct sophgo_pcie_ep), GFP_KERNEL);
 	if (!sg_ep)
-		goto fail;
+		return -ENOMEM;
 	dev_set_drvdata(dev, sg_ep);
 	sg_ep->dev = dev;
 
@@ -316,28 +324,56 @@ static int sophgo_ep_probe(struct platform_device *pdev)
 	list_add(&sg_ep->pcie_ep_list, &ep_list_head);
 	spin_unlock(&ep_list_lock);
 
-	sophgo_pcie_ep_get_dtbif(pdev, link_role);
+	ret = sophgo_pcie_ep_get_dtbif(pdev, link_role);
+	if (ret)
+		goto err_get_dtbif;
 
 	switch (link_role) {
 	case PCIE_DATA_LINK_PCIE:
-		sophgo_pcie_link_probe(pdev);
+		ret = sophgo_pcie_link_init(pdev);
 		break;
 	case PCIE_DATA_LINK_C2C:
-		sophgo_c2c_link_probe(pdev);
+		ret = sophgo_c2c_link_init(pdev);
 		break;
 	}
 
+	if (ret)
+		goto err_link_init;
+
 	return 0;
 
-fail:
-	pr_err("malloc sg_ep failed\n");
-
+err_link_init:
+err_get_dtbif:
+	spin_lock(&ep_list_lock);
+	list_del(&sg_ep->pcie_ep_list);
+	spin_unlock(&ep_list_lock);
+	kfree(sg_ep);
+	dev_set_drvdata(dev, NULL);
 	return ret;
 }
 
 static void sophgo_ep_remove(struct platform_device *pdev)
 {
-	return;
+	struct device *dev = &pdev->dev;
+	struct sophgo_pcie_ep *sg_ep = dev_get_drvdata(dev);
+
+	if (!sg_ep)
+		return;
+
+	if (sg_ep->perst_irqnr > 0)
+		free_irq(sg_ep->perst_irqnr, sg_ep);
+
+	cancel_delayed_work_sync(&sg_ep->link_work);
+	cancel_delayed_work_sync(&sg_ep->probe_delayed_work);
+
+	device_remove_file(dev, &dev_attr_c2c_ep_enable);
+
+	spin_lock(&ep_list_lock);
+	list_del(&sg_ep->pcie_ep_list);
+	spin_unlock(&ep_list_lock);
+
+	kfree(sg_ep);
+	dev_set_drvdata(dev, NULL);
 }
 
 struct vector_info *sophgo_ep_alloc_vector(int pcie_id, int vector_id)
@@ -356,7 +392,7 @@ struct vector_info *sophgo_ep_alloc_vector(int pcie_id, int vector_id)
 		vector = get_vector(sg_ep, vector_id);
 		if (vector != NULL && vector->allocated_num == 0) {
 			vector->allocated_num++;
-			pr_err("vp:%px, alloc vector %d, vector msi va:%px, vector msi data:0x%llx\n",
+			pr_info("vp:%px, alloc vector %d, vector msi va:%px, vector msi data:0x%llx\n",
 				vector, vector_id, vector->msi_va, vector->msi_data);
 			return vector;
 		}

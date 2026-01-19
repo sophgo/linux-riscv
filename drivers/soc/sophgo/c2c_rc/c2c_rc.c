@@ -150,20 +150,20 @@ static ssize_t c2c_enable_show(struct device *dev,
 
 static int dump_pcie_info(struct pcie_info *pcie_info)
 {
-	pr_err("pcie[%llu]  status:%s\n", pcie_info->pcie_id, pcie_info->enable == 1 ? "enable": "disable");
-	pr_err("	slot id:0x%llx\n", pcie_info->slot_id);
-	pr_err("	socket id:0x%llx\n", pcie_info->socket_id);
-	pr_err("	send port:0x%llx, recv port:0x%llx\n", pcie_info->send_port, pcie_info->recv_port);
-	pr_err("	data link type:%s, link role:%s, gpio:%llu\n",
+	pr_info("pcie[%llu]  status:%s\n", pcie_info->pcie_id, pcie_info->enable == 1 ? "enable": "disable");
+	pr_info("	slot id:0x%llx\n", pcie_info->slot_id);
+	pr_info("	socket id:0x%llx\n", pcie_info->socket_id);
+	pr_info("	send port:0x%llx, recv port:0x%llx\n", pcie_info->send_port, pcie_info->recv_port);
+	pr_info("	data link type:%s, link role:%s, gpio:%llu\n",
 		pcie_info->data_link_type == PCIE_DATA_LINK_C2C ?
 		"c2c" : (pcie_info->data_link_type == PCIE_LINK_ROLE_RC ? "cascade" : "error"),
 		pcie_info->link_role == PCIE_LINK_ROLE_RC ? "rc" : (pcie_info->link_role == PCIE_LINK_ROLE_EP ?
 		"ep" : "error"),
 		pcie_info->link_role_gpio);
-	pr_err("	perst gpio:%llu\n", pcie_info->perst_gpio);
-	pr_err("	peer slot id:%llu, peer socket id:%llu, peer pcie id:%llu\n\n",
+	pr_info("	perst gpio:%llu\n", pcie_info->perst_gpio);
+	pr_info("	peer slot id:%llu, peer socket id:%llu, peer pcie id:%llu\n\n",
 		pcie_info->peer_slotid, pcie_info->peer_socketid, pcie_info->peer_pcie_id);
-	pr_err("	expect gen%llu_x%llu, current gen%llu_x%llu\n",
+	pr_info("	expect gen%llu_x%llu, current gen%llu_x%llu\n",
 		pcie_info->max_link_speed, pcie_info->phy_role,
 		pcie_info->current_link_speed, pcie_info->current_link_width);
 

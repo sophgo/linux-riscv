@@ -160,7 +160,7 @@ static void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
 
 	//config subdevice id
 	writel(PCIE_DATA_LINK_C2C_DEVICEID << 16, pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG);
-	pr_err("config dbi subdevice id:0x%x\n", readl(pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG));
+	pr_info("config dbi subdevice id:0x%x\n", readl(pcie_dbi_base + SUBSYSTEM_ID_SUBSYTEM_VENDOR_DI_REG));
 
 	val = readl(pcie_dbi_base + 0xc);
 	if (func_num == 0x1)
@@ -517,7 +517,7 @@ static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 
 	// keep msi_user_data all 0
 	msi_data = readl(pcie_dbi_base + 0x5c);
-	pr_err("msi data from pcie:0x%x\n", msi_data);
+	pr_info("msi data from pcie:0x%x\n", msi_data);
 	writel(msi_data, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_USER_DATA_REG));
 
 	// First configure msi_gen_en enable
@@ -529,10 +529,10 @@ static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 		// Second assign msi_lower_addr and msi_upper_addr
 		msi_addr = readl(pcie_dbi_base + 0x54);
 		writel(msi_addr, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_LOWER_ADDR_REG));
-		pr_err("msi_addr:0x%x\n", msi_addr);
+		pr_info("msi_addr:0x%x\n", msi_addr);
 		msi_addr = readl(pcie_dbi_base + 0x58);
 		writel(msi_addr, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG));
-		pr_err("msi_addr:0x%x\n", msi_addr);
+		pr_info("msi_addr:0x%x\n", msi_addr);
 	} else {
 		msi_addr = readl(pcie_dbi_base + 0x54);
 		pr_info("msi low addr = 0x%x\n", msi_addr);
@@ -686,7 +686,7 @@ static int bm1690e_setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 
 	// keep msi_user_data all 0
 	msi_data = readl(pcie_dbi_base + 0x5c);
-	pr_err("msi data from pcie:0x%x\n", msi_data);
+	pr_info("msi data from pcie:0x%x\n", msi_data);
 	writel(msi_data, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_USER_DATA_REG));
 
 	// First configure msi_gen_en enable
@@ -696,12 +696,12 @@ static int bm1690e_setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 
 	msi_addr = readl(pcie_dbi_base + 0x58);
 	if (msi_addr != 0x0)
-		pr_err("msi high addr is not 0x0,now:0x%x there may be some error in msi gen module\n", msi_addr);
+		pr_info("msi high addr is not 0x0,now:0x%x there may be some error in msi gen module\n", msi_addr);
 
 	msi_addr = readl(pcie_dbi_base + 0x54);
 	writel(msi_addr, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_LOWER_ADDR_REG));
 	writel(msi_addr_high[socket_id], (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_UPPER_ADDR_REG));
-	pr_err("msi_addr:0x%x_0x%x\n", msi_addr_high[socket_id], msi_addr);
+	pr_info("msi_addr:0x%x_0x%x\n", msi_addr_high[socket_id], msi_addr);
 
 	// **********************************************************************************
 	// 2. EP read MSI control register, and configure msi_gen_multi_msi_en
@@ -726,11 +726,11 @@ static int setup_msi_info(struct sophgo_pcie_ep *sg_ep)
 	int i;
 
 	pci_msi_ctrl = readl(sg_ep->dbi_base + PCI_MSI_CAP_ID_NEXT_CTRL_REG);
-	pr_err("pci_msi_ctrl = 0x%x\n", pci_msi_ctrl);
+	pr_info("pci_msi_ctrl = 0x%x\n", pci_msi_ctrl);
 	sg_ep->vector_allocated = (pci_msi_ctrl >> PCI_MSI_MULTIPLE_MSG_EN_SHIFT) & PCI_MSI_MULTIPLE_MSG_EN_MASK;
-	pr_err("vector allocated:0x%llx\n", sg_ep->vector_allocated);
+	pr_info("vector allocated:0x%llx\n", sg_ep->vector_allocated);
 	sg_ep->vector_allocated = 1 << sg_ep->vector_allocated;
-	pr_err("vector allocated:0x%llx\n", sg_ep->vector_allocated);
+	pr_info("vector allocated:0x%llx\n", sg_ep->vector_allocated);
 
 	if (sg_ep->vector_allocated == 1) {
 		for (int i = 0; i < VECTOR_MAX; i++) {
@@ -739,12 +739,12 @@ static int setup_msi_info(struct sophgo_pcie_ep *sg_ep)
 			sg_ep->vector_info[i].msi_data = 0x1;
 			sg_ep->vector_info[i].vector_flag = VECTOR_SHARED;
 			sg_ep->vector_info[i].share_vector_reg = sg_ep->share_vector_reg;
-			pr_err("msi:%d, va:%p, data:0x%llx\n", i, sg_ep->vector_info[i].msi_va,
+			pr_info("msi:%d, va:%p, data:0x%llx\n", i, sg_ep->vector_info[i].msi_va,
 				sg_ep->vector_info[i].msi_data);
 		}
 	} else {
 		if (sg_ep->vector_allocated > VECTOR_MAX) {
-			pr_err("host allocated to many vector, fix to %d\n", VECTOR_MAX);
+			pr_info("host allocated to many vector, fix to %d\n", VECTOR_MAX);
 			sg_ep->vector_allocated = VECTOR_MAX;
 		}
 
@@ -754,7 +754,7 @@ static int setup_msi_info(struct sophgo_pcie_ep *sg_ep)
 			sg_ep->vector_info[i].msi_data = 0x1 << i;
 			sg_ep->vector_info[i].vector_flag = VECTOR_EXCLUSIVE;
 			sg_ep->vector_info[i].share_vector_reg = sg_ep->share_vector_reg;
-			pr_err("msi:%d, va:%p, data:0x%llx\n", i, sg_ep->vector_info[i].msi_va,
+			pr_info("msi:%d, va:%p, data:0x%llx\n", i, sg_ep->vector_info[i].msi_va,
 				sg_ep->vector_info[i].msi_data);
 		}
 		for (; i < VECTOR_MAX; i++) {
@@ -873,7 +873,7 @@ static int prog_outbound_iatu(struct sophgo_pcie_ep *sg_ep, int index, uint32_t 
 	uint64_t limit_addr = 0;
 	uint32_t type = PCIE_ATU_TYPE_MEM;
 
-	pr_err("ep config ob %2datu:0x%llx -> 0x%llx, [0x%llx]\n", index, cpu_addr,
+	pr_info("ep config ob %2datu:0x%llx -> 0x%llx, [0x%llx]\n", index, cpu_addr,
 		pci_addr, size);
 
 	limit_addr = cpu_addr + size - 1;
@@ -958,7 +958,7 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 	host_ring_buf_addr = readl(top_base + 0x1fc);
 	host_ring_buf_addr = host_ring_buf_addr << 32;
 	host_ring_buf_addr |= readl(top_base + 0x1f8);
-	pr_err("host ring buffer addr:0x%llx\n", host_ring_buf_addr);
+	pr_info("host ring buffer addr:0x%llx\n", host_ring_buf_addr);
 
 	struct iatu socket0_ob_atu[3] = {
 		[0] = {
@@ -998,7 +998,7 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 		for (int i = 0; i < sizeof(socket0_ob_atu) / sizeof(struct iatu); i++) {
 			socket0_ob_atu[i].index = ava_atu++;
 			if (socket0_ob_atu[i].index < 0) {
-				pr_err("index%d no available ob iatu\n", i);
+				pr_info("index%d no available ob iatu\n", i);
 				return -1;
 			}
 			prog_outbound_iatu(ep, socket0_ob_atu[i].index, socket0_ob_atu[i].func,
@@ -1012,7 +1012,7 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 		for (int i = 0; i < sizeof(socket1_ob_atu) / sizeof(struct iatu); i++) {
 			socket1_ob_atu[i].index = find_available_ob_atu(ep);
 			if (socket1_ob_atu[i].index < 0) {
-				pr_err("index%d no available ob iatu\n", i);
+				pr_info("index%d no available ob iatu\n", i);
 				return -1;
 			}
 			prog_outbound_iatu(ep, socket1_ob_atu[i].index, socket1_ob_atu[i].func,
@@ -1020,7 +1020,7 @@ static int bm1690ep_set_ob_iatu(struct sophgo_pcie_ep *ep)
 					socket1_ob_atu[i].size);
 		}
 	} else {
-		pr_err("%s error socket id %llu\n", __func__, ep->ep_info.socket_id);
+		pr_info("%s error socket id %llu\n", __func__, ep->ep_info.socket_id);
 	}
 
 
@@ -1079,7 +1079,7 @@ static int bm1690eep_set_ib_iatu(struct sophgo_pcie_ep *sg_ep)
 
 	chipid = sg_ep->ep_info.socket_id;
 	barid = 3 * chipid;
-	pr_err("chipid:0x%llx, barid:0x%llx\n", chipid, barid);
+	pr_info("chipid:0x%llx, barid:0x%llx\n", chipid, barid);
 
 	for (func = 0; func < sg_ep->func_num; func++) {
 		atu.func = func;
@@ -1143,7 +1143,7 @@ static int bm1690eep_set_ob_iatu(struct sophgo_pcie_ep *sg_ep)
 static int bm1690eep_set_iatu_ob(struct sophgo_pcie_ep *sg_ep)
 {
 	if (sg_ep->ep_info.socket_id != 0) {
-		pr_err("only socket0 need config c2c atu, now socket id is 0x%llx\n",
+		pr_info("only socket0 need config c2c atu, now socket id is 0x%llx\n",
 			sg_ep->ep_info.socket_id);
 		return 0;
 	}
@@ -1209,22 +1209,24 @@ static void pcie_config_slv_mapping(struct sophgo_pcie_ep *pcie)
 	writel((up_end_addr & 0xffffffff), (ctrl_reg_base + PCIE_CTRL_SN_UP_END_ADDR_REG));
 
 
-	pr_err("config slv mapping 0x%llx - 0x%llx\n", up_start_addr, up_end_addr);
+	pr_info("config slv mapping 0x%llx - 0x%llx\n", up_start_addr, up_end_addr);
 }
 
 static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val;
 
+	// configure the memory attribute to devcie
 	val = readl(sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
 	val |= (0x1 << 4);
 	writel(val, sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
 
+	// configure the ap to access the host
 	val = readl(sg_ep->c2c_top_base + PCIEX8_SN_ADDR_CTRL);
 	val = val & 0x3;
 	val |= BM1690E_DST_BOARD_ID(0) | BM1690E_MSI(1) | BM1690E_FUNC_NUM(0) | BM1690E_DST_CHIP_ID(7);
 	writel(val, sg_ep->c2c_top_base + PCIEX8_SN_ADDR_CTRL);
-	pr_err("pcie sn addr ctrl:0x%x\n", val);
+	pr_info("pcie sn addr ctrl:0x%x\n", val);
 
 	pcie_clear_slv_mapping(sg_ep);
 	pcie_config_slv_mapping(sg_ep);
@@ -1272,7 +1274,7 @@ static void prog_c2c_ibatu(struct sophgo_pcie_ep *sg_ep, uint32_t index,
 		C2C_IBATU_CTRL_ENABLE;
 	writel(atu_ctrl, ib_atu + C2C_IBATU_CTRL);
 
-	pr_err("c2c ibatu %d:0x%llx -> 0x%llx, ctrl:0x%x\n", index, match_addr,
+	pr_info("c2c ibatu %d:0x%llx -> 0x%llx, ctrl:0x%x\n", index, match_addr,
 		out_addr, atu_ctrl);
 }
 
@@ -1307,7 +1309,7 @@ static int bm1690eep_set_c2c_ib_atu(struct sophgo_pcie_ep *sg_ep)
 static int bm1690eep_set_c2c_atu_ib(struct sophgo_pcie_ep *sg_ep)
 {
 	if (sg_ep->ep_info.socket_id != 0) {
-		pr_err("only socket0 need config c2c atu, now socket id is 0x%llx\n",
+		pr_info("only socket0 need config c2c atu, now socket id is 0x%llx\n",
 			sg_ep->ep_info.socket_id);
 		return 0;
 	}
@@ -1339,7 +1341,7 @@ static void prog_c2c_obatu(struct sophgo_pcie_ep *sg_ep, uint32_t index, uint32_
 		C2C_OBATU_MATCH_ADDR(match_addr);
 	writel(atu_ctrl, ob_atu + C2C_OBATU_CTRL);
 
-	pr_err("c2c obatu %d:0x%llx -> 0x%llx, ob_size:0x%llx, ctrl:0x%x\n", index, match_addr, out_addr, ob_size, atu_ctrl);
+	pr_info("c2c obatu %d:0x%llx -> 0x%llx, ob_size:0x%llx, ctrl:0x%x\n", index, match_addr, out_addr, ob_size, atu_ctrl);
 }
 
 static int get_ap_access_buffer_addr(struct sophgo_pcie_ep *sg_ep, uint64_t *addr, int addr_num)
@@ -1354,7 +1356,7 @@ static int get_ap_access_buffer_addr(struct sophgo_pcie_ep *sg_ep, uint64_t *add
 		low_addr = readl(top_base + 0x1f8 + i * 8);
 
 		addr[i] = ((uint64_t)high_addr << 32) | (uint64_t)low_addr;
-		pr_err("chip%d ap access buffer addr:0x%llx\n", i, addr[i]);
+		pr_info("chip%d ap access buffer addr:0x%llx\n", i, addr[i]);
 	}
 
 	return 0;
@@ -1401,7 +1403,7 @@ static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
 static int bm1690eep_set_c2c_atu_ob(struct sophgo_pcie_ep *sg_ep)
 {
 	if (sg_ep->ep_info.socket_id != 0) {
-		pr_err("only socket0 need config c2c atu, now socket id is 0x%llx\n",
+		pr_info("only socket0 need config c2c atu, now socket id is 0x%llx\n",
 			sg_ep->ep_info.socket_id);
 		return 0;
 	}
@@ -1470,7 +1472,7 @@ static int prog_recoder(struct sophgo_pcie_ep *sg_ep, uint32_t dir, uint32_t ind
 
 	recoder_en_val |= (1 << index);
 	writel(recoder_en_val, recoder_en);
-	pr_err("ib recoder %d:0x%x -> 0x%x, mask_size:0x%x\n", index, st_addr,
+	pr_info("ib recoder %d:0x%x -> 0x%x, mask_size:0x%x\n", index, st_addr,
 		recode_addr, mask_size);
 
 	return 0;
@@ -1638,7 +1640,7 @@ static int bm1690eep_set_portcode(struct sophgo_pcie_ep *sg_ep)
 			portcode_route_bits[sg_ep->ep_info.socket_id]);
 
 	writel(portcode_val, portcode);
-	pr_err("portcode:0x%x, board_size:0x%llx, board_id:0x%llx, route_bits:0x%x\n",
+	pr_info("portcode:0x%x, board_size:0x%llx, board_id:0x%llx, route_bits:0x%x\n",
 		portcode_val, sg_ep->board_size, sg_ep->board_id,
 		portcode_route_bits[sg_ep->ep_info.socket_id]);
 
@@ -1712,7 +1714,7 @@ static int prog_wr_order(struct sophgo_pcie_ep *sg_ep, uint32_t index, uint32_t 
 	set_wr_order_mode(sg_ep, index, mode);
 	enable_wr_order(sg_ep, index);
 
-	pr_err("wr_order %d:0x%llx -> 0x%llx, mode:0x%x\n", index, start_addr,
+	pr_info("wr_order %d:0x%llx -> 0x%llx, mode:0x%x\n", index, start_addr,
 		end_addr, mode);
 
 	return 0;
@@ -1954,6 +1956,8 @@ int bm1690_ep_init(struct platform_device *pdev)
 		sg_ep->set_vector = bm1690e_set_vector;
 		sg_ep->reset_vector = bm1690e_reset_vector;
 	}
+
+	sg_ep->boot_flag_addr = 0x7050000000;
 
 	return 0;
 unmap_c2c_top:

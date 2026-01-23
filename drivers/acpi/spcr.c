@@ -90,6 +90,7 @@ int __init acpi_parse_spcr(bool enable_earlycon, bool enable_console)
 	char *uart;
 	char *iotype;
 	int baud_rate;
+	int clk_freq;
 	int err;
 
 	if (acpi_disabled)
@@ -152,9 +153,13 @@ int __init acpi_parse_spcr(bool enable_earlycon, bool enable_console)
 	 * Baud Rate field. If this field is zero or not present, Configured
 	 * Baud Rate is used.
 	 */
-	if (table->header.revision >= 4 && table->precise_baudrate)
+	if (table->header.revision >= 4 && table->precise_baudrate) {
 		baud_rate = table->precise_baudrate;
-	else switch (table->baud_rate) {
+		if (table->uart_clk_freq)
+			clk_freq = table->uart_clk_freq;
+		else
+			clk_freq = 0;
+	} else switch (table->baud_rate) {
 	case 0:
 		/*
 		 * SPCR 1.04 defines 0 as a preconfigured state of UART.
@@ -218,8 +223,12 @@ int __init acpi_parse_spcr(bool enable_earlycon, bool enable_console)
 		snprintf(opts, sizeof(opts), "%s,%s,0x%llx", uart, iotype,
 			 table->serial_port.address);
 	} else {
-		snprintf(opts, sizeof(opts), "%s,%s,0x%llx,%d", uart, iotype,
-			 table->serial_port.address, baud_rate);
+		if (clk_freq)
+			snprintf(opts, sizeof(opts), "%s,%s,0x%llx,%d,%d", uart, iotype,
+				 table->serial_port.address, baud_rate, clk_freq);
+		else
+			snprintf(opts, sizeof(opts), "%s,%s,0x%llx,%d", uart, iotype,
+				 table->serial_port.address, baud_rate);
 	}
 
 	pr_info("console: %s\n", opts);

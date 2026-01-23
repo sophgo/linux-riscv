@@ -217,9 +217,12 @@ int __init acpi_parse_spcr(bool enable_earlycon, bool enable_console)
 	if (!baud_rate) {
 		snprintf(opts, sizeof(opts), "%s,%s,0x%llx", uart, iotype,
 			 table->serial_port.address);
-	} else {
+	} else if (!table->uart_clk_freq) {
 		snprintf(opts, sizeof(opts), "%s,%s,0x%llx,%d", uart, iotype,
 			 table->serial_port.address, baud_rate);
+	} else {
+		snprintf(opts, sizeof(opts), "%s,%s,0x%llx,%d,%d", uart, iotype,
+			 table->serial_port.address, baud_rate, table->uart_clk_freq);
 	}
 
 	pr_info("console: %s\n", opts);

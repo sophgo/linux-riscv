@@ -20,7 +20,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,9600 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,64M maxcpus=4";
+		bootargs = "console=ttyS0,115200 earlycon rdinit=/init root=/dev/ram0 rw initrd=0x8b000000,64M maxcpus=4";
 		stdout-path = "serial0";
 	};
 
@@ -31,8 +31,8 @@
 			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
 			interrupt-parent = <&intc>;
 			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
-			clock-frequency = <153600>;
-			current-speed = <9600>;
+			clock-frequency = <500000000>;
+			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
 		};
@@ -61,6 +61,120 @@
 			};
 		};
 
+		c2c_enable {
+			compatible = "sophgo,c2c_enable";
+		};
+
+		ap_ras@0 {
+			compatible = "sophgo,bm1690-ras";
+			chip_type = "bm1690";
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			reg = <0x0 0x00001000 0x0 0x00001000>;
+			ap-index = <0xff>;
+		};
+
+		tp0_ras@0 {
+			compatible = "sophgo,bm1690-ras";
+			chip_type = "bm1690";
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			reg = <0x0 0x00002000 0x0 0x00001000>;
+			tp-index = <0>;
+		};
+
+		tp1_ras@1 {
+			compatible = "sophgo,bm1690-ras";
+			chip_type = "bm1690";
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			reg = <0x0 0x00003000 0x0 0x00001000>;
+			tp-index = <1>;
+		};
+
+		tp2_ras@2 {
+			compatible = "sophgo,bm1690-ras";
+			chip_type = "bm1690";
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			reg = <0x0 0x00004000 0x0 0x00001000>;
+			tp-index = <2>;
+		};
+
+		tp3_ras@3 {
+			compatible = "sophgo,bm1690-ras";
+			chip_type = "bm1690";
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			reg = <0x0 0x00005000 0x0 0x00001000>;
+			tp-index = <3>;
+		};
+
+		veth:  veth {
+			compatible = "sg2260, sgveth";
+			reg = <0x00000001 0x1a100000 0x00000000 0x1000>,
+				<0x00000001 0x1a110000 0x00000000 0x70000>,
+				<0x00000001 0x1a180000 0x00000000 0x70000>,
+				<0x0000006d 0x50000000 0x00000000 0x1000>;
+			reg-names = "shm_reg", "rx_reg", "tx_reg", "irq_reg";
+			interrupt-parent = <&intc>;
+			interrupts = <361 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "rx";
+			status = "okay";
+		};
+
+		vtty0: vtty@bfff0000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1 0x1fff1000 0x0 0x1000>,
+				<0x1 0x1fff0000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x0CD00004 0x1>;
+			clr-irq = <0x6e 0x10000028 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <362 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		vtty1: vtty@bfff2000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1 0x1fff3000 0x0 0x1000>,
+				<0x1 0x1fff2000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x1CD00004 0x1>;
+			clr-irq = <0x6e 0x1000002c 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <363 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		vtty2: vtty@bfff4000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1 0x1fff5000 0x0 0x1000>,
+				<0x1 0x1fff4000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x2CD00004 0x1>;
+			clr-irq = <0x6e 0x10000030 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <364 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		vtty3: vtty@bfff6000 {
+			compatible = "sophgo,vtty-ap";
+			#size-cells = <0x2>;
+			#address-cells = <0x2>;
+			reg = <0x1 0x1fff7000 0x0 0x1000>,
+				<0x1 0x1fff6000 0x0 0x1000>;
+			virtaul-msi = <0x69 0x3CD00004 0x1>;
+			clr-irq = <0x6e 0x10000034 0x0>;
+			interrupt-parent = <&intc>;
+			interrupts = <365 IRQ_TYPE_LEVEL_HIGH>;
+		};
 
 		//c2c0 x8/x4
 		pciephy_0: pciephy_0@6C00f81000 {

@@ -17,6 +17,10 @@
 
 	aliases {
 		serial0 = &uart0;
+		vtty0 = &vtty0;
+		vtty1 = &vtty1;
+		vtty2 = &vtty2;
+		vtty3 = &vtty3;
 	};
 
 	chosen {

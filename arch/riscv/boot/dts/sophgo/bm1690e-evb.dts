@@ -21,6 +21,26 @@
 		vtty1 = &vtty1;
 		vtty2 = &vtty2;
 		vtty3 = &vtty3;
+		pcie_rc_0 = &pcie_rc_0;
+		pcie_rc_1 = &pcie_rc_1;
+		pcie_rc_2 = &pcie_rc_2;
+		pcie_rc_3 = &pcie_rc_3;
+		pcie_rc_4 = &pcie_rc_4;
+		pcie_rc_5 = &pcie_rc_5;
+		pcie_rc_6 = &pcie_rc_6;
+		pcie_rc_7 = &pcie_rc_7;
+		pcie_rc_8 = &pcie_rc_8;
+		pcie_rc_9 = &pcie_rc_9;
+		pcie_ep_0 = &pcie_ep_0;
+		pcie_ep_1 = &pcie_ep_1;
+		pcie_ep_2 = &pcie_ep_2;
+		pcie_ep_3 = &pcie_ep_3;
+		pcie_ep_4 = &pcie_ep_4;
+		pcie_ep_5 = &pcie_ep_5;
+		pcie_ep_6 = &pcie_ep_6;
+		pcie_ep_7 = &pcie_ep_7;
+		pcie_ep_8 = &pcie_ep_8;
+		pcie_ep_9 = &pcie_ep_9;
 	};
 
 	chosen {
@@ -533,7 +553,7 @@
 		};
 
 		pcie_rc_6: pcie@6c06400000 {
-			compatible = "sophgo,bm1690e-pcie-host";
+			compatible = "sophgo,bm1690-c2c-pcie-host";
 			device_type = "pci";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -815,7 +835,7 @@
 			board_size = <0x0 0x4>;
 			speed = <0x0 0x5>;
 			lane_num = <0x0 0x8>;
-			func_num = <0x0 0x4>;
+			func_num = <0x0 0x1>;
 			cxp_x8;
 
 			reg =	<0x6c 0x02400000  0x0 0x00300000>,

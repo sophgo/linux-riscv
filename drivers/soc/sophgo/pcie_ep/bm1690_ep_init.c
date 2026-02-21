@@ -1748,10 +1748,21 @@ static int set_bar4_wr_order(struct sophgo_pcie_ep *sg_ep, uint32_t barid)
 	return 0;
 }
 
+static int clean_wr_order(struct sophgo_pcie_ep *sg_ep)
+{
+	void *wr_order = get_wr_order_en_addr(sg_ep);
+
+	writel(0, wr_order);
+
+	return 0;
+}
+
 static int bm1690eep_set_wr_order(struct sophgo_pcie_ep *sg_ep)
 {
 	int wr_order_index;
 	int barid = sg_ep->ep_info.socket_id * 3 + 2;
+
+	clean_wr_order(sg_ep);
 
 	for (int i = 0; i < sg_ep->func_num; i++) {
 		if (i == 0) {

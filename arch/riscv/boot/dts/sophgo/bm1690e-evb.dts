@@ -5,8 +5,18 @@
 
 /dts-v1/;
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/reset/sophgo,sg2044-reset.h>
+#include <dt-bindings/clock/sophgo,bm1690e-clock.h>
 #include "bm1690-cpu-ap.dtsi"
 #include "bm1690-pcie-msi.dtsi"
+#include "bm1690e-clock.dtsi"
+#include "sg2044-pinctrl.dtsi"
+#include "bm1690e-peri-sys.dtsi"
+
+/delete-node/ &uart1;
+/delete-node/ &uart2;
+/delete-node/ &uart3;
+/delete-node/ &uart4;
 
 / {
 	/delete-node/ memory@80200000;
@@ -50,41 +60,6 @@
 
 
 	soc {
-		uart0: serial@7030000000 {
-			compatible = "sophgo,sg2044-uart", "snps,dw-apb-uart";
-			reg = <0x00000070 0x30000000 0x00000000 0x00001000>;
-			interrupt-parent = <&intc>;
-			interrupts = <41 IRQ_TYPE_LEVEL_HIGH>;
-			clock-frequency = <500000000>;
-			current-speed = <115200>;
-			reg-shift = <2>;
-			reg-io-width = <4>;
-		};
-
-		gpio0: gpio@7040009000 {
-			compatible = "snps,dw-apb-gpio";
-			reg = <0x70 0x40009000 0x0 0x1000>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			//clocks = <&div_clk GATE_CLK_APB_GPIO>,
-			//		<&div_clk GATE_CLK_APB_GPIO_INTR>,
-			//		<&div_clk GATE_CLK_GPIO_DB>;
-			//clock-names = "base_clk", "intr_clk", "db_clk";
-
-			port0a: gpio-controller@0 {
-				compatible = "snps,dw-apb-gpio-port";
-				bank-name = "port0a";
-				gpio-controller;
-				#gpio-cells = <2>;
-				snps,nr-gpios = <32>;
-				reg = <0>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				interrupt-parent = <&intc>;
-				interrupts = <26 IRQ_TYPE_LEVEL_HIGH>;
-			};
-		};
-
 		c2c_enable {
 			compatible = "sophgo,c2c_enable";
 		};

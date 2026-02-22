@@ -23,6 +23,11 @@ enum {
 	CHIP_BM1690E,
 };
 
+enum {
+	PCIE_CTRL_X8 = 0,
+	PCIE_CTRL_X4 = 1,
+};
+
 struct pcie_info {
 	uint64_t slot_id;
 	uint64_t socket_id;
@@ -84,6 +89,7 @@ struct sophgo_pcie_ep {
 	uint64_t c2c_config_base;
 	uint64_t c2c_config_size;
 	uint32_t pcie_route_config;
+	uint32_t ctrl_type;
 	uint64_t global_chipid;
 	uint64_t board_size;
 	uint64_t board_id;

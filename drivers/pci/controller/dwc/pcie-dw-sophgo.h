@@ -87,12 +87,6 @@
 #define CHIP_BM1690 0x1690
 #define CHIP_BM1690E 0x169e
 
-enum pcie_rst_status {
-	PCIE_RST_ASSERT = 0,
-	PCIE_RST_DE_ASSERT,
-	PCIE_RST_STATUS_BUTT
-};
-
 enum {
 	C2C_PCIE_X8_0 = 0b0101,
 	C2C_PCIE_X8_1 = 0b0111,

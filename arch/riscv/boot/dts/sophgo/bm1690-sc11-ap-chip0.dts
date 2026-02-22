@@ -222,6 +222,7 @@
 			#phy-cells = <1>;
 			reg = <0x6c 0x00f81000 0x0 0x00001000>;
 			bus-width = <8>;
+			x8-ctrl-reg = <0x6c 0x000c0000>;
 		};
 
 		//c2c0 x8/x4_0
@@ -230,6 +231,7 @@
 			#phy-cells = <1>;
 			reg = <0x6c 0x00781000 0x0 0x00001000>;
 			bus-width = <8>;
+			x8-ctrl-reg = <0x6c 0x00780000>;
 		};
 
 		//c2c1 x8/x4_1
@@ -238,6 +240,7 @@
 			#phy-cells = <1>;
 			reg = <0x6c 0x02f81000 0x0 0x00001000>;
 			bus-width = <8>;
+			x8-ctrl-reg = <0x6c 0x020c0000>;
 		};
 
 		//c2c1 x8/x4_0
@@ -246,6 +249,7 @@
 			#phy-cells = <1>;
 			reg = <0x6c 0x02781000 0x0 0x00001000>;
 			bus-width = <8>;
+			x8-ctrl-reg = <0x6c 0x02780000>;
 		};
 
 		//cxp x8/x4
@@ -254,6 +258,7 @@
 			#phy-cells = <1>;
 			reg = <0x6c 0x08781000 0x0 0x00001000>;
 			bus-width = <8>;
+			x8-ctrl-reg = <0x6c 0x08780000>;
 		};
 
 		c2c_enable {

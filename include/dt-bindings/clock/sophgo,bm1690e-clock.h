@@ -1,0 +1,121 @@
+#ifndef __SOPHGO_SG2044_CLOCK__
+#define __SOPHGO_SG2044_CLOCK__
+
+#include <dt-bindings/clock/sophgo-clk.h>
+
+/*div clock*/
+/* MPLL0 */
+#define DIV_CLK_MPLL0_AP_CPU_NORMAL_0	0
+/* MPLL2 */
+#define DIV_CLK_MPLL2_TPU_SYS_0		1
+/* MPLL3 */
+#define DIV_CLK_MPLL3_CC_GRP_SYS_0	2
+
+/* FPLL0 */
+#define DIV_CLK_FPLL0_AP_CPU_NORMAL_1	3
+#define DIV_CLK_FPLL0_TPU_SYS_1		4
+#define DIV_CLK_FPLL0_CC_GRP_SYS_1	5
+
+#define DIV_CLK_FPLL0_TOP_50M		6
+#define DIV_CLK_FPLL0_DIV_TMIER1	7
+#define DIV_CLK_FPLL0_DIV_TMIER2	8
+#define DIV_CLK_FPLL0_DIV_TMIER3	9
+#define DIV_CLK_FPLL0_DIV_TMIER4	10
+#define DIV_CLK_FPLL0_DIV_TMIER5	11
+#define DIV_CLK_FPLL0_DIV_TMIER6	12
+#define DIV_CLK_FPLL0_DIV_TMIER7	13
+#define DIV_CLK_FPLL0_DIV_TMIER8	14
+#define DIV_CLK_FPLL0_UART_500M		15
+#define DIV_CLK_FPLL0_EFUSE		16
+#define DIV_CLK_FPLL0_TOP_AXI0		17
+#define DIV_CLK_FPLL0_DIV_GPIO_DB	18
+#define DIV_CLK_FPLL0_TOP_AXI_HSPERI	19
+#define DIV_CLK_FPLL0_DDR0_1		20
+#define DIV_CLK_FPLL0_DDR1_1		21
+#define DIV_CLK_FPLL0_DDR2_1		22
+#define DIV_CLK_FPLL0_DDR3_1		23
+
+/* DPLL0 */
+#define DIV_CLK_DPLL0_DDR0_0		24
+/* DPLL1 */
+#define DIV_CLK_DPLL1_DDR1_0		25
+/* DPLL2 */
+#define DIV_CLK_DPLL2_DDR2_0		26
+/* DPLL3 */
+#define DIV_CLK_DPLL3_DDR3_0		27
+
+/*gate clock*/
+/* MPLL0 */
+#define GATE_CLK_AP_CPU_NORMAL		28
+
+/* MPLL2 */
+#define GATE_CLK_TPU_SYS		29
+/* MPLL3 */
+#define GATE_CLK_CC_GRP_SYS		30
+
+/* FPLL0 */
+#define GATE_CLK_TOP_50M		31
+#define GATE_CLK_TIMER1			32
+#define GATE_CLK_TIMER2			33
+#define GATE_CLK_TIMER3			34
+#define GATE_CLK_TIMER4			35
+#define GATE_CLK_TIMER5			36
+#define GATE_CLK_TIMER6			37
+#define GATE_CLK_TIMER7			38
+#define GATE_CLK_TIMER8			39
+#define GATE_CLK_UART_500M		40
+#define GATE_CLK_EFUSE			41
+#define GATE_CLK_TOP_AXI0		42
+#define GATE_CLK_APB_PWM		43
+#define GATE_CLK_APB_WDT		44
+#define GATE_CLK_APB_I2C		45
+#define GATE_CLK_GPIO_DB		46
+#define GATE_CLK_APB_GPIO_INTR		47
+#define GATE_CLK_APB_GPIO		48
+#define GATE_CLK_APB_EFUSE		49
+#define GATE_CLK_APB_TIMER		50
+#define GATE_CLK_AXI_SRAM		51
+#define GATE_CLK_AHB_SF			52
+#define GATE_CLK_APB_ROM		53
+#define GATE_CLK_INTC0			54
+#define GATE_CLK_INTC1			55
+#define GATE_CLK_INTC2			56
+#define GATE_CLK_INTC3			57
+#define GATE_CLK_MAILBOX0		58
+#define GATE_CLK_MAILBOX1		59
+#define GATE_CLK_MAILBOX2		60
+#define GATE_CLK_MAILBOX3		61
+#define GATE_CLK_TOP_AXI_HSPERI		62
+#define GATE_CLK_APB_SPI		63
+#define GATE_CLK_AXI_DBG_I2C		64
+#define GATE_CLK_APB_UART		65
+#define GATE_CLK_SYSDMA_AXI		66
+
+/* DPLL0 */
+#define GATE_CLK_DDR0			67
+/* DPLL1 */
+#define GATE_CLK_DDR1			68
+/* DPLL2 */
+#define GATE_CLK_DDR2			69
+/* DPLL3 */
+#define GATE_CLK_DDR3			70
+
+#define GATE_CLK_AP_CPU_NORMAL_DIV0 71
+#define GATE_CLK_TPU_SYS_DIV0 72
+#define GATE_CLK_CC_GRP_SYS_DIV0 73
+#define GATE_CLK_AP_CPU_NORMAL_DIV1 74
+#define GATE_CLK_TPU_SYS_DIV1 75
+#define GATE_CLK_CC_GRP_SYS_DIV1 76
+
+/* MUX */
+#define MUX_CLK_DDR0			0
+#define MUX_CLK_DDR1			1
+#define MUX_CLK_DDR2			2
+#define MUX_CLK_DDR3			3
+#define MUX_CLK_CC_GRP_SYS		4
+#define MUX_CLK_TPU_SYS			5
+#define MUX_CLK_AP_CPU_NORMAL		6
+
+#define DIV_CLK_TABLE			0
+#define MUX_CLK_TABLE			1
+#endif

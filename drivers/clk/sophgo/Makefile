@@ -12,3 +12,4 @@ obj-$(CONFIG_CLK_SOPHGO_SG2042_RPGATE)	+= clk-sg2042-rpgate.o
 
 obj-$(CONFIG_ARCH_SOPHGO) += clk.o
 obj-$(CONFIG_ARCH_SOPHGO) += clk-sg2044.o
+obj-$(CONFIG_ARCH_SOPHGO) += clk-bm1690e.o

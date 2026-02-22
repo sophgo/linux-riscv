@@ -1334,52 +1334,6 @@ static int pcie_check_link_status(struct sophgo_dw_pcie *pcie)
 	return 0;
 }
 
-static int pcie_config_soft_phy_reset(struct sophgo_dw_pcie *pcie, uint32_t rst_status)
-{
-	uint32_t val = 0;
-	void __iomem *reg_base;
-
-	//deassert = 1; assert = 0;
-	if ((rst_status != 0) && (rst_status != 1))
-		return -1;
-
-	reg_base = pcie->ctrl_reg_base;
-
-	//cfg soft_phy_rst_n , first cfg 1
-	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
-	if (rst_status == 1)
-		val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
-	else
-		val &= (~PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
-
-	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
-
-	udelay(1);
-
-	return 0;
-}
-
-static int pcie_config_soft_cold_reset(struct sophgo_dw_pcie *pcie)
-{
-	uint32_t val = 0;
-	void __iomem  *reg_base;
-
-
-	reg_base = pcie->ctrl_reg_base;
-
-	//cfg soft_cold_rst_n , first cfg 0
-	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
-	val &= (~PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
-	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
-
-	//cfg soft_cold_rst_n , second cfg 1
-	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
-	val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
-	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
-
-	return 0;
-}
-
 static void pcie_check_radm_status(struct sophgo_dw_pcie *pcie)
 {
 	uint32_t val = 0;
@@ -1505,9 +1459,6 @@ static int sophgo_pcie_host_init_port(struct sophgo_dw_pcie *pcie)
 	int timeout = 0;
 
 	phy_init(pcie->phy);
-	pcie_config_soft_phy_reset(pcie, PCIE_RST_ASSERT);
-	pcie_config_soft_phy_reset(pcie, PCIE_RST_DE_ASSERT);
-	pcie_config_soft_cold_reset(pcie);
 
 	gpio_direction_output(pcie->pe_rst, 0);
 	gpio_set_value(pcie->pe_rst, 0);

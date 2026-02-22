@@ -321,31 +321,6 @@ static void pcie_config_axi_route(struct sophgo_pcie_ep *sg_ep)
 	writel(((cfg_end_addr >> 32) & 0xffffffff), (c2c_top_reg + 0x30));
 }
 
-static int pcie_config_soft_phy_reset(struct sophgo_pcie_ep *pcie, uint32_t rst_status)
-{
-	uint32_t val = 0;
-	void __iomem *reg_base;
-
-	//deassert = 1; assert = 0;
-	if ((rst_status != 0) && (rst_status != 1))
-		return -1;
-
-	reg_base = pcie->ctrl_reg_base;
-
-	//cfg soft_phy_rst_n , first cfg 1
-	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
-	if (rst_status == 1)
-		val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
-	else
-		val &= (~PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
-
-	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
-
-	udelay(1);
-
-	return 0;
-}
-
 static void pcie_check_radm_status(struct sophgo_pcie_ep *pcie)
 {
 	uint32_t val = 0;
@@ -353,35 +328,14 @@ static void pcie_check_radm_status(struct sophgo_pcie_ep *pcie)
 
 	do {
 		udelay(10);
-		if (pcie->lane_num == 8) {
+		if (pcie->ctrl_type == PCIE_CTRL_X8) {
 			val = readl(base_addr + 0xfc);
 			val = (val >> 29) & 0x1; //bit29, radm_idle
-		} else {
+		} else if (pcie->ctrl_type == PCIE_CTRL_X4) {
 			val = readl(base_addr + 0xe8);
 			val = (val >> 21) & 0x1; //bit21, radm_idle
 		}
 	} while (val != 1);
-}
-
-static int pcie_config_soft_cold_reset(struct sophgo_pcie_ep *pcie)
-{
-	uint32_t val = 0;
-	void __iomem  *reg_base;
-
-
-	reg_base = pcie->ctrl_reg_base;
-
-	//cfg soft_cold_rst_n , first cfg 0
-	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
-	val &= (~PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
-	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
-
-	//cfg soft_cold_rst_n , second cfg 1
-	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
-	val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
-	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
-
-	return 0;
 }
 
 static void pcie_config_bar0_iatu(struct sophgo_pcie_ep *sg_ep)
@@ -416,9 +370,6 @@ void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 	pr_info("begin c2c ep init\n");
 
 	phy_init(sg_ep->phy);
-	pcie_config_soft_phy_reset(sg_ep, PCIE_RST_ASSERT);
-	pcie_config_soft_phy_reset(sg_ep, PCIE_RST_DE_ASSERT);
-	pcie_config_soft_cold_reset(sg_ep);
 	phy_configure(sg_ep->phy, NULL);
 
 	pcie_wait_core_clk(sg_ep);
@@ -1927,6 +1878,12 @@ int bm1690_ep_init(struct platform_device *pdev)
 		sg_ep->pcie_route_config = CXP_PCIE_X4;
 	else
 		dev_err(dev, "no pcie type found, this pcie may not support c2c\n");
+
+	if (sg_ep->pcie_route_config == C2C_PCIE_X8_1 || sg_ep->pcie_route_config == C2C_PCIE_X8_0 || sg_ep->pcie_route_config == CXP_PCIE_X8)
+		sg_ep->ctrl_type = PCIE_CTRL_X8;
+	else if (sg_ep->pcie_route_config == C2C_PCIE_X4_1 || sg_ep->pcie_route_config == C2C_PCIE_X4_0 || sg_ep->pcie_route_config == CXP_PCIE_X4)
+		sg_ep->ctrl_type = PCIE_CTRL_X4;
+
 
 	ret = of_property_read_u64_index(dev_node, "cdma-reg", 0, &sg_ep->cdma_pa_start);
 	ret = of_property_read_u64_index(dev_node, "cdma-reg", 1, &sg_ep->cdma_size);

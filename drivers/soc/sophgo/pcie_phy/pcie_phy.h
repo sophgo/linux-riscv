@@ -5,6 +5,17 @@
 
 #include <linux/types.h>
 
+enum pcie_rst_status {
+	PCIE_RST_ASSERT = 0,
+	PCIE_RST_DE_ASSERT,
+	PCIE_RST_STATUS_BUTT
+};
+
+#define PCIE_CTRL_SFT_RST_SIG_REG                           0x050
+#define PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT                  1
+
+#define PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT                 0
+
 enum pcie_serdes_mode {
 	PCIE_SERDES_MODE_X8 = 0,
 	PCIE_SERDES_MODE_X4_X4,

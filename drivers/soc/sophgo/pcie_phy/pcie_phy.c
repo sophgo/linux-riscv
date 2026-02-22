@@ -28,6 +28,8 @@ struct sophgo_pcie_phy {
 	int init_cnt;
 	uint32_t lanes;
 	int force_skip_init;
+	uint64_t x8_ctrl_pa;
+	uint64_t x4_ctrl_pa;
 };
 
 static struct sophgo_pcie_phy *to_pcie_phy(struct phy_pcie_instance *inst)
@@ -139,15 +141,79 @@ static void pcie_config_phy_eq_afe(struct sophgo_pcie_phy *sg_phy)
 	}
 }
 
+static int pcie_config_soft_phy_reset(void *pcie_ctrl_base, uint32_t rst_status)
+{
+	uint32_t val = 0;
+	void __iomem *reg_base;
+
+	//deassert = 1; assert = 0;
+	if ((rst_status != 0) && (rst_status != 1))
+		return -1;
+
+	reg_base = pcie_ctrl_base;
+
+	//cfg soft_phy_rst_n , first cfg 1
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	if (rst_status == 1)
+		val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
+	else
+		val &= (~PCIE_CTRL_SFT_RST_SIG_PHY_RSTN_BIT);
+
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	udelay(1);
+
+	return 0;
+}
+
+static int pcie_config_soft_cold_reset(void *pcie_ctrl_base)
+{
+	uint32_t val = 0;
+	void __iomem  *reg_base;
+
+	reg_base = pcie_ctrl_base;
+
+	//cfg soft_cold_rst_n , first cfg 0
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	val &= (~PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	//cfg soft_cold_rst_n , second cfg 1
+	val = readl(reg_base + PCIE_CTRL_SFT_RST_SIG_REG);
+	val |= (0x1 << PCIE_CTRL_SFT_RST_SIG_COLD_RSTN_BIT);
+	writel(val, (reg_base + PCIE_CTRL_SFT_RST_SIG_REG));
+
+	return 0;
+}
+
 static int sophgo_pcie_phy_init(struct phy *phy)
 {
 	struct phy_pcie_instance *inst = phy_get_drvdata(phy);
 	struct sophgo_pcie_phy *sg_phy = to_pcie_phy(inst);
+	void *__iomem x8_ctrl_reg_base;
+	void *__iomem x4_ctrl_reg_base;
 
 	mutex_lock(&sg_phy->pcie_mutex);
 
 	if (sg_phy->init_cnt++ || sg_phy->force_skip_init)
 		goto err_out;
+	if (sg_phy->x8_ctrl_pa != 0) {
+		x8_ctrl_reg_base = ioremap(sg_phy->x8_ctrl_pa, SZ_4K);
+		if (!x8_ctrl_reg_base) {
+			pr_err("failed to remap x8 ctrl reg\n");
+			goto err_out;
+		}
+		x8_ctrl_reg_base += 0xc00;
+	}
+
+	if (sg_phy->x4_ctrl_pa != 0) {
+		x4_ctrl_reg_base = ioremap(sg_phy->x4_ctrl_pa, SZ_4K);
+		if (!x4_ctrl_reg_base) {
+			pr_err("failed to remap x4 ctrl reg\n");
+			goto unmap_x8_ctrl;
+		}
+		x4_ctrl_reg_base += 0xc00;
+	}
 
 	pr_err("sophgo pcie phy init:va:0x%llx, num lanes:%d\n", (uint64_t)sg_phy->reg_base, sg_phy->lanes);
 	sg_pcie_phy_config_ss_mode(sg_phy);
@@ -155,6 +221,21 @@ static int sophgo_pcie_phy_init(struct phy *phy)
 	pcie_config_phy_pwr_stable(sg_phy);
 	pcie_config_phy_eq_afe(sg_phy);
 
+	if (x8_ctrl_reg_base) {
+		pcie_config_soft_phy_reset(x8_ctrl_reg_base, PCIE_RST_ASSERT);
+		pcie_config_soft_phy_reset(x8_ctrl_reg_base, PCIE_RST_DE_ASSERT);
+		pcie_config_soft_cold_reset(x8_ctrl_reg_base);
+	}
+
+	if (x4_ctrl_reg_base && sg_phy->lanes == 4) {
+		pcie_config_soft_phy_reset(x4_ctrl_reg_base, PCIE_RST_ASSERT);
+		pcie_config_soft_phy_reset(x4_ctrl_reg_base, PCIE_RST_DE_ASSERT);
+		pcie_config_soft_cold_reset(x4_ctrl_reg_base);
+	}
+
+	iounmap(x4_ctrl_reg_base);
+unmap_x8_ctrl:
+	iounmap(x8_ctrl_reg_base);
 err_out:
 	mutex_unlock(&sg_phy->pcie_mutex);
 	return 0;
@@ -244,6 +325,7 @@ static int sophgo_pcie_phy_probe(struct platform_device *pdev)
 	int i;
 	u32 phy_num = 2;
 	struct resource *regs;
+	int ret;
 
 	dev_err(dev, "sophgo pcie phy probe\n");
 	sg_phy = devm_kzalloc(dev, sizeof(*sg_phy), GFP_KERNEL);
@@ -261,6 +343,16 @@ static int sophgo_pcie_phy_probe(struct platform_device *pdev)
 	device_property_read_u32(dev, "bus-width", &sg_phy->lanes);
 
 	pr_err("sophgo pcie phy addr:0x%llx, va:0x%llx, bus width:%d\n", regs->start, (uint64_t)sg_phy->reg_base, sg_phy->lanes);
+
+	ret = device_property_read_u64(dev, "x8-ctrl-reg", &sg_phy->x8_ctrl_pa);
+	if (ret)
+		pr_err("failed get x8 ctrl reg pa\n");
+	ret = device_property_read_u64(dev, "x4-ctrl-reg", &sg_phy->x4_ctrl_pa);
+	if (ret) {
+		pr_err("warning: not get x4 ctrl reg pa\n");
+		sg_phy->x4_ctrl_pa = 0;
+	}
+
 
 	if (device_property_present(dev, "force-skip-init")) {
 		sg_phy->force_skip_init = 1;

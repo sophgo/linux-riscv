@@ -1,0 +1,160 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 Sophgo Technology Inc. All rights reserved.
+ */
+
+/ {
+	soc {
+		clocks {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			cgi: ctrystal {
+				compatible = "fixed-clock";
+				clock-frequency = <25000000>;
+				clock-output-names = "cgi";
+				#clock-cells = <0>;
+			};
+			/* pll clock */
+			mpll0: mpll0 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL0_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll0_clock";
+			};
+
+			mpll2: mpll2 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL2_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll2_clock";
+			};
+			mpll3: mpll3 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <MPLL3_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "mpll3_clock";
+			};
+
+			fpll0: fpll0 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <FPLL0_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "fpll0_clock";
+			};
+
+			dpll0: dpll0 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL0_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll0_clock";
+			};
+			dpll1: dpll1 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL1_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll1_clock";
+			};
+			dpll2: dpll2 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL2_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll2_clock";
+			};
+			dpll3: dpll3 {
+				compatible = "bm1690e, pll-clock";
+				#clock-cells = <0>;
+				id = <DPLL3_CLK>;
+				mode = <NORMAL_MODE>;
+				subctrl-syscon = <&top_misc>;
+				clocks = <&cgi>;
+				clock-output-names = "dpll3_clock";
+			};
+
+			div_clk: div_clk {
+				compatible = "bm1690e, pll-child-clock";
+				#clock-cells = <1>;
+				id = <DIV_CLK_TABLE>;
+				subctrl-syscon = <&top_misc>;
+			};
+			mux_clk: mux_clk {
+				compatible = "bm1690e, pll-mux-clock";
+				#clock-cells = <1>;
+				id = <MUX_CLK_TABLE>;
+				subctrl-syscon = <&top_misc>;
+			};
+			clock_init: default_rates {
+				compatible = "bm1690e, clk-default-rates";
+				#clock-cells = <1>;
+				clocks = \
+					<&mpll0>, <&mpll2>, <&mpll3>,
+					<&div_clk DIV_CLK_MPLL0_AP_CPU_NORMAL_0>,
+					<&div_clk DIV_CLK_MPLL2_TPU_SYS_0>,
+					<&div_clk DIV_CLK_MPLL3_CC_GRP_SYS_0>,
+
+					<&div_clk DIV_CLK_FPLL0_CC_GRP_SYS_1>,
+					<&div_clk DIV_CLK_FPLL0_TPU_SYS_1>,
+
+					<&div_clk DIV_CLK_FPLL0_AP_CPU_NORMAL_1>,
+
+					<&div_clk DIV_CLK_FPLL0_TOP_50M>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER1>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER2>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER3>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER4>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER5>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER6>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER7>,
+					<&div_clk DIV_CLK_FPLL0_DIV_TMIER8>,
+					<&div_clk DIV_CLK_FPLL0_UART_500M>,
+					<&div_clk DIV_CLK_FPLL0_EFUSE>,
+					<&div_clk DIV_CLK_FPLL0_TOP_AXI0>,
+					<&div_clk DIV_CLK_FPLL0_DIV_GPIO_DB>,
+					<&div_clk DIV_CLK_FPLL0_TOP_AXI_HSPERI>;
+
+				clock-rates = \
+					<2000000000>, <1200000000>, <2000000000>,
+					/* MPLL */
+					<2000000000>, <1200000000>,
+					<2000000000>,
+					/* FPLL */
+					<2000000000>, <1000000000>,
+					<2000000000>,
+                    /* TOP_50M */
+					<50000000>,
+                    /* TIMER */
+					<50000000>, <50000000>, <50000000>, <50000000>,
+					<50000000>, <50000000>, <50000000>, <50000000>,
+                    /* PKA UART*/
+					<500000000>,
+                    /* EFUSE */
+					<25000000>,
+                    /* TOP_AXI0 GPIO_DB*/
+					<100000000>, <100000>,
+                    /* AXI_HSPERI */
+					<250000000>;
+			};
+		};
+	};
+};

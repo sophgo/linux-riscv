@@ -51,6 +51,11 @@
 		pcie_ep_7 = &pcie_ep_7;
 		pcie_ep_8 = &pcie_ep_8;
 		pcie_ep_9 = &pcie_ep_9;
+		pciephy_0 = &pciephy_0;
+		pciephy_1 = &pciephy_1;
+		pciephy_2 = &pciephy_2;
+		pciephy_3 = &pciephy_3;
+		pciephy_4 = &pciephy_4;
 	};
 
 	chosen {

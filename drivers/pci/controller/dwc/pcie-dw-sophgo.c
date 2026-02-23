@@ -1311,9 +1311,11 @@ static int pcie_check_link_status(struct sophgo_dw_pcie *pcie)
 			timeout--;
 			udelay(100);
 		}
+		if (timeout == 0) {
+			pr_err("link speed, expect gen%d, current gen%d\n", pcie->link_gen, (speed + 1));
+			break;
+		}
 	}
-	if (timeout == 0)
-		pr_err("link speed, expect gen%d, current gen%d\n", pcie->link_gen, (speed + 1));
 
 	timeout = 10000;
 	while (1) {
@@ -1325,9 +1327,12 @@ static int pcie_check_link_status(struct sophgo_dw_pcie *pcie)
 			timeout--;
 			udelay(100);
 		}
+
+		if (timeout == 0) {
+			pr_err("link width, expect x%d, current x%d\n", pcie->num_lanes, width);
+			break;
+		}
 	}
-	if (timeout == 0)
-		pr_err("link width, expect x%d, current x%d\n", pcie->num_lanes, width);
 
 	pr_info("PCIe Link status, ltssm[0x%x], gen%d, x%d.\n", ltssm_state, (speed + 1), width);
 

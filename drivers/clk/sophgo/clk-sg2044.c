@@ -387,7 +387,7 @@ static const struct sg2044_gate_clock gate_clks[] = {
 	{ GATE_CLK_SC_RX_X0Y1, "clk_gate_sc_rx_x0y1", "clk_div_top_50m",
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2000, 13, 0 },
 	{ GATE_CLK_TIMER1, "clk_gate_timer1", "clk_div_timer1",
-		CLK_SET_RATE_PARENT, 0x2004, 8, 0 },
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2004, 8, 0 },
 	{ GATE_CLK_TIMER2, "clk_gate_timer2", "clk_div_timer2",
 		CLK_SET_RATE_PARENT, 0x2004, 9, 0 },
 	{ GATE_CLK_TIMER3, "clk_gate_timer3", "clk_div_timer3",

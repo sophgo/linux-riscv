@@ -209,7 +209,7 @@ static const struct sg2044_gate_clock bm1690e_gate_clks[] = {
 		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, 0x2000, 1, 0 },
 
 	{ GATE_CLK_TIMER1, "clk_gate_timer1", "clk_div_timer1",
-		CLK_SET_RATE_PARENT, 0x2000, 27, 0 },
+		CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED | CLK_IS_CRITICAL, 0x2000, 27, 0 },
 	{ GATE_CLK_TIMER2, "clk_gate_timer2", "clk_div_timer2",
 		CLK_SET_RATE_PARENT, 0x2000, 28, 0 },
 	{ GATE_CLK_TIMER3, "clk_gate_timer3", "clk_div_timer3",

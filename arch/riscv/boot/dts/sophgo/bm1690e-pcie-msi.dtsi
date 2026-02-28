@@ -3,8 +3,8 @@
 	soc {
 		msi: msi-controller@6E10000000 {
 			compatible = "sophgo,sg2044-msi";
-			reg = <0x0  0x7EE00060 0x0 0x8>,
-			      <0x6E 0x10000000 0x0 0x256>;
+			reg = <0x0  0x7EE00064 0x0 0x4>,
+			      <0x6E 0x10000080 0x0 0x80>;
 			reg-names = "set", "clr";
 			reg-bitwidth = <32>;
 			msi-controller;

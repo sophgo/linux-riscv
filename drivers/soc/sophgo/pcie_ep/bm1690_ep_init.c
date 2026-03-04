@@ -1124,7 +1124,7 @@ static void config_obatu_delay_func(struct work_struct *p_work)
 
 		msleep(10);
 		check_loop++;
-		if (check_loop % 100 == 0) {
+		if (check_loop % 1000 == 0) {
 			pr_err("wait for top status:0x%x\n", status);
 		}
 	}
@@ -1166,6 +1166,17 @@ static void pcie_config_slv_mapping(struct sophgo_pcie_ep *pcie)
 static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
 {
 	uint32_t val;
+	uint32_t sn_addr;
+
+	if (sg_ep->ctrl_type == PCIE_CTRL_X8)
+		sn_addr = PCIEX8_SN_ADDR_CTRL;
+	else if (sg_ep->ctrl_type == PCIE_CTRL_X4)
+		sn_addr = PCIEX4_SN_ADDR_CTRL;
+	else {
+		sn_addr = PCIEX8_SN_ADDR_CTRL;
+		pr_err("error pcie ctrl type:0x%x, default use x8 sn addr ctrl\n", sg_ep->ctrl_type);
+	}
+
 
 	// configure the memory attribute to devcie
 	val = readl(sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
@@ -1173,10 +1184,10 @@ static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
 	writel(val, sg_ep->c2c_top_base + PCIE_CACHE_CTRL);
 
 	// configure the ap to access the host
-	val = readl(sg_ep->c2c_top_base + PCIEX8_SN_ADDR_CTRL);
+	val = readl(sg_ep->c2c_top_base + sn_addr);
 	val = val & 0x3;
 	val |= BM1690E_DST_BOARD_ID(0) | BM1690E_MSI(1) | BM1690E_FUNC_NUM(0) | BM1690E_DST_CHIP_ID(7);
-	writel(val, sg_ep->c2c_top_base + PCIEX8_SN_ADDR_CTRL);
+	writel(val, sg_ep->c2c_top_base + sn_addr);
 	pr_info("pcie sn addr ctrl:0x%x\n", val);
 
 	pcie_clear_slv_mapping(sg_ep);
@@ -1187,6 +1198,9 @@ static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
 	if (sg_ep->ep_info.socket_id == 0) {
 		schedule_delayed_work(&sg_ep->probe_delayed_work, 1);
 	}
+
+	writel(0xf0000, sg_ep->c2c_top_base + 0xcc);
+	pr_err("bypass axiid replacement\n");
 
 	return 0;
 }
@@ -1326,13 +1340,30 @@ static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
 	uint64_t out_addr_mask = ~((1UL << ob_size) - 1);
 
 	uint64_t ap_access_obatu_index = 128 + 24;
-	uint64_t ap_access_match_addr[4] = {0x6000000000,
+	int ap_c2c_ob_atu_num;
+	uint64_t hd12_ap_access_match_addr[4] = {0x6000000000,
+					0x5400000000,
+					0x5000000000,
+					0x6100000000};
+	uint64_t sc11e_ap_access_match_addr[4] = {0x6000000000,
 					0x5800000000,
 					0x5000000000,
 					0x6100000000};
+	uint64_t *ap_access_match_addr;
 	uint64_t ap_access_out_addr[4];
 	uint64_t ap_access_ob_size = 22;
 	uint64_t ap_access_out_addr_mask = ~((1UL << ap_access_ob_size) - 1);
+
+	if (sg_ep->board_type == HD12) {
+		ap_access_match_addr = hd12_ap_access_match_addr;
+		ap_c2c_ob_atu_num = sizeof(hd12_ap_access_match_addr) / sizeof(uint64_t);
+	}else if (sg_ep->board_type == SC11E) {
+		ap_access_match_addr = sc11e_ap_access_match_addr;
+		ap_c2c_ob_atu_num = sizeof(sc11e_ap_access_match_addr) / sizeof(uint64_t);
+	} else {
+		pr_err("unsupported board id:0x%llx\n", sg_ep->board_id);
+		return -1;
+	}
 
 	get_msi_addr(sg_ep, pc_msi_addr, sg_ep->func_num);
 	for (i = 0; i < sizeof(match_addr) / sizeof(uint64_t); i++) {
@@ -1342,7 +1373,7 @@ static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
 	}
 
 	get_ap_access_buffer_addr(sg_ep, ap_access_out_addr, sg_ep->func_num);
-	for (i = 0; i < sizeof(ap_access_match_addr) / sizeof(uint64_t); i++) {
+	for (i = 0; i < ap_c2c_ob_atu_num; i++) {
 		prog_c2c_obatu(sg_ep, ap_access_obatu_index, 0x1, 0x1, ap_access_match_addr[i],
 				ap_access_out_addr[i] & ap_access_out_addr_mask, ap_access_ob_size);
 		ap_access_obatu_index++;
@@ -1600,16 +1631,37 @@ static int bm1690eep_set_portcode(struct sophgo_pcie_ep *sg_ep)
 
 static inline void *get_wr_order_addr(struct sophgo_pcie_ep *sg_ep, uint32_t index)
 {
+	if (sg_ep->ctrl_type == PCIE_CTRL_X8)
+		return sg_ep->c2c_top_base + 0x1120 + (index * 0x10);
+	else if (sg_ep->ctrl_type == PCIE_CTRL_X4)
+		return sg_ep->c2c_top_base + 0x1330 + (index * 0x10);
+	else
+		pr_err("error pcie ctrl type:0x%x, default use x8 wr order addr\n", sg_ep->ctrl_type);
+
 	return sg_ep->c2c_top_base + 0x1120 + (index * 0x10);
 }
 
 static inline void *get_wr_order_en_addr(struct sophgo_pcie_ep *sg_ep)
 {
+	if (sg_ep->ctrl_type == PCIE_CTRL_X8)
+		return sg_ep->c2c_top_base + 0x1320;
+	else if (sg_ep->ctrl_type == PCIE_CTRL_X4)
+		return sg_ep->c2c_top_base + 0x1530;
+	else
+		pr_err("error pcie ctrl type:0x%x, default use x8 wr order en addr\n", sg_ep->ctrl_type);
+
 	return sg_ep->c2c_top_base + 0x1320;
 }
 
 static inline void *get_wr_order_mode_addr(struct sophgo_pcie_ep *sg_ep)
 {
+	if (sg_ep->ctrl_type == PCIE_CTRL_X8)
+		return sg_ep->c2c_top_base + 0x1324;
+	else if (sg_ep->ctrl_type == PCIE_CTRL_X4)
+		return sg_ep->c2c_top_base + 0x1534;
+	else
+		pr_err("error pcie ctrl type:0x%x, default use x8 wr order mode addr\n", sg_ep->ctrl_type);
+
 	return sg_ep->c2c_top_base + 0x1324;
 }
 
@@ -1683,6 +1735,10 @@ static int set_bar4_wr_order(struct sophgo_pcie_ep *sg_ep, uint32_t barid)
 		[1] = {
 			.start_addr = 0x6e00000000,
 			.size = 0x1000000,
+		},
+		[2] = {
+			.start_addr = 0x118000000,
+			.size = 0x4000000,
 		},
 	};
 

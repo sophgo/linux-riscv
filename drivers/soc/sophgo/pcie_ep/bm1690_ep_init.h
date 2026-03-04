@@ -219,6 +219,7 @@ struct wr_order_list {
 #define BM1690E_SOC_MSI_ADDR_FUNC_NUM(val)	(val << 60)
 
 #define PCIEX8_SN_ADDR_CTRL	(0xe0)
+#define PCIEX4_SN_ADDR_CTRL	(0xe4)
 
 #define BM1690E_K2K_ROUTING(val)	((val) << 0)
 #define BM1690E_DST_BOARD_ID(val)	((val) << 3)

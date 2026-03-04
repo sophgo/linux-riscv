@@ -2003,7 +2003,7 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	if (pcie->pcie_card && pcie->c2c_pcie_rc == 0) {
 		config_rc_atu(pcie, bridge);
 		config_port_code(pcie);
-		config_wr_order(pcie);
+		//config_wr_order(pcie);
 	}
 
 	return 0;

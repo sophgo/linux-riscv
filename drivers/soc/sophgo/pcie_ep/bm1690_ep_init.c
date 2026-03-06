@@ -1349,6 +1349,8 @@ static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
 					0x5800000000,
 					0x5000000000,
 					0x6100000000};
+	uint64_t evb_ap_access_match_addr[1] = {0x6000000000};
+
 	uint64_t *ap_access_match_addr;
 	uint64_t ap_access_out_addr[4];
 	uint64_t ap_access_ob_size = 22;
@@ -1360,6 +1362,9 @@ static int bm1690eep_set_c2c_ob_atu(struct sophgo_pcie_ep *sg_ep)
 	}else if (sg_ep->board_type == SC11E) {
 		ap_access_match_addr = sc11e_ap_access_match_addr;
 		ap_c2c_ob_atu_num = sizeof(sc11e_ap_access_match_addr) / sizeof(uint64_t);
+	} else if (sg_ep->board_type == BM1690EEVB) {
+		ap_access_match_addr = evb_ap_access_match_addr;
+		ap_c2c_ob_atu_num = sizeof(evb_ap_access_match_addr) / sizeof(uint64_t);
 	} else {
 		pr_err("unsupported board id:0x%llx\n", sg_ep->board_id);
 		return -1;

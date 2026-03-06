@@ -296,12 +296,22 @@ static int sophgo_pcie_ep_get_dtbif(struct platform_device *pdev, uint64_t link_
 		return -EINVAL;
 	}
 
+	if (link_role == PCIE_DATA_LINK_C2C)
+		return 0;
+
 	if (device_property_present(dev, "sc11"))
 		sg_ep->board_type = SC11;
 	else if (device_property_present(dev, "sc11e"))
 		sg_ep->board_type = SC11E;
 	else if (device_property_present(dev, "hd12"))
 		sg_ep->board_type = HD12;
+	else if (device_property_present(dev, "bm1690e_evb"))
+		sg_ep->board_type = BM1690EEVB;
+	else {
+		dev_err(dev, "no board type found\n");
+		return -1;
+	}
+
 	return 0;
 }
 

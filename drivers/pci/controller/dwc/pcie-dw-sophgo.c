@@ -1652,16 +1652,37 @@ static int config_rc_atu(struct sophgo_dw_pcie *pcie, struct pci_host_bridge *br
 
 static inline void *get_wr_order_addr(struct sophgo_dw_pcie *pcie, uint32_t index)
 {
+	if (pcie->ctrl_type == PCIE_CTRL_X8)
+		return pcie->c2c_top + 0x1120 + (index * 0x10);
+	else if (pcie->ctrl_type == PCIE_CTRL_X4)
+		return pcie->c2c_top + 0x1330 + (index * 0x10);
+	else
+		pr_err("error pcie ctrl type:0x%x, default use x8 wr order addr\n", pcie->ctrl_type);
+
 	return pcie->c2c_top + 0x1120 + (index * 0x10);
 }
 
 static inline void *get_wr_order_en_addr(struct sophgo_dw_pcie *pcie)
 {
+	if (pcie->ctrl_type == PCIE_CTRL_X8)
+		return pcie->c2c_top + 0x1320;
+	else if (pcie->ctrl_type == PCIE_CTRL_X4)
+		return pcie->c2c_top + 0x1530;
+	else
+		pr_err("error pcie ctrl type:0x%x, default use x8 wr order en addr\n", pcie->ctrl_type);
+
 	return pcie->c2c_top + 0x1320;
 }
 
 static inline void *get_wr_order_mode_addr(struct sophgo_dw_pcie *pcie)
 {
+	if (pcie->ctrl_type == PCIE_CTRL_X8)
+		return pcie->c2c_top + 0x1324;
+	else if (pcie->ctrl_type == PCIE_CTRL_X4)
+		return pcie->c2c_top + 0x1534;
+	else
+		pr_err("error pcie ctrl type:0x%x, default use x8 wr order mode addr\n", pcie->ctrl_type);
+
 	return pcie->c2c_top + 0x1324;
 }
 
@@ -1723,6 +1744,15 @@ static int prog_wr_order(struct sophgo_dw_pcie *pcie, uint32_t index, uint32_t m
 	return 0;
 }
 
+static int bm1690e_clean_wr_order(struct sophgo_dw_pcie *pcie)
+{
+	void *wr_order = get_wr_order_en_addr(pcie);
+
+	writel(0, wr_order);
+
+	return 0;
+}
+
 static int config_wr_order(struct sophgo_dw_pcie *pcie)
 {
 	int wr_order_index;
@@ -1779,6 +1809,8 @@ static int config_wr_order(struct sophgo_dw_pcie *pcie)
 	if (pcie->chip_type == CHIP_BM1690)
 		return 0;
 	else if (pcie->chip_type == CHIP_BM1690E) {
+		bm1690e_clean_wr_order(pcie);
+
 		for (int i = 0; i < sizeof(cdma_access_order) / sizeof(struct wr_order_list); i++) {
 			wr_order_index = find_avaliable_wr_order(pcie);
 			if (wr_order_index < 0) {
@@ -2003,7 +2035,7 @@ int sophgo_dw_pcie_probe(struct platform_device *pdev)
 	if (pcie->pcie_card && pcie->c2c_pcie_rc == 0) {
 		config_rc_atu(pcie, bridge);
 		config_port_code(pcie);
-		//config_wr_order(pcie);
+		config_wr_order(pcie);
 	}
 
 	return 0;

@@ -19,6 +19,8 @@
 #include <linux/circ_buf.h>
 #include <linux/device.h>
 #include <linux/bitfield.h>
+#include <linux/types.h>
+#include <linux/stddef.h>
 #include "pcie_device.h"
 #include "../c2c_rc/c2c_rc.h"
 
@@ -39,6 +41,50 @@ struct REG_BASES {
 	void __iomem *Intc2Base;
 	void __iomem *Intc3Base;
 	void __iomem *CdmaBase;
+};
+
+#define ADDRES_MATCH	0
+#define BAR_MATCH	1
+
+#define PCIE_ATU_REGION_CTRL1		0x000
+
+#define PCIE_ATU_REGION_CTRL2		0x004
+#define PCIE_ATU_ENABLE			BIT(31)
+#define PCIE_ATU_BAR_MODE_ENABLE	BIT(30)
+#define PCIE_ATU_INHIBIT_PAYLOAD	BIT(22)
+#define PCIE_ATU_FUNC_NUM_MATCH_EN      BIT(19)
+
+#define PCIE_ATU_LOWER_BASE		0x008
+#define PCIE_ATU_UPPER_BASE		0x00C
+#define PCIE_ATU_LIMIT			0x010
+#define PCIE_ATU_LOWER_TARGET		0x014
+#define PCIE_ATU_UPPER_TARGET		0x018
+#define PCIE_ATU_UPPER_LIMIT		0x020
+
+#define PCIE_ATU_INCREASE_REGION_SIZE	BIT(13)
+
+#define PCIE_ATU_FUNC_NUM(pf)           ((pf) << 20)
+
+#define PCIE_ATU_TYPE_MEM		0x0
+
+#define ATU_IB	1
+#define ATU_OB	0
+
+#define PCIE_ATU_BASE(dir, index) (((index) << 9) | (dir << 8))
+
+#define TOP_REG_SIZE	(0x100000)
+
+#define CDMA_CSR_OFFSET	(0x1000)
+
+struct iatu {
+	int match_type;
+	int index;
+	int type;
+	uint64_t cpu_addr;
+	uint64_t pci_addr;
+	uint64_t size;
+	uint32_t func;
+	uint32_t bar;
 };
 
 struct p_dev {
@@ -64,6 +110,83 @@ struct p_dev {
 	int bus_num;
 	int data_link_role;
 };
+
+static inline uint32_t sg_pcie_readl_atu(void *atu_base, uint32_t dir,
+					uint32_t index, uint32_t reg)
+{
+	void __iomem *base = atu_base + PCIE_ATU_BASE(dir, index);
+
+	return readl(base + reg);
+}
+
+static int find_available_ib_atu(void *atu_base)
+{
+	for (int i = 0; i < 32; i++) {
+		uint32_t val = sg_pcie_readl_atu(atu_base, ATU_IB, i, PCIE_ATU_REGION_CTRL2);
+		if (!(val & PCIE_ATU_ENABLE))
+			return i;
+	}
+
+	return -1;
+}
+
+static inline void sg_pcie_writel_atu(void *atu_base, uint32_t dir,
+					uint32_t index, uint32_t reg, uint32_t val)
+{
+	void __iomem *base = atu_base + PCIE_ATU_BASE(dir, index);
+
+	writel(val, base + reg);
+}
+
+static int prog_inbound_iatu(void *atu_base, struct iatu *atu)
+{
+	uint64_t pci_addr = atu->pci_addr;
+	uint64_t limit_addr = atu->pci_addr + atu->size - 1;
+	uint64_t cpu_addr = atu->cpu_addr;
+	uint32_t val = atu->type;
+	uint32_t index = atu->index;
+
+	if (atu->match_type == ADDRES_MATCH) {
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_LOWER_BASE,
+					lower_32_bits(pci_addr));
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_UPPER_BASE,
+					upper_32_bits(pci_addr));
+
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_LIMIT,
+					lower_32_bits(limit_addr));
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_UPPER_LIMIT,
+					upper_32_bits(limit_addr));
+
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_LOWER_TARGET,
+					lower_32_bits(cpu_addr));
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_UPPER_TARGET,
+					upper_32_bits(cpu_addr));
+
+		if (upper_32_bits(limit_addr) > upper_32_bits(pci_addr))
+		val |= PCIE_ATU_INCREASE_REGION_SIZE;
+
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_REGION_CTRL1, val);
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_REGION_CTRL2, PCIE_ATU_ENABLE);
+		pr_err("prg ib iatu%2u, 0x%llx -> 0x%llx\n", index, pci_addr, cpu_addr);
+	} else if (atu->match_type == BAR_MATCH) {
+		pr_err("prg ib iatu%2u, func%d bar%d -> 0x%llx\n", index, atu->func,
+			atu->bar, cpu_addr);
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_LOWER_TARGET,
+			lower_32_bits(cpu_addr));
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_UPPER_TARGET,
+			upper_32_bits(cpu_addr));
+
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_REGION_CTRL1, val |
+			PCIE_ATU_FUNC_NUM(atu->func));
+		sg_pcie_writel_atu(atu_base, ATU_IB, index, PCIE_ATU_REGION_CTRL2,
+			PCIE_ATU_ENABLE | PCIE_ATU_FUNC_NUM_MATCH_EN |
+			PCIE_ATU_BAR_MODE_ENABLE | (atu->bar << 8));
+	} else {
+		pr_err("error atu match type:0x%x\n", atu->match_type);
+	}
+
+	return 0;
+}
 
 static u32 top_reg_read(struct p_dev *hdev, u32 reg_offset)
 {
@@ -186,9 +309,9 @@ err0_out:
 static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 {
 	uint32_t val = 0;
-	uint32_t c2c_id = 0;
-	uint64_t c2c_base = 0;
 	void __iomem *atu_base_addr = NULL;
+	struct iatu atu;
+	int atu_index;
 
 	hdev->iatu_mask = 0x1; // BAR0 occupied iATU0
 	atu_base_addr = hdev->BarVirt[0] + REG_OFFSET_PCIE_iATU;
@@ -197,89 +320,32 @@ static void bm1690_map_bar(struct p_dev *hdev, struct pci_dev *pdev)
 	hdev->RegBases.PcieIatuBase = hdev->BarVirt[0] + REG_OFFSET_PCIE_iATU;
 	pr_info("Start to set atu\n");
 
-	// sram 2M
-	REG_WRITE32(atu_base_addr, 0x300, 0);
-	REG_WRITE32(atu_base_addr, 0x304, 0x80000100);
-	REG_WRITE32(atu_base_addr, 0x308, (u32)(hdev->BarPhys[1] & 0xffffffff));                //src addr
-	REG_WRITE32(atu_base_addr, 0x30C, 0);
-	REG_WRITE32(atu_base_addr, 0x310, (u32)(hdev->BarPhys[1] & 0xffffffff) + 0x1fffff);       //size 2M
-	REG_WRITE32(atu_base_addr, 0x314, 0x10000000);          //dst addr
-	REG_WRITE32(atu_base_addr, 0x318, 0x70);
-	hdev->sram_bar_vaddr = hdev->BarVirt[1];
+	atu_index = find_available_ib_atu(atu_base_addr);
+	if (atu_index == -1) {
+		dev_err(&hdev->pdev->dev, "no available ib atu for top reg map\n");
+		return;
+	}
+	atu.index = atu_index;
+	atu.pci_addr = hdev->BarPhys[1] & 0xffffffff;
+	atu.cpu_addr = 0x7050000000;
+	atu.size = TOP_REG_SIZE;
+	atu.match_type = ADDRES_MATCH;
+	prog_inbound_iatu(atu_base_addr, &atu);
 
-	//bm1690 top sys_ctrl
-	REG_WRITE32(atu_base_addr, 0x500, 0);
-	REG_WRITE32(atu_base_addr, 0x504, 0x80000100);
-	REG_WRITE32(atu_base_addr, 0x508, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART2_OFFSET);                //src addr
-	REG_WRITE32(atu_base_addr, 0x50C, 0);
-	REG_WRITE32(atu_base_addr, 0x510, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART2_OFFSET + 0x7fff);       //size 3M
-	REG_WRITE32(atu_base_addr, 0x514, 0x50000000);          //dst addr
-	REG_WRITE32(atu_base_addr, 0x518, 0x70);
 
-	hdev->top_bar_vaddr = hdev->BarVirt[1] + BAR1_PART2_OFFSET;
+	hdev->top_bar_vaddr = hdev->BarVirt[1];
 	val = top_reg_read(hdev, 0x0);
-	pr_info("[Top_reg_0] the val = 0x%x\n", val);
+	pr_info("link [Top_reg_0] the val = 0x%x\n", val);
 	val = top_reg_read(hdev, 0x4);
 	pr_info("[Top_reg_1] the val = 0x%x\n", val);
-	c2c_id = (val >> 3) & 0x3;
-	if (c2c_id == 2)
-		c2c_id = 4;
-	c2c_base = 0x6c00000000 + (c2c_id * 0x02000000) + 0x780000;
-
-	// c2c cdma, top, 512K
-	REG_WRITE32(atu_base_addr, 0x700, 0);
-	REG_WRITE32(atu_base_addr, 0x704, 0x80000100);
-	REG_WRITE32(atu_base_addr, 0x708, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART1_OFFSET);  //src addr
-	REG_WRITE32(atu_base_addr, 0x70C, 0);
-	REG_WRITE32(atu_base_addr, 0x710, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART1_OFFSET + 0x7ffff);       //size 3M
-	REG_WRITE32(atu_base_addr, 0x714, (c2c_base & 0xffffffff));          //dst addr
-	REG_WRITE32(atu_base_addr, 0x718, 0x6c);
-	hdev->cdma_bar_vaddr = hdev->BarVirt[1] + BAR1_PART1_OFFSET + 0x10000; //0x6c00790000
-
-	// MTLI-2 AP 8K
-	REG_WRITE32(atu_base_addr, 0x900, 0);
-	REG_WRITE32(atu_base_addr, 0x904, 0x80000100);
-	REG_WRITE32(atu_base_addr, 0x908, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART3_OFFSET); //src addr
-	REG_WRITE32(atu_base_addr, 0x90C, 0);
-	REG_WRITE32(atu_base_addr, 0x910, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART3_OFFSET + 0x1fff);//size 256K
-	REG_WRITE32(atu_base_addr, 0x914, 0x10000000);          //dst addr
-	REG_WRITE32(atu_base_addr, 0x918, 0x6e);
-
-	// misc 1M
-	REG_WRITE32(atu_base_addr, 0xb00, 0);
-	REG_WRITE32(atu_base_addr, 0xb04, 0x80000100);
-	REG_WRITE32(atu_base_addr, 0xb08, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART4_OFFSET);  //src addr
-	REG_WRITE32(atu_base_addr, 0xb0C, 0);
-	REG_WRITE32(atu_base_addr, 0xb10, (u32)(hdev->BarPhys[1] & 0xffffffff)
-			+ BAR1_PART4_OFFSET + 0xfffff);       //size 3M
-	REG_WRITE32(atu_base_addr, 0xb14, 0x40000000);          //dst addr
-	REG_WRITE32(atu_base_addr, 0xb18, 0x70);
-	hdev->misc_bar_vaddr = hdev->BarVirt[1] + BAR1_PART4_OFFSET;
-
-	REG_WRITE32(atu_base_addr, 0xd00, 0);
-	REG_WRITE32(atu_base_addr, 0xd04, 0x80000100);
-	REG_WRITE32(atu_base_addr, 0xd08, (u32)(hdev->BarPhys[3] & 0xffffffff));//src addr
-	REG_WRITE32(atu_base_addr, 0xd0C, hdev->BarPhys[3] >> 32);
-	REG_WRITE32(atu_base_addr, 0xd10, (u32)(hdev->BarPhys[3] & 0xffffffff)
-				+ 0xFFFFF); //1M size
-	REG_WRITE32(atu_base_addr, 0xd14, 0x10080000); //dst addr
-	REG_WRITE32(atu_base_addr, 0xd18, 0x70);
-	hdev->copy_data_bar_vaddr = hdev->BarVirt[3];
 }
 
 static int show_pcie_info(int pcie_id, char *head, struct pcie_info *info)
 {
 	pr_info("[%s pcie%d]->slot id:0x%llx\n", head, pcie_id, info->slot_id);
 	pr_info("[%s pcie%d]->socket id:0x%llx\n", head, pcie_id, info->socket_id);
-	pr_info("[%s pcie%d]->send port:0x%llx\n", head, pcie_id, info->send_port);
-	pr_info("[%s pcie%d]->recv port:0x%llx\n", head, pcie_id, info->recv_port);
+	pr_info("[%s pcie%d]->send port[%llu]:0x%llx\n", head, pcie_id, info->send_port, info->send_cdma_pa);
+	pr_info("[%s pcie%d]->recv port[%llu]:0x%llx\n", head, pcie_id, info->recv_port, info->recv_cdma_pa);
 	pr_info("[%s pcie%d]->data link type:%s\n", head, pcie_id,
 		info->data_link_type == PCIE_DATA_LINK_C2C ? "c2c": "cascade");
 	pr_info("[%s pcie%d]->link role:%s\n", head, pcie_id,
@@ -291,6 +357,93 @@ static int show_pcie_info(int pcie_id, char *head, struct pcie_info *info)
 		info->current_link_speed, info->current_link_width);
 
 	return 0;
+}
+
+
+static int init_cdma_route(void *cdma_reg_base, uint64_t peer_cdma_pa, uint32_t pcie_route_config)
+{
+	uint32_t tmp;
+
+	tmp = (pcie_route_config << 28) | (peer_cdma_pa >> 32);
+	writel(tmp, cdma_reg_base + CDMA_CSR_RCV_ADDR_H32);
+
+	tmp = (peer_cdma_pa & ((1ul << 32) - 1)) >> 16;
+	writel(tmp, cdma_reg_base + CDMA_CSR_RCV_ADDR_M16);
+
+	// OS: 2
+	tmp = readl(cdma_reg_base + CDMA_CSR_4) | (1 << CDMA_CSR_RCV_CMD_OS);
+	writel(tmp, cdma_reg_base + CDMA_CSR_4);
+
+	tmp = (readl(cdma_reg_base + CDMA_CSR_INTER_DIE_RW) &
+		~(0xff << CDMA_CSR_INTER_DIE_WRITE_ADDR_L4)) |
+		(pcie_route_config << CDMA_CSR_INTER_DIE_WRITE_ADDR_H4) |
+		(0b0000 << CDMA_CSR_INTER_DIE_WRITE_ADDR_L4);
+	writel(tmp, cdma_reg_base + CDMA_CSR_INTER_DIE_RW);
+
+	tmp = (readl(cdma_reg_base + CDMA_CSR_INTRA_DIE_RW) &
+		~(0xff << CDMA_CSR_INTRA_DIE_READ_ADDR_L4)) |
+		(AXI_RN << CDMA_CSR_INTRA_DIE_READ_ADDR_H4) |
+		(0b0000 << CDMA_CSR_INTRA_DIE_READ_ADDR_L4);
+	writel(tmp, cdma_reg_base + CDMA_CSR_INTRA_DIE_RW);
+
+	return 0;
+}
+
+static int init_c2c_cdma(struct p_dev *hdev)
+{
+	void __iomem *atu_base_addr;
+	int atu_index;
+	struct iatu atu;
+	struct pcie_info *peer_pcie_info;
+	struct pcie_info *myself_pcie_info;
+	uint64_t myself_cdma_pa;
+	void *myself_cdma_va;
+	uint32_t myself_pcie_route;
+	uint64_t peer_cdma_pa;
+	void *peer_cdma_va;
+	uint32_t peer_pcie_route;
+	int ret = 0;
+
+	myself_pcie_info = hdev->pci_info_base + hdev->bus_num * PER_INFO_SIZE;
+	peer_pcie_info = myself_pcie_info + 1;
+	myself_cdma_pa = myself_pcie_info->send_cdma_pa;
+	peer_cdma_pa = peer_pcie_info->send_cdma_pa;
+	myself_pcie_route = myself_pcie_info->pcie_route;
+	peer_pcie_route = peer_pcie_info->pcie_route;
+
+	dev_err(&hdev->pdev->dev, "myself cdma pa:0x%llx, peer cdma pa:0x%llx, pcie route:0x%x\n",
+		myself_cdma_pa, peer_cdma_pa, myself_pcie_route);
+
+	myself_cdma_va = ioremap(myself_cdma_pa, 0x10000);
+	if (myself_cdma_va == NULL) {
+		dev_err(&hdev->pdev->dev, "failed top map cdma[%llu]:0x%llx\n", myself_pcie_info->send_port,
+			myself_cdma_pa);
+
+		return -1;
+	}
+	init_cdma_route(myself_cdma_va, peer_cdma_pa, peer_pcie_route);
+
+	atu_base_addr = hdev->BarVirt[0] + REG_OFFSET_PCIE_iATU;
+	atu_index = find_available_ib_atu(atu_base_addr);
+	if (atu_index == -1) {
+		dev_err(&hdev->pdev->dev, "no availabe atu for cdma[%llu]:0x%llx map\n", peer_pcie_info->send_port,
+			peer_cdma_pa);
+		ret = -1;
+		goto release_myself_cdma;
+	}
+	atu.index = atu_index;
+	atu.pci_addr = (hdev->BarPhys[1] & 0xffffffff) + TOP_REG_SIZE;
+	atu.cpu_addr = peer_cdma_pa;
+	atu.size = 0x10000;
+	atu.type = ADDRES_MATCH;
+	prog_inbound_iatu(atu_base_addr, &atu);
+	peer_cdma_va = hdev->BarVirt[1] + TOP_REG_SIZE;
+	init_cdma_route(peer_cdma_va, myself_cdma_pa, myself_pcie_route);
+
+release_myself_cdma:
+	iounmap(myself_cdma_va);
+
+	return ret;
 }
 
 static int build_pcie_info(struct p_dev *hdev)
@@ -328,13 +481,13 @@ static int build_pcie_info(struct p_dev *hdev)
 		myself_pcie_info, peer_pcie_info);
 	show_pcie_info(hdev->bus_num, "myself", myself_pcie_info);
 
-	info_addr = hdev->BarVirt[1] + CONFIG_STRUCT_OFFSET + hdev->bus_num * PER_INFO_SIZE;
+	info_addr = hdev->BarVirt[3];
 	memcpy_fromio(peer_pcie_info, info_addr, sizeof(struct pcie_info));
 	peer_pcie_info->current_link_speed = current_link_speed;
 	peer_pcie_info->current_link_width = current_link_width;
-	show_pcie_info(hdev->bus_num, "peer", peer_pcie_info);
+	show_pcie_info(peer_pcie_info->peer_pcie_id, "peer", peer_pcie_info);
 
-	if (peer_pcie_info->peer_pcie_id != hdev->bus_num) {
+	if (peer_pcie_info->peer_pcie_id > 10 || peer_pcie_info->send_port > 10) {
 		pr_err("[pcie device]:error pcie link, RC and EP are not match\n");
 		pr_err("[pcie device]:my bus num is %d, but peer expect 0x%llx\n", hdev->bus_num,
 			peer_pcie_info->peer_pcie_id);
@@ -393,10 +546,10 @@ static int config_ep_huge_bar(struct p_dev *hdev)
 	readl(pcie_dbi_base + 0x20);
 	writel(0x0, (pcie_dbi_base + 0x20));
 
-	writel(0x0, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x514));
-	writel(0x0, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x518));
-	writel(0x0, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x500));
-	writel(0xC0080400, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x504));
+	writel(0x0, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x314));
+	writel(0x0, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x318));
+	writel(0x0, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x300));
+	writel(0xC0080400, (pcie_dbi_base + C2C_PCIE_ATU_OFFSET + 0x304));
 
 	return 0;
 }
@@ -426,6 +579,7 @@ static int pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		ret = build_pcie_info(hdev);
 		if (ret)
 			goto failed;
+		ret = init_c2c_cdma(hdev);
 
 		config_ep_huge_bar(hdev);
 		sophgo_set_c2c_ready(hdev->bus_num);

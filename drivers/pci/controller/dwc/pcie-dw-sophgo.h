@@ -58,25 +58,6 @@
 #define PCIE_CTRL_AXI_MSI_GEN_CTRL_MSI_GEN_EN_BIT           0
 #define PCIE_CTRL_IRQ_EN_INTX_SHIFT_BIT                     1
 
-#define CDMA_CSR_RCV_ADDR_H32				(0x1004)
-#define CDMA_CSR_RCV_ADDR_M16				(0x1008)
-#define CDMA_CSR_INTER_DIE_RW				(0x100c)
-#define CDMA_CSR_4					(0x1010)
-#define CDMA_CSR_INTRA_DIE_RW				(0x123c)
-
-#define CDMA_CSR_RCV_CMD_OS				15
-
-// CDMA_CSR_INTER_DIE_RW
-#define CDMA_CSR_INTER_DIE_READ_ADDR_L4		0
-#define CDMA_CSR_INTER_DIE_READ_ADDR_H4		4
-#define CDMA_CSR_INTER_DIE_WRITE_ADDR_L4	8
-#define CDMA_CSR_INTER_DIE_WRITE_ADDR_H4	12
-
-// CDMA_CSR_INTRA_DIE_RW
-#define CDMA_CSR_INTRA_DIE_READ_ADDR_L4		0
-#define CDMA_CSR_INTRA_DIE_READ_ADDR_H4		4
-#define CDMA_CSR_INTRA_DIE_WRITE_ADDR_L4	8
-#define CDMA_CSR_INTRA_DIE_WRITE_ADDR_H4	12
 
 #define GENMASK_32(h, l) \
 	(((0xFFFFFFFF) << (l)) & (0xFFFFFFFF >> (32UL - 1 - (h))))
@@ -120,7 +101,6 @@ struct sophgo_dw_pcie {
 	void __iomem		*sii_reg_base;
 	void __iomem		*ctrl_reg_base;
 	void __iomem		*c2c_top;
-	void __iomem		*cdma_reg_base;
 	uint64_t		cfg_start_addr;
 	uint64_t		cfg_end_addr;
 	uint64_t		slv_start_addr;
@@ -128,8 +108,6 @@ struct sophgo_dw_pcie {
 	uint64_t		dw_start;
 	uint64_t		dw_end;
 	uint64_t		up_start_addr;
-	uint64_t		cdma_pa_start;
-	uint64_t		cdma_size;
 	uint32_t		c2c_pcie_rc;
 	uint32_t		chip_type;
 	uint32_t		board_type;

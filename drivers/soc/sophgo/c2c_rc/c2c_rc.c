@@ -73,6 +73,9 @@ struct pcie_info {
 	uint64_t max_link_speed;
 	uint64_t current_link_width;
 	uint64_t current_link_speed;
+	uint64_t send_cdma_pa;
+	uint64_t recv_cdma_pa;
+	uint64_t pcie_route;
 };
 
 struct c2c_info {

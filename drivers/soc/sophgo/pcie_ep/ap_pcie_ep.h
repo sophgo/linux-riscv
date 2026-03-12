@@ -31,14 +31,24 @@ enum {
 struct pcie_info {
 	uint64_t slot_id;
 	uint64_t socket_id;
-	uint64_t peer_socketid;
 	uint64_t pcie_id;
+	uint64_t send_port;
+	uint64_t recv_port;
 	uint64_t enable;
 	uint64_t data_link_type;
 	uint64_t link_role;
 	uint64_t link_role_gpio;
 	uint64_t perst_gpio;
 	uint64_t phy_role;
+	uint64_t peer_slotid;
+	uint64_t peer_socketid;
+	uint64_t peer_pcie_id;
+	uint64_t max_link_speed;
+	uint64_t current_link_width;
+	uint64_t current_link_speed;
+	uint64_t send_cdma_pa;
+	uint64_t recv_cdma_pa;
+	uint64_t pcie_route;
 };
 
 struct msi_info {

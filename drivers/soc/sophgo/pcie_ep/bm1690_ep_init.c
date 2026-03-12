@@ -28,6 +28,7 @@
 #include "ap_pcie_ep.h"
 #include "bm1690_ep_init.h"
 
+static int prog_inbound_iatu(struct sophgo_pcie_ep *sg_ep, struct iatu *atu);
 
 static void pcie_wait_core_clk(struct sophgo_pcie_ep *sg_ep)
 {
@@ -197,6 +198,10 @@ static void pcie_config_ep_function(struct sophgo_pcie_ep *sg_ep)
 		}
 	}
 
+	writel(0xfff, (void *)((uint64_t)(pcie_dbi_base + C2C_PCIE_DBI2_OFFSET + 0x20)));
+	writel(0, (void *)((uint64_t)(pcie_dbi_base + C2C_PCIE_DBI2_OFFSET + 0x24)));
+	dev_err(sg_ep->dev, "config bar4 size 0x1000\n");
+
 	if (func_num > 1) {
 		val = readl(pcie_dbi_base + 0x718);
 		val &= ~0xff;
@@ -348,6 +353,20 @@ static void pcie_config_bar0_iatu(struct sophgo_pcie_ep *sg_ep)
 	writel(0xC0080000, (atu_base + 0x104));
 }
 
+static void pcie_config_bar4_iatu(struct sophgo_pcie_ep *sg_ep)
+{
+	struct iatu atu;
+	uint64_t cpu_addr = CONFIG_STRUCT_BASE + sg_ep->ep_info.pcie_id * PER_CONFIG_STR_OFFSET;
+
+	atu.index = 1;
+	atu.match_type = BAR_MATCH;
+	atu.bar = 4;
+	atu.func = 0;
+	atu.cpu_addr = cpu_addr;
+
+	prog_inbound_iatu(sg_ep, &atu);
+}
+
 static int get_msi_addr(struct sophgo_pcie_ep *sg_ep, uint64_t *msi_addr, int func_num)
 {
 	void __iomem *pcie_dbi_base = (void __iomem *)sg_ep->dbi_base;
@@ -381,6 +400,7 @@ void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 	pcie_config_ep_function(sg_ep);
 	pcie_config_axi_route(sg_ep);
 	pcie_config_bar0_iatu(sg_ep);
+	pcie_config_bar4_iatu(sg_ep);
 #ifdef PCIE_EP_HUGE_BAR
 	if (link_mode == PCIE_CHIPS_C2C_LINK)
 		pcie_config_ep_huge_bar(c2c_id, wrapper_id, phy_id, 0);
@@ -393,36 +413,6 @@ void bm1690_pcie_init_link(struct sophgo_pcie_ep *sg_ep)
 	pcie_check_link_status(sg_ep);
 }
 EXPORT_SYMBOL_GPL(bm1690_pcie_init_link);
-
-int sophgo_pcie_ep_config_cdma_route(struct sophgo_pcie_ep *pcie)
-{
-	uint32_t tmp;
-
-	tmp = (pcie->pcie_route_config << 28) | (pcie->cdma_pa_start >> 32);
-	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_H32);
-
-	tmp = (pcie->cdma_pa_start & ((1ul << 32) - 1)) >> 16;
-	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_RCV_ADDR_M16);
-
-	// OS: 2
-	tmp = readl(pcie->cdma_reg_base + CDMA_CSR_4) | (1 << CDMA_CSR_RCV_CMD_OS);
-	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_4);
-
-	tmp = (readl(pcie->cdma_reg_base + CDMA_CSR_INTER_DIE_RW) &
-		~(0xff << CDMA_CSR_INTER_DIE_WRITE_ADDR_L4)) |
-		(pcie->pcie_route_config << CDMA_CSR_INTER_DIE_WRITE_ADDR_H4) |
-		(0b0000 << CDMA_CSR_INTER_DIE_WRITE_ADDR_L4);
-	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_INTER_DIE_RW);
-
-	tmp = (readl(pcie->cdma_reg_base + CDMA_CSR_INTRA_DIE_RW) &
-		~(0xff << CDMA_CSR_INTRA_DIE_READ_ADDR_L4)) |
-		(AXI_RN << CDMA_CSR_INTRA_DIE_READ_ADDR_H4) |
-		(0b0000 << CDMA_CSR_INTRA_DIE_READ_ADDR_L4);
-	writel(tmp, pcie->cdma_reg_base + CDMA_CSR_INTRA_DIE_RW);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(sophgo_pcie_ep_config_cdma_route);
 
 #ifndef CONFIG_SOPHGO_TX_MSIX_USED
 static int setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
@@ -1199,8 +1189,8 @@ static int bm1690eep_set_quirks(struct sophgo_pcie_ep *sg_ep)
 		schedule_delayed_work(&sg_ep->probe_delayed_work, 1);
 	}
 
-	writel(0xf0000, sg_ep->c2c_top_base + 0xcc);
-	pr_err("bypass axiid replacement\n");
+	//writel(0xf0000, sg_ep->c2c_top_base + 0xcc);
+	//pr_err("bypass axiid replacement\n");
 
 	return 0;
 }
@@ -1926,38 +1916,19 @@ int bm1690_ep_init(struct platform_device *pdev)
 	}
 
 	if (device_property_present(dev, "c2c0_x8_1") || device_property_present(dev, "c2c1_x8_1"))
-		sg_ep->pcie_route_config = C2C_PCIE_X8_1;
+		sg_ep->ctrl_type = PCIE_CTRL_X8;
 	else if (device_property_present(dev, "c2c0_x8_0") || device_property_present(dev, "c2c1_x8_0"))
-		sg_ep->pcie_route_config = C2C_PCIE_X8_0;
+		sg_ep->ctrl_type = PCIE_CTRL_X8;
 	else if (device_property_present(dev, "c2c0_x4_1") || device_property_present(dev, "c2c1_x4_1"))
-		sg_ep->pcie_route_config = C2C_PCIE_X4_1;
+		sg_ep->ctrl_type = PCIE_CTRL_X4;
 	else if (device_property_present(dev, "c2c0_x4_0") || device_property_present(dev, "c2c1_x4_0"))
-		sg_ep->pcie_route_config = C2C_PCIE_X4_0;
+		sg_ep->ctrl_type = PCIE_CTRL_X4;
 	else if (device_property_present(dev, "cxp_x8"))
-		sg_ep->pcie_route_config = CXP_PCIE_X8;
+		sg_ep->ctrl_type = PCIE_CTRL_X8;
 	else if (device_property_present(dev, "cxp_x4"))
-		sg_ep->pcie_route_config = CXP_PCIE_X4;
+		sg_ep->ctrl_type = PCIE_CTRL_X4;
 	else
 		dev_err(dev, "no pcie type found, this pcie may not support c2c\n");
-
-	if (sg_ep->pcie_route_config == C2C_PCIE_X8_1 || sg_ep->pcie_route_config == C2C_PCIE_X8_0 || sg_ep->pcie_route_config == CXP_PCIE_X8)
-		sg_ep->ctrl_type = PCIE_CTRL_X8;
-	else if (sg_ep->pcie_route_config == C2C_PCIE_X4_1 || sg_ep->pcie_route_config == C2C_PCIE_X4_0 || sg_ep->pcie_route_config == CXP_PCIE_X4)
-		sg_ep->ctrl_type = PCIE_CTRL_X4;
-
-
-	ret = of_property_read_u64_index(dev_node, "cdma-reg", 0, &sg_ep->cdma_pa_start);
-	ret = of_property_read_u64_index(dev_node, "cdma-reg", 1, &sg_ep->cdma_size);
-	if (ret)
-		pr_err("cdma reg not found, this pcie is not support c2c\n");
-	else {
-		sg_ep->cdma_reg_base = devm_ioremap(dev, sg_ep->cdma_pa_start, sg_ep->cdma_size);
-		if (!sg_ep->cdma_reg_base) {
-			dev_err(dev, "failed to map cdma reg\n");
-			goto unmap_c2c_top;
-		}
-
-	}
 
 	ret = of_property_read_u64_index(dev_node, "slv_range", 0, &sg_ep->slv_start_addr);
 	ret = of_property_read_u64_index(dev_node, "slv_range", 1, &sg_ep->slv_end_addr);

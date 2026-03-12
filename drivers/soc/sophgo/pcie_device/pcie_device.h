@@ -95,6 +95,9 @@ struct pcie_info {
 	uint64_t max_link_speed;
 	uint64_t current_link_width;
 	uint64_t current_link_speed;
+	uint64_t send_cdma_pa;
+	uint64_t recv_cdma_pa;
+	uint64_t pcie_route;
 };
 
 #define BM1690_SRAM_BASE	(0X7010000000)
@@ -108,5 +111,41 @@ struct pcie_info {
 #define PCIE_INFO_BASE	CONFIG_STRUCT_BASE
 #define PER_INFO_SIZE	PER_CONFIG_STR_OFFSET
 #define PCIE_INFO_SIZE	(10 * 1024 * 1024)
+
+
+#define CDMA_CSR_RCV_ADDR_H32				(0x1004)
+#define CDMA_CSR_RCV_ADDR_M16				(0x1008)
+#define CDMA_CSR_INTER_DIE_RW				(0x100c)
+#define CDMA_CSR_4					(0x1010)
+#define CDMA_CSR_INTRA_DIE_RW				(0x123c)
+
+#define CDMA_CSR_RCV_CMD_OS				15
+
+// CDMA_CSR_INTER_DIE_RW
+#define CDMA_CSR_INTER_DIE_READ_ADDR_L4		0
+#define CDMA_CSR_INTER_DIE_READ_ADDR_H4		4
+#define CDMA_CSR_INTER_DIE_WRITE_ADDR_L4	8
+#define CDMA_CSR_INTER_DIE_WRITE_ADDR_H4	12
+
+// CDMA_CSR_INTRA_DIE_RW
+#define CDMA_CSR_INTRA_DIE_READ_ADDR_L4		0
+#define CDMA_CSR_INTRA_DIE_READ_ADDR_H4		4
+#define CDMA_CSR_INTRA_DIE_WRITE_ADDR_L4	8
+#define CDMA_CSR_INTRA_DIE_WRITE_ADDR_H4	12
+
+enum {
+	C2C_PCIE_X8_0 = 0b0101,
+	C2C_PCIE_X8_1 = 0b0111,
+	C2C_PCIE_X4_0 = 0b0100,
+	C2C_PCIE_X4_1 = 0b0110,
+	CXP_PCIE_X8 = 0b1010,
+	CXP_PCIE_X4 = 0b1011,
+};
+
+enum {
+	// RN: K2K; RNI: CCN
+	AXI_RNI = 0b1001,
+	AXI_RN = 0b1000,
+};
 
 #endif

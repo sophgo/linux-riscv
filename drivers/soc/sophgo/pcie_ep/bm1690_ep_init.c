@@ -135,9 +135,9 @@ static void pcie_config_link(struct sophgo_pcie_ep *sg_ep)
 	writel(val, (base_addr + 0x8c0));
 
 	//config eq bypass highest rate disable
-	val = readl(base_addr + 0x1c0);
-	val |= 0x1;
-	writel(val, (base_addr + 0x1c0));
+	//val = readl(base_addr + 0x1c0);
+	//val |= 0x1;
+	//writel(val, (base_addr + 0x1c0));
 }
 
 

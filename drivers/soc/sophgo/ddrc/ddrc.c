@@ -785,6 +785,9 @@ static irqreturn_t ddrc_interrupt(int irq, void *dev_id)
 	pr_err("%s trigger interrupt\n", ddrc_info->name);
 
 	for (int ctl_index = 0; ctl_index < 2; ctl_index++)
+		writel(0xff, ddrc_info->base + (0x02000000 + ctl_index * 0x400000) + 0x10984);
+
+	for (int ctl_index = 0; ctl_index < 2; ctl_index++)
 		lpddr5x_inline_ecc_error_check_sub((ddrc_info->ddrc_id) * 2 + ctl_index, ddrc_info);
 
 	for (int ctl_index = 0; ctl_index < 2; ctl_index++) {

@@ -655,8 +655,9 @@ static int bm1690e_setup_msi_gen(struct sophgo_pcie_ep *sg_ep)
 	val |= (msi_gen_multi_en << 1);
 	writel(val, (pcie_ctrl_base + PCIE_CTRL_AXI_MSI_GEN_CTRL_REG));
 
-	if (msi_gen_multi_en != 0)
-		writel(0xff, (c2c_top + C2C_TOP_MSI_GEN_MODE_REG));
+	// only for 2260 have rp, now this is useless
+	//if (msi_gen_multi_en != 0)
+	//	writel(0xff, (c2c_top + C2C_TOP_MSI_GEN_MODE_REG));
 
 	return 0;
 }

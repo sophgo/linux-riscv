@@ -362,21 +362,22 @@ static int cdns_pcie_host_init_address_translation(struct cdns_mango_pcie_rc *rc
 	resource_list_for_each_entry(entry, list) {
 		struct resource *res = entry->res;
 		u64 pci_addr = res->start - entry->offset;
+		unsigned long res_type;
 
-		if (resource_type(res) == IORESOURCE_IO)
+		res_type = resource_type(res);
+
+		/* resources in this list are bus, io and memory, we only
+		 * set atu for memory and io, skip bus resource
+		 */
+		if (res_type == IORESOURCE_MEM ||
+		    res_type == IORESOURCE_IO) {
 			cdns_pcie_set_outbound_region(pcie, busnr, 0, r,
-						      true,
-						      pci_pio_to_address(res->start),
-						      pci_addr,
-						      resource_size(res));
-		else
-			cdns_pcie_set_outbound_region(pcie, busnr, 0, r,
-						      false,
+						      res_type == IORESOURCE_IO,
 						      res->start,
 						      pci_addr,
 						      resource_size(res));
-
-		r++;
+			r++;
+		}
 	}
 
 	/*

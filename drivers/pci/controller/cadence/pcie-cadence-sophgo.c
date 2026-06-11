@@ -380,6 +380,15 @@ static int cdns_pcie_host_init_address_translation(struct cdns_mango_pcie_rc *rc
 		}
 	}
 
+#if defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS)
+       /*
+	* acpi_dev_get_resources creates resources and attach then to resource_list.
+        * After resources are processed, we need release these resources.
+        */
+       if (!acpi_disabled)
+               resource_list_free(list);
+#endif
+
 	/*
 	 * Set Root Port no BAR match Inbound Translation registers:
 	 * needed for MSI and DMA.

@@ -154,14 +154,25 @@ static void plic_irq_disable(struct irq_data *d)
 static void plic_irq_eoi(struct irq_data *d)
 {
 	struct plic_handler *handler = this_cpu_ptr(&plic_handlers);
+	unsigned long flags;
+	void __iomem *reg = handler->enable_base + (d->hwirq / 32) * sizeof(u32);
+	u32 hwirq_mask = 1 << (d->hwirq % 32);
 
-	if (unlikely(irqd_irq_disabled(d))) {
-		plic_toggle(handler, d->hwirq, 1);
+	/*
+	 * PLIC drops a completion unless the source is enabled for this hart; a
+	 * dropped one leaves the interrupt stuck in-progress. Serialize against
+	 * plic_set_affinity() clearing the enable bit by holding enable_lock
+	 * across the EOI; re-enable around it if the bit was clear.
+	 */
+	raw_spin_lock_irqsave(&handler->enable_lock, flags);
+	if (unlikely(!(readl(reg) & hwirq_mask))) {
+		__plic_toggle(handler->enable_base, d->hwirq, 1);
 		writel(d->hwirq, handler->hart_base + CONTEXT_CLAIM);
-		plic_toggle(handler, d->hwirq, 0);
+		__plic_toggle(handler->enable_base, d->hwirq, 0);
 	} else {
 		writel(d->hwirq, handler->hart_base + CONTEXT_CLAIM);
 	}
+	raw_spin_unlock_irqrestore(&handler->enable_lock, flags);
 }
 
 #ifdef CONFIG_SMP

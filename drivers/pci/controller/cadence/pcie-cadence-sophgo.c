@@ -512,7 +512,8 @@ struct vendor_id_list vendor_id_list[] = {
 	{"Sophgo sc11", 0x1f1c, 0x1690},
 	//{"WangXun RP1000", 0x8088},
 	{"Switchtec", 0x11f8,0x4052},
-	{"Mellanox ConnectX-2", 0x15b3, 0x6750}
+	{"Mellanox ConnectX-2", 0x15b3, 0x6750},
+	{"Cambricon MLU370", 0xcabc, 0x0370}
 };
 
 size_t vendor_id_list_num = ARRAY_SIZE(vendor_id_list);
